@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './login1.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faEnvelope, faLock } from '@fortawesome/free-solid-svg-icons';
+import { loginUser,signupUser } from '../../api/auth';
 
 // Homepage component with header
 const HomePage = () => {
@@ -104,28 +105,28 @@ const Login1 = ({ onLoginSuccess, onSignUpSuccess }) => {
         }
     };
 
-    // Function to validate login credentials
-    const validateLogin = () => {
-        // For demo purposes, we'll use some sample credentials
-        // In a real app, this would check against a database
-        const validCredentials = [
-            { email: 'user@example.com', password: 'password123' },
-            { email: 'admin@test.com', password: 'admin123' },
-            { email: 'test@gmail.com', password: 'test123' }
-        ];
-
-        const foundUser = validCredentials.find(
-            user => user.email === email && user.password === password
-        );
-
-        if (!foundUser) {
-            setLoginError('Incorrect email or password');
-            return false;
+    // Login handler
+    const handleLogin = async () => {
+        try{
+            const data = await loginUser(email,password,accountType);
+            console.log(data);
+            onLoginSuccess();
+        }catch(err){
+            setLoginError(err.message || "Login failed");
         }
-        
-        setLoginError('');
-        return true;
-    };
+    }
+
+    //signup handler
+    const handleSignup = async () => {
+        try{
+            const data =  await signupUser(name,email,password,accountType);
+            console.log(data);
+            alert("Signup successful! Please log in.");
+            onSignUpSuccess();
+        }catch(err){
+            alert(err.errMsg || "Signup failed");
+        }
+    }
 
     // Function to handle action change and reset fields
     const handleActionChange = (newAction) => {
@@ -242,14 +243,9 @@ const Login1 = ({ onLoginSuccess, onSignUpSuccess }) => {
                     className="submit"
                     onClick={() => {
                         if (action === "login") {
-                            // Validate login credentials before proceeding
-                            if (validateLogin()) {
-                                onLoginSuccess();
-                            }
+                            handleLogin();
                         } else {
-                            // On successful sign-up, return to the login page
-                            // This is the function that triggers the parent to re-render
-                            onSignUpSuccess();
+                           handleSignup();
                         }
                     }}
                 >
