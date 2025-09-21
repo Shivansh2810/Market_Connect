@@ -4,9 +4,9 @@ const router = express.Router();
 const { validateUser } = require("../middlewares");
 const userController = require("../controllers/user");
 
-router.post("/signup", validateUser, userController.signup);
+router.post("/api/signup", validateUser, userController.signup);
 
-router.post("/login", (req, res, next) => {
+router.post("/api/login", (req, res, next) => {
   passport.authenticate("local", { session: false }, (err, user, info) => {
     if (err) return next(err);
 
