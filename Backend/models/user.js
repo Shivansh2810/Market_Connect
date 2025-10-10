@@ -1,18 +1,49 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const { required } = require("joi");
 const { Schema } = mongoose;
 
+
+//Add to cart schema
+const cartSchema = new Schema(
+  {
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+
+    quantity: {
+      type: Number,
+      required: true,
+      min: [1, "Quantity can't be less than 1"],
+      default: 1,
+    },
+  },
+  { _id: false }
+);
+
+//address schema for destructuring address
 const addressSchema = new Schema(
   {
     street: { type: String, required: true, trim: true },
     city: { type: String, required: true, trim: true },
     state: { type: String, required: true, trim: true },
-    pincode: { type: String, required: true, trim: true, minlength: 6, maxlength: 6 },
+    pincode: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 6,
+      maxlength: 6,
+    },
     country: { type: String, required: true, default: "India" },
   },
   { _id: false }
 );
 
+
+//user schema includes buyer and seller and info req for buying 
+//and selling the products
 const userSchema = new Schema(
   {
     name: {
@@ -59,6 +90,7 @@ const userSchema = new Schema(
     },
     buyerInfo: {
       shippingAddresses: [addressSchema],
+      cart: [cartSchema],
     },
   },
   {
@@ -66,6 +98,7 @@ const userSchema = new Schema(
   }
 );
 
+//password protection - salting and hashing
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
@@ -76,7 +109,7 @@ userSchema.pre("save", async function (next) {
 });
 
 userSchema.methods.comparePassword = async function (enteredPassword) {
-  return await bcrypt.compare(entered-password, this.password);
+  return await bcrypt.compare(entered - password, this.password);
 };
 
 module.exports = mongoose.model("User", userSchema);
