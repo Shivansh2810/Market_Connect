@@ -1,18 +1,50 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const { required } = require("joi");
 const { Schema } = mongoose;
 
-const addressSchema = new Schema(
+
+//Add to cart schema
+const cartSchema = new Schema(
   {
-    street: String,
-    city: String,
-    state: String,
-    pincode: String,
-    country: { type: String, default: "India" },
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+
+    quantity: {
+      type: Number,
+      required: true,
+      min: [1, "Quantity can't be less than 1"],
+      default: 1,
+    },
   },
   { _id: false }
 );
 
+//address schema for destructuring address
+const addressSchema = new Schema(
+  {
+
+    street: { type: String, required: true, trim: true },
+    city: { type: String, required: true, trim: true },
+    state: { type: String, required: true, trim: true },
+    pincode: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 6,
+      maxlength: 6,
+    },
+    country: { type: String, required: true, default: "India" },
+  },
+  { _id: false }
+);
+
+
+//user schema includes buyer and seller and info req for buying 
+//and selling the products
 const userSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -32,12 +64,13 @@ const userSchema = new Schema(
     },
     buyerInfo: {
       shippingAddresses: [addressSchema],
+      cart: [cartSchema],
     },
   },
   { timestamps: true }
 );
 
-// In models/user.js - update the pre-save hook
+
 userSchema.pre("save", async function (next) {
   // console.log("=== PRE-SAVE HOOK ===");
   // console.log("Password modified:", this.isModified("password"));
@@ -67,6 +100,7 @@ userSchema.pre("save", async function (next) {
 // Compare password
 // In your models/user.js - update the comparePassword method
 userSchema.methods.comparePassword = async function (enteredPassword) {
+
   // console.log("=== Inside comparePassword ===");
   // console.log("Entered password:", `"${enteredPassword}"`);
   // console.log("Entered password trimmed:", `"${enteredPassword.trim()}"`);
@@ -76,6 +110,8 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
   // console.log("Comparison result:", result);
   
   return result;
+
+  return await bcrypt.compare(entered - password, this.password);
 };
 
 module.exports = mongoose.model("User", userSchema);
