@@ -26,6 +26,7 @@ const cartSchema = new Schema(
 //address schema for destructuring address
 const addressSchema = new Schema(
   {
+
     street: { type: String, required: true, trim: true },
     city: { type: String, required: true, trim: true },
     state: { type: String, required: true, trim: true },
@@ -46,69 +47,70 @@ const addressSchema = new Schema(
 //and selling the products
 const userSchema = new Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-    password: {
-      type: String,
-      required: true,
-      minlength: 6,
-      select: false,
-    },
-    role: {
-      type: String,
-      enum: ["buyer", "seller", "both"],
-      required: true,
-    },
-    mobNo: {
-      type: String,
-      required: [true, "Phone number is required"],
-      unique: true,
-      trim: true,
-    },
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, select: false },
+    googleId: { type: String, unique: true, sparse: true },
+    role: { type: String, enum: ["buyer", "seller", "both"], required: true },
+    mobNo: String,
     profilePic: {
-      public_id: { type: String, required: true },
-      url: { type: String, required: true },
+      public_id: String,
+      url: String,
     },
     sellerInfo: {
-      shopName: { type: String, trim: true },
+      shopName: String,
       shopAddress: addressSchema,
-      razorpayAccountId: { type: String, trim: true },
-      verified: {
-        type: Boolean,
-        default: false,
-      },
+      verified: { type: Boolean, default: false },
     },
     buyerInfo: {
       shippingAddresses: [addressSchema],
       cart: [cartSchema],
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-//password protection - salting and hashing
+
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
+  // console.log("=== PRE-SAVE HOOK ===");
+  // console.log("Password modified:", this.isModified("password"));
+  // console.log("Password exists:", !!this.password);
+  
+  if (!this.isModified("password") || !this.password) {
+    console.log("Skipping password hashing");
     return next();
   }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  
+  // Ensure password is a string and trim it
+  const plainPassword = this.password.toString().trim();
+  console.log("Password to hash:", `"${plainPassword}"`);
+  console.log("Password length:", plainPassword.length);
+  
+  try {
+    this.password = await bcrypt.hash(plainPassword, 10);
+    console.log("Hashed password:", this.password);
+  } catch (error) {
+    console.error("Hashing error:", error);
+    return next(error);
+  }
+  
   next();
 });
 
+// Compare password
+// In your models/user.js - update the comparePassword method
 userSchema.methods.comparePassword = async function (enteredPassword) {
+
+  // console.log("=== Inside comparePassword ===");
+  // console.log("Entered password:", `"${enteredPassword}"`);
+  // console.log("Entered password trimmed:", `"${enteredPassword.trim()}"`);
+  // console.log("Stored hash:", this.password);
+  
+  const result = await bcrypt.compare(enteredPassword.trim(), this.password);
+  // console.log("Comparison result:", result);
+  
+  return result;
+
   return await bcrypt.compare(entered - password, this.password);
 };
 
