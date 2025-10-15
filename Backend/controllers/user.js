@@ -1,55 +1,86 @@
-// controllers/user.js
 const User = require("../models/user");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
 
-// ----------------- SIGNUP -----------------
+// ---------------- SIGNUP ----------------
 exports.signup = async (req, res) => {
   try {
-    const { name, email, password, role, mobNo, profilePic } = req.body;
-
-    // Trim inputs
-    const trimmedEmail = email.trim();
-    const trimmedPassword = password ? password.toString().trim() : undefined;
-
-    // Check if user exists
-    const existingUser = await User.findOne({ email: trimmedEmail });
-    if (existingUser)
-      return res.status(400).json({ message: "User already exists" });
-
-    // Create user with plain password
-    const newUser = new User({
-      name,
-      email: trimmedEmail,
-      password: trimmedPassword,
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      confirmPassword,
       role,
       mobNo,
-      profilePic,
-    });
+      sellerInfo,
+    } = req.body;
 
+    // Check required fields
+    if (!firstName || !lastName || !email || !password || !confirmPassword || !role) {
+      return res.status(400).json({ message: "All required fields must be filled" });
+    }
+
+    // Password confirmation
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
+
+    // Role validation
+    const validRoles = ["buyer", "seller", "both"];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ message: "Invalid role selected" });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // Build user data
+    const userData = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim().toLowerCase(),
+      password: password.trim(),
+      role,
+      mobNo,
+    };
+
+    // If seller or both, include shop details
+    if (role === "seller" || role === "both") {
+      if (!sellerInfo || !sellerInfo.shopName || !sellerInfo.shopAddress) {
+        return res.status(400).json({
+          message: "Shop name and shop address are required for sellers",
+        });
+      }
+      userData.sellerInfo = sellerInfo;
+    }
+
+    // Save new user
+    const newUser = new User(userData);
     await newUser.save();
 
     // Generate JWT
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
-      expiresIn: "1d",
-    });
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
-    res.status(200).json({
-      message: "User registered successfully",
+    res.status(201).json({
+      message: "Account created successfully",
       token,
       user: {
         id: newUser._id,
-        name: newUser.name,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
         email: newUser.email,
         role: newUser.role,
       },
     });
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-// ----------------- LOGIN -----------------
+// ---------------- LOGIN ----------------
 exports.login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
@@ -58,51 +89,54 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
-    // Find user and include password
-    const user = await User.findOne({ email: email.trim() }).select("+password");
-    if (!user)
+    const user = await User.findOne({ email: email.trim().toLowerCase() }).select("+password");
+    if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
+    }
 
-    // Check role
-    if (role && user.role !== role)
-      return res
-        .status(403)
-        .json({ message: `Access denied for role: ${role}` });
+    // Role check with "both" support
+    if (role) {
+      if (user.role === "both") {
+        if (!["buyer", "seller"].includes(role)) {
+          return res.status(403).json({ message: `Access denied for role: ${role}` });
+        }
+      } else if (user.role !== role) {
+        return res.status(403).json({ message: `Access denied for role: ${role}` });
+      }
+    }
 
-    // If user has no password (Google OAuth)
-    if (!user.password)
-      return res.status(401).json({
-        message: "This account is registered via Google. Use Google login.",
-      });
+    // Google login check
+    if (!user.password) {
+      return res.status(401).json({ message: "This account is linked with Google. Please use Google login." });
+    }
 
-    // Compare password
-    const isMatch = await user.comparePassword(password);
-
-    if (!isMatch)
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid email or password" });
+    }
 
-    // Generate JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1d",
-    });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
     res.status(200).json({
       message: "Login successful",
       token,
       user: {
         id: user._id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
-        role: user.role,
+        role: role || user.role, // return the role used to login
       },
     });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
-// ----------------- GOOGLE AUTH -----------------
+
+
+// ---------------- GOOGLE AUTH ----------------
 exports.googleAuth = (req, res) => {
-  res.json({
+  res.status(200).json({
     message: "Google login successful",
     token: req.user.token,
     user: req.user.user,
