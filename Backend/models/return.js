@@ -71,11 +71,6 @@ const returnSchema = new Schema(
         status: { type: String, enum: ['pending', 'processed', 'failed'] },
         amount: { type: Number },
     },
-
-    comments: { // Optional field for buyer to add more details about the request
-        type: String,
-        trim: true,
-    },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt timestamps

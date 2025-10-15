@@ -1,20 +1,5 @@
 const Joi = require("joi");
-
-const addressSchema = Joi.object({
-  street: Joi.string().trim().required(),
-  city: Joi.string().trim().required(),
-  state: Joi.string().trim().required(),
-  pincode: Joi.string()
-    .trim()
-    .length(6)
-    .pattern(/^[0-9]+$/)
-    .required()
-    .messages({
-      "string.length": "Pincode must be exactly 6 digits.",
-      "string.pattern.base": "Pincode must only contain numbers.",
-    }),
-  country: Joi.string().trim().default("India"),
-});
+const addressSchema = require("./sharedSchemas");
 
 const signupSchema = Joi.object({
   name: Joi.string().trim().min(3).required(),
@@ -56,7 +41,8 @@ const signupSchema = Joi.object({
 
 const loginSchema = Joi.object({
     email: Joi.string().trim().email().lowercase().required(),
-    password: Joi.string().required()
+    password: Joi.string().required(),
+    role: Joi.string().required()
 }).required();
 
 const updateProfileSchema = Joi.object({

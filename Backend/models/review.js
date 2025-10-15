@@ -29,11 +29,6 @@ const reviewSchema = new Schema(
       min: 1,
       max: 5,
     },
-    title: {
-      type: String,
-      trim: true,
-      maxlength: 100,
-    },
     comment: {
       type: String,
       trim: true,
@@ -45,10 +40,6 @@ const reviewSchema = new Schema(
         publicId: { type: String, required: true },
       },
     ],
-    helpfulCount: {
-      type: Number,
-      default: 0,
-    },
     status: {
       type: String,
       enum: ["visible", "hidden", "reported"],

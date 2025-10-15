@@ -83,12 +83,6 @@ const productSchema = new Schema(
     ratingAvg: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
 
-    status: {
-      type: String,
-      enum: ["active", "inactive", "draft", "blocked"],
-      default: "active",
-    },
-
     isDeleted: {
       type: Boolean,
       default: false,
