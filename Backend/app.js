@@ -3,22 +3,37 @@ const express = require("express");
 const mongoose = require("mongoose");
 const passport = require("passport");
 const cors = require("cors");
-const userRouter = require("./routes/user");
-require("./config/passport"); // Google strategy
+
+const userRoutes = require("./routes/user");
+require("./auth/googleAuth.js"); // Google OAuth setup
 
 const app = express();
 
-mongoose.connect(process.env.MONGO_DB_URL)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.error("DB connection error:", err));
+// ------------------ DATABASE CONNECTION ------------------
+mongoose
+  .connect(process.env.MONGO_DB_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("MongoDB connection established"))
+  .catch((err) => console.error("MongoDB connection failed:", err.message));
 
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(passport.initialize());
+// ------------------ MIDDLEWARES ------------------
+app.use(cors()); // Enable CORS
+app.use(express.json()); // Parse JSON request bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded data
+app.use(passport.initialize()); // Initialize passport for OAuth
 
-app.get("/", (req, res) => res.json({ message: "Server running" }));
-app.use("/", userRouter);
+// ------------------ ROUTES ------------------
+app.get("/", (req, res) => {
+  res.json({ message: "Server is running" });
+});
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// User-related routes (signup, login, Google Auth)
+app.use("/", userRoutes);
+
+// ------------------ START SERVER ------------------
+const PORT = 8080;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
