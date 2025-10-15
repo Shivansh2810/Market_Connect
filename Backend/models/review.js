@@ -14,7 +14,7 @@ const reviewSchema = new Schema(
       required: true,
     },
     buyerId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId, 
       ref: "User",
       required: true,
     },

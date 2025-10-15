@@ -3,17 +3,16 @@ const { Schema } = mongoose;
 
 const addressSchema = require("./sharedSchemas.js");
 
-// Schema for individual items within an order
 const orderItemSchema = new Schema(
     {
         name: { type: String, required: true },
         quantity: { type: Number, required: true },
-        image: { type: String, required: true }, // URL to the product image
+        image: { type: String, required: true }, 
         price: { type: Number, required: true },
         product: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
-            ref: "Product", // Reference to the Product schema
+            ref: "Product", 
         },
     },
     { _id: false }
@@ -29,7 +28,7 @@ const orderSchema = new Schema(
     buyer: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        ref: "User", // Reference to the User schema
+        ref: "User", 
     },
     seller: {
         type: mongoose.Schema.Types.ObjectId,
@@ -72,7 +71,7 @@ const orderSchema = new Schema(
     },
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt timestamps
+    timestamps: true, 
   }
 );
 

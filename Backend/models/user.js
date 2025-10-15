@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const { required } = require("joi");
 const { Schema } = mongoose;
 
 //Add to cart schema
@@ -110,3 +109,4 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
 };
 
 module.exports = mongoose.model("User", userSchema);
+ 

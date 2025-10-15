@@ -3,7 +3,6 @@ const Joi = require("joi");
 const createProductSchema = Joi.object({
     title: Joi.string().trim().min(3).max(140).required(),
     description: Joi.string().trim().max(5000).required(),
-    // categoryId is valid Object id
     categoryId: Joi.string().hex().length(24).required(),
     tags: Joi.array().items(Joi.string().trim()).default([]),
     images: Joi.array().items(
@@ -38,8 +37,7 @@ const updateProductSchema = Joi.object({
     currency: Joi.string().valid('INR', 'USD'),
     stock: Joi.number().integer().min(0),
     condition: Joi.string().valid('new', 'used', 'refurbished'),
-    specs: Joi.object().pattern(Joi.string(), Joi.string()),
-    status: Joi.string().valid('active', 'inactive', 'draft') 
+    specs: Joi.object().pattern(Joi.string(), Joi.string())
 });
 
 

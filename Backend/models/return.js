@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-// A sub-schema for the specific items being requested for return
+
 const returnItemSchema = new Schema(
     {
         product: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Product", // Reference to the Product schema
+            ref: "Product", 
             required: true,
         },
         quantity: {
@@ -22,17 +22,17 @@ const returnSchema = new Schema(
   {
     order: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Order", //Reference to the original order
+        ref: "Order", 
         required: true,
     },
     buyer: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User", //Ref. to the user who requested the return
+        ref: "User", 
         required: true,
     },
     seller: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User", //Ref. to the seller of the product(s)
+        ref: "User", 
         required: true,
     },
     items: [returnItemSchema],
@@ -57,7 +57,7 @@ const returnSchema = new Schema(
             "Rejected",
             "Shipped by Buyer",
             "Received by Seller",
-            "Completed", //i.e., Refund processed or replacement sent
+            "Completed", 
         ],
         default: "Requested",
     },
@@ -66,14 +66,14 @@ const returnSchema = new Schema(
         enum: ["Pending", "Refund", "Replacement", "Store Credit"],
         default: "Pending"
     },
-    refundInfo: { //section to store refund details obtained from payment gateway
-        refundId: { type: String, trim: true }, // The ID from the payment gateway (rfnd_...)
+    refundInfo: { 
+        refundId: { type: String, trim: true }, 
         status: { type: String, enum: ['pending', 'processed', 'failed'] },
         amount: { type: Number },
     },
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt timestamps
+    timestamps: true, 
   }
 );
 
