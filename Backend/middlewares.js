@@ -1,9 +1,6 @@
-// middlewares.js
+
 const { userSchema, loginSchema } = require("./schema");
 
-/*
- * Ensures all required user fields are present and valid before creating an account
- */
 exports.validateSignup = (req, res, next) => {
   const { error } = userSchema.validate(req.body, { abortEarly: false });
 
@@ -15,12 +12,10 @@ exports.validateSignup = (req, res, next) => {
     });
   }
 
-  next(); // Continue to controller
+  next(); 
 };
 
-/*
- * Checks if email and password are correctly formatted and provided
- */
+
 exports.validateLogin = (req, res, next) => {
   const { error } = loginSchema.validate(req.body, { abortEarly: false });
 
@@ -32,5 +27,5 @@ exports.validateLogin = (req, res, next) => {
     });
   }
 
-  next(); // Continue to controller
+  next(); 
 };

@@ -12,10 +12,9 @@ passport.use(
     },
     async (accessToken, refreshToken, googleProfile, done) => {
       try {
-        // Check if user already exists
         let existingUser = await User.findOne({ email: googleProfile.emails[0].value });
 
-        // If user not found, create a new one
+        
         if (!existingUser) {
           existingUser = new User({
             name: googleProfile.displayName,
@@ -30,14 +29,12 @@ passport.use(
           await existingUser.save();
         }
 
-        // Generate JWT for the authenticated user
         const authToken = jwt.sign(
           { id: existingUser._id },
           process.env.JWT_SECRET,
           { expiresIn: "1d" }
         );
 
-        // Return user and token through Passport
         return done(null, { user: existingUser, token: authToken });
       } catch (error) {
         return done(error, null);
@@ -47,3 +44,4 @@ passport.use(
 );
 
 module.exports = passport;
+
