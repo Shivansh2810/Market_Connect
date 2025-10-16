@@ -1,6 +1,5 @@
 const Joi = require("joi");
 
-// 🧩 Reusable address schema
 const addressSchema = Joi.object({
   street: Joi.string().trim().required(),
   city: Joi.string().trim().required(),
@@ -16,13 +15,11 @@ const addressSchema = Joi.object({
   country: Joi.string().trim().default("India"),
 });
 
-// 🧠 Profile picture (optional for signup)
 const profilePicSchema = Joi.object({
   public_id: Joi.string().allow("", null),
   url: Joi.string().uri().allow("", null),
 });
 
-// 🧍‍♂️ User signup validation
 const userSchema = Joi.object({
   firstName: Joi.string().trim().min(2).required().messages({
     "string.empty": "First name is required",
@@ -47,7 +44,6 @@ const userSchema = Joi.object({
     .messages({ "string.pattern.base": "Mobile number must be 10 digits" }),
   profilePic: profilePicSchema.optional(),
 
-  // 👇 Seller or both account types require shop info
   sellerInfo: Joi.when("role", {
     is: Joi.valid("seller", "both"),
     then: Joi.object({
@@ -62,7 +58,6 @@ const userSchema = Joi.object({
   }),
 });
 
-// 🔐 Login validation
 const loginSchema = Joi.object({
   email: Joi.string().email().trim().required(),
   password: Joi.string().required(),
