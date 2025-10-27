@@ -2,7 +2,9 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const { Schema } = mongoose;
 
-//Add to cart schema
+const addressSchema = require("./sharedSchemas.js");
+
+
 const cartSchema = new Schema(
   {
     productId: {
@@ -10,56 +12,59 @@ const cartSchema = new Schema(
       ref: "Product",
       required: true,
     },
-
     quantity: {
       type: Number,
       required: true,
-      min: [1, "Quantity can't be less than 1"],
+      min: [1, "Quantity cannot be less than 1"],
       default: 1,
     },
   },
   { _id: false }
 );
 
-//address schema for destructuring address
-const addressSchema = new Schema(
-  {
-    street: { type: String, required: true, trim: true },
-    city: { type: String, required: true, trim: true },
-    state: { type: String, required: true, trim: true },
-    pincode: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: 6,
-      maxlength: 6,
-    },
-    country: { type: String, required: true, default: "India" },
-  },
-  { _id: false }
-);
-
-//user schema includes buyer and seller and info req for buying
-//and selling the products
 const userSchema = new Schema(
   {
-    name: { type: String, required: true, trim: true },
+    name: {
+      type: String,
+      required: [true, "Name is required"],
+      trim: true,
+    },
+
     email: {
       type: String,
-      required: true,
+      required: [true, "Email is required"],
       unique: true,
       lowercase: true,
       trim: true,
     },
-    password: { type: String, select: false },
-    googleId: { type: String, unique: true, sparse: true },
-    role: { type: String, enum: ["buyer", "seller", "both"], required: true },
-    mobNo: { type: String },
+
+    password: {
+      type: String,
+      select: false, 
+    },
+
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true, // allows multiple null values
+    },
+
+    role: {
+      type: String,
+      enum: ["buyer", "seller", "both"],
+      required: [true, "Role is required"],
+    },
+
+    mobNo: {
+      type: String,
+      trim: true,
+    },
 
     sellerInfo: {
-      shopName: String,
+      shopName: { type: String, trim: true },
       shopAddress: addressSchema,
     },
+
     buyerInfo: {
       shippingAddresses: [addressSchema],
       cart: [cartSchema],
@@ -68,45 +73,25 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-userSchema.pre("save", async function (next) {
-  // console.log("=== PRE-SAVE HOOK ===");
-  // console.log("Password modified:", this.isModified("password"));
-  // console.log("Password exists:", !!this.password);
 
+userSchema.pre("save", async function (next) {
   if (!this.isModified("password") || !this.password) {
-    console.log("Skipping password hashing");
     return next();
   }
 
-  // Ensure password is a string and trim it
-  const plainPassword = this.password.toString().trim();
-  console.log("Password to hash:", `"${plainPassword}"`);
-  console.log("Password length:", plainPassword.length);
-
   try {
-    this.password = await bcrypt.hash(plainPassword, 10);
-    console.log("Hashed password:", this.password);
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password.trim(), salt);
+    next();
   } catch (error) {
-    console.error("Hashing error:", error);
-    return next(error);
+    next(error);
   }
-
-  next();
 });
 
-// Compare password
-// In your models/user.js - update the comparePassword method
+
 userSchema.methods.comparePassword = async function (enteredPassword) {
-  // console.log("=== Inside comparePassword ===");
-  // console.log("Entered password:", `"${enteredPassword}"`);
-  // console.log("Entered password trimmed:", `"${enteredPassword.trim()}"`);
-  // console.log("Stored hash:", this.password);
-
-  const result = await bcrypt.compare(enteredPassword.trim(), this.password);
-  // console.log("Comparison result:", result);
-
-  return result;
+  if (!this.password) return false; // for Google users
+  return await bcrypt.compare(enteredPassword.trim(), this.password);
 };
 
 module.exports = mongoose.model("User", userSchema);
- 
