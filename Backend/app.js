@@ -9,6 +9,11 @@ require("./auth/googleAuth.js");
 
 const app = express();
 
+<<<<<<< HEAD
+mongoose.connect(process.env.ATLASDB_URL)
+  .then(() => console.log("MongoDB Atlas connected"))
+  .catch(err => console.error("DB connection error:", err));
+=======
 mongoose
   .connect(process.env.MONGO_DB_URL, {
     useNewUrlParser: true,
@@ -16,6 +21,7 @@ mongoose
   })
   .then(() => console.log("MongoDB connection established"))
   .catch((err) => console.error("MongoDB connection failed:", err.message));
+>>>>>>> 45a586a05c9beb5add369394bc52ac4928b397f1
 
 app.use(cors()); 
 app.use(express.json()); 
