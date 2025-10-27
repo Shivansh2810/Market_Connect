@@ -8,8 +8,8 @@ require("./config/passport"); // Google strategy
 
 const app = express();
 
-mongoose.connect(process.env.MONGO_DB_URL)
-  .then(() => console.log("MongoDB connected"))
+mongoose.connect(process.env.ATLASDB_URL)
+  .then(() => console.log("MongoDB Atlas connected"))
   .catch(err => console.error("DB connection error:", err));
 
 app.use(cors());
