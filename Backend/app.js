@@ -8,6 +8,7 @@ const userRoutes = require("./routes/user");
 require("./auth/googleAuth.js"); 
 
 const app = express();
+const cartRoutes = require('./routes/cart');
 
 mongoose.connect(process.env.ATLASDB_URL)
   .then(() => console.log("MongoDB Atlas connected"))
@@ -17,7 +18,7 @@ app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true })); 
 app.use(passport.initialize()); 
-
+app.use('/api/cart', cartRoutes);
 app.get("/", (req, res) => {
   res.json({ message: "Server is running" });
 });
