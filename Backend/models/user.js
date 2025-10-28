@@ -18,8 +18,16 @@ const cartSchema = new Schema(
       min: [1, "Quantity cannot be less than 1"],
       default: 1,
     },
+    price: {  
+      type: Number,
+      required: true
+    },
+    addedAt: {  
+      type: Date,
+      default: Date.now
+    }
   },
-  { _id: false }
+  { _id: true } 
 );
 
 const userSchema = new Schema(
@@ -46,7 +54,7 @@ const userSchema = new Schema(
     googleId: {
       type: String,
       unique: true,
-      sparse: true, // allows multiple null values
+      sparse: true,
     },
 
     role: {
@@ -90,7 +98,7 @@ userSchema.pre("save", async function (next) {
 
 
 userSchema.methods.comparePassword = async function (enteredPassword) {
-  if (!this.password) return false; // for Google users
+  if (!this.password) return false; 
   return await bcrypt.compare(enteredPassword.trim(), this.password);
 };
 
