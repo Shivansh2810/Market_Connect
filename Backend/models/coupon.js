@@ -15,14 +15,34 @@ const couponSchema = new Schema(
       trim: true,
       maxlength: 500,
     },
-    discountValue: {
+    discountAmount: {
       type: Number,
       required: true,
-      min: 0,
+      min: 1,
     },
     minOrderValue: {
       type: Number,
       default: 0,
+    },
+    validFrom: {
+      type: Date,
+      default: Date.now,
+    },
+    validUntil: {
+      type: Date,
+      required: true,
+    },
+    usageLimit: {
+      type: Number,
+      default: null,
+    },
+    usedCount: {
+      type: Number,
+      default: 0,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     applicableCategories: [
       {
@@ -34,15 +54,26 @@ const couponSchema = new Schema(
   { timestamps: true }
 );
 
-
 couponSchema.methods.calculateDiscount = function (cartValue) {
-  if (cartValue < this.minOrderValue) {
-    return 0; 
-  }
+  if (!this.isActive) return 0;
+  
+  if (new Date() > this.validUntil) return 0;
+  
+  if (cartValue < this.minOrderValue) return 0;
+  
+  if (this.usageLimit && this.usedCount >= this.usageLimit) return 0;
 
-  const discount = this.discountValue;
+  const discount = Math.min(this.discountAmount, cartValue);
 
-  return Math.min(discount, cartValue);
+  return discount;
 };
 
-module.exports = mongoose.model("Coupon", couponSchema);
+couponSchema.methods.isValid = function (cartValue) {
+  if (!this.isActive) return false;
+  if (new Date() > this.validUntil) return false;
+  if (cartValue < this.minOrderValue) return false;
+  if (this.usageLimit && this.usedCount >= this.usageLimit) return false;
+  return true;
+};
+
+module.exports = mongoose.model("Coupon", couponSchema);  

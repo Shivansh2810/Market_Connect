@@ -4,7 +4,6 @@ const User = require("../models/user");
 
 exports.protect = async (req, res, next) => {
   try {
-    // Extract token from "Authorization" header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ message: "Access denied. No token provided." });
@@ -24,5 +23,18 @@ exports.protect = async (req, res, next) => {
     next(); 
   } catch (error) {
     res.status(401).json({ message: "Invalid or expired token." });
+  }
+};
+
+exports.isAdmin = (req, res, next) => {
+  const adminEmails = ['admin@marketplace.com'];
+  
+  if (adminEmails.includes(req.user.email)) {
+    next();
+  } else {
+    res.status(403).json({
+      success: false,
+      message: "Access denied. Admin privileges required."
+    });
   }
 };
