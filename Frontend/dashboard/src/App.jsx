@@ -1,5 +1,5 @@
 import React from 'react';
-import BuyerDashboard from './componants/buyer dashboard/BuyerDashboard';
+import BuyerDashboard from './components/buyer dashboard/BuyerDashboard';
 import './App.css';
 
 function App() {
