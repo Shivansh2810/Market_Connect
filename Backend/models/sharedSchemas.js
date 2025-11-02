@@ -9,10 +9,16 @@ const addressSchema = new Schema(
     street: { type: String, required: true, trim: true },
     city: { type: String, required: true, trim: true },
     state: { type: String, required: true, trim: true },
-    pincode: { type: String, required: true, trim: true, minlength: 6, maxlength: 6 },
+    pincode: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 6,
+      maxlength: 6,
+    },
     country: { type: String, required: true, default: "India" },
   },
-  { _id: false } // Prevents creation of separate id
+  {} // allow default _id for subdocuments so they can be referenced/updated
 );
 
 // Exporting the schema for usage in other files

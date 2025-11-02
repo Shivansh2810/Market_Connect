@@ -5,23 +5,26 @@ const passport = require("passport");
 const cors = require("cors");
 
 const userRoutes = require("./routes/user");
-require("./auth/googleAuth.js"); 
+require("./auth/googleAuth.js");
 
 const app = express();
-const cartRoutes = require('./routes/cart');
-const couponRoutes = require('./routes/coupon');
+const cartRoutes = require("./routes/cart");
+const couponRoutes = require("./routes/coupon");
+const reviewRoutes = require("./routes/review");
 
-mongoose.connect(process.env.ATLASDB_URL)
+mongoose
+  .connect(process.env.ATLASDB_URL)
   .then(() => console.log("MongoDB Atlas connected"))
-  .catch(err => console.error("DB connection error:", err));
+  .catch((err) => console.error("DB connection error:", err));
 
-app.use(cors()); 
-app.use(express.json()); 
-app.use(express.urlencoded({ extended: true })); 
-app.use(passport.initialize()); 
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(passport.initialize());
 
-app.use('/api/cart', cartRoutes);
-app.use('/api/coupons', couponRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/coupons", couponRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Server is running" });
@@ -29,7 +32,12 @@ app.get("/", (req, res) => {
 
 app.use("/", userRoutes);
 
-const PORT = 8080;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Export the app for testing. When run directly, start the server.
+if (require.main === module) {
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
