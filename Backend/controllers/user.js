@@ -6,10 +6,6 @@ const addressJoiSchema = require("../validations/sharedSchema");
 
 exports.signup = async (req, res) => {
   try {
-<<<<<<< Updated upstream
-    const { name, email, password, confirmPassword, role, mobNo, sellerInfo } =
-      req.body;
-=======
     const {
       name,
       email,
@@ -17,7 +13,6 @@ exports.signup = async (req, res) => {
       confirmPassword,
       mobNo,
     } = req.body;
->>>>>>> Stashed changes
 
     if (!name || !email || !password || !confirmPassword|| !mobNo) {
       return res
@@ -127,8 +122,6 @@ exports.login = async (req, res) => {
   }
 };
 
-<<<<<<< Updated upstream
-=======
 exports.upgradeToSeller = async (req, res) => {
     try {
         const { shopName, shopAddress } = req.body;
@@ -167,7 +160,6 @@ exports.upgradeToSeller = async (req, res) => {
 
 
 
->>>>>>> Stashed changes
 exports.googleAuth = (req, res) => {
   res.status(200).json({
     message: "Google login successful",
