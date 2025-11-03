@@ -1,17 +1,13 @@
 const User = require("../models/user");
+const Order = require("../models/order");
 const jwt = require("jsonwebtoken");
+const { updateProfileSchema } = require("../validations/user");
+const addressJoiSchema = require("../validations/sharedSchema");
 
 exports.signup = async (req, res) => {
   try {
-    const {
-      name,
-      email,
-      password,
-      confirmPassword,
-      role,
-      mobNo,
-      sellerInfo,
-    } = req.body;
+    const { name, email, password, confirmPassword, role, mobNo, sellerInfo } =
+      req.body;
 
     if (!name || !email || !password || !confirmPassword || !role) {
       return res
@@ -74,8 +70,6 @@ exports.signup = async (req, res) => {
   }
 };
 
-
-
 exports.login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
@@ -110,8 +104,7 @@ exports.login = async (req, res) => {
 
     if (!user.password) {
       return res.status(401).json({
-        message:
-          "This account is linked with Google. Please use Google login.",
+        message: "This account is linked with Google. Please use Google login.",
       });
     }
 
@@ -139,12 +132,194 @@ exports.login = async (req, res) => {
   }
 };
 
-
-
 exports.googleAuth = (req, res) => {
   res.status(200).json({
     message: "Google login successful",
     token: req.user.token,
     user: req.user.user,
   });
+};
+
+/**
+ * GET /api/me
+ * Fetch full profile of logged-in user (addresses, cart, wishlist if present)
+ */
+exports.getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .populate("buyerInfo.cart.productId", "title images price stock sellerId")
+      .select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const profile = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      mobNo: user.mobNo,
+      sellerInfo: user.sellerInfo || null,
+      buyerInfo: {
+        shippingAddresses:
+          user.buyerInfo && user.buyerInfo.shippingAddresses
+            ? user.buyerInfo.shippingAddresses
+            : [],
+        cart: user.buyerInfo && user.buyerInfo.cart ? user.buyerInfo.cart : [],
+        wishlist:
+          user.buyerInfo && user.buyerInfo.wishlist
+            ? user.buyerInfo.wishlist
+            : [],
+      },
+    };
+
+    res.json({ success: true, data: profile });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * PUT /api/me/profile
+ * Update basic profile information (name, mobNo, sellerInfo)
+ */
+exports.updateProfile = async (req, res) => {
+  try {
+    const { error, value } = updateProfileSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (value.name) user.name = value.name;
+    if (value.mobNo) user.mobNo = value.mobNo;
+    if (value.sellerInfo)
+      user.sellerInfo = { ...user.sellerInfo, ...value.sellerInfo };
+
+    await user.save();
+    const updated = await User.findById(user._id).select("-password");
+    res.json({ success: true, message: "Profile updated", data: updated });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/** Address related handlers */
+
+exports.getAddresses = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("buyerInfo");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const addresses =
+      (user.buyerInfo && user.buyerInfo.shippingAddresses) || [];
+    res.json({ success: true, data: addresses });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.addAddress = async (req, res) => {
+  try {
+    const { error, value } = addressJoiSchema.validate(req.body);
+    if (error)
+      return res.status(400).json({ message: error.details[0].message });
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.buyerInfo) user.buyerInfo = {};
+    if (!user.buyerInfo.shippingAddresses)
+      user.buyerInfo.shippingAddresses = [];
+
+    user.buyerInfo.shippingAddresses.push(value);
+    await user.save();
+
+    const last =
+      user.buyerInfo.shippingAddresses[
+        user.buyerInfo.shippingAddresses.length - 1
+      ];
+    res
+      .status(201)
+      .json({ success: true, message: "Address added", data: last });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.updateAddress = async (req, res) => {
+  try {
+    const { addressId } = req.params;
+    const { error, value } = addressJoiSchema.validate(req.body);
+    if (error)
+      return res.status(400).json({ message: error.details[0].message });
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const address =
+      user.buyerInfo && user.buyerInfo.shippingAddresses
+        ? user.buyerInfo.shippingAddresses.id(addressId)
+        : null;
+
+    if (!address) return res.status(404).json({ message: "Address not found" });
+
+    address.street = value.street;
+    address.city = value.city;
+    address.state = value.state;
+    address.pincode = value.pincode;
+    address.country = value.country;
+
+    await user.save();
+    res.json({ success: true, message: "Address updated", data: address });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.deleteAddress = async (req, res) => {
+  try {
+    const { addressId } = req.params;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const existing =
+      user.buyerInfo && user.buyerInfo.shippingAddresses
+        ? user.buyerInfo.shippingAddresses.id(addressId)
+        : null;
+
+    if (!existing)
+      return res.status(404).json({ message: "Address not found" });
+
+    existing.remove();
+    await user.save();
+
+    res.json({ success: true, message: "Address deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * GET /api/me/orders
+ * Fetch order history for logged-in buyer
+ */
+exports.getMyOrders = async (req, res) => {
+  try {
+    if (req.user.role === "seller") {
+      return res.status(403).json({ message: "Access denied. Not a buyer." });
+    }
+
+    const orders = await Order.find({ buyer: req.user._id })
+      .populate("orderItems.product", "title images price")
+      .populate("seller", "name email")
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, data: orders });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
