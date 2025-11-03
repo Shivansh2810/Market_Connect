@@ -60,7 +60,7 @@ const userSchema = new Schema(
     role: {
       type: String,
       enum: ["buyer", "seller", "both"],
-      required: [true, "Role is required"],
+      default:"buyer",
     },
 
     mobNo: {

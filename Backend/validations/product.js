@@ -3,17 +3,8 @@ const Joi = require("joi");
 const createProductSchema = Joi.object({
     title: Joi.string().trim().min(3).max(140).required(),
     description: Joi.string().trim().max(5000).required(),
-    categoryId: Joi.string().hex().length(24).required(),
+    categoryId: Joi.string().hex().length(24),
     tags: Joi.array().items(Joi.string().trim()).default([]),
-    images: Joi.array().items(
-        Joi.object({
-            url: Joi.string().uri().required(),
-            publicId: Joi.string().required(),
-            isPrimary: Joi.boolean().default(false)
-        })
-    ).min(1).required().messages({
-        'array.min': 'Please upload at least one image for the product.'
-    }),
     price: Joi.number().min(0).required(),
     currency: Joi.string().valid('INR', 'USD').default('INR'),
     stock: Joi.number().integer().min(0).required(),

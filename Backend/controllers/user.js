@@ -6,10 +6,20 @@ const addressJoiSchema = require("../validations/sharedSchema");
 
 exports.signup = async (req, res) => {
   try {
+<<<<<<< Updated upstream
     const { name, email, password, confirmPassword, role, mobNo, sellerInfo } =
       req.body;
+=======
+    const {
+      name,
+      email,
+      password,
+      confirmPassword,
+      mobNo,
+    } = req.body;
+>>>>>>> Stashed changes
 
-    if (!name || !email || !password || !confirmPassword || !role) {
+    if (!name || !email || !password || !confirmPassword|| !mobNo) {
       return res
         .status(400)
         .json({ message: "All required fields must be filled" });
@@ -17,11 +27,6 @@ exports.signup = async (req, res) => {
 
     if (password !== confirmPassword) {
       return res.status(400).json({ message: "Passwords do not match" });
-    }
-
-    const validRoles = ["buyer", "seller", "both"];
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({ message: "Invalid role selected" });
     }
 
     const existingUser = await User.findOne({
@@ -35,18 +40,8 @@ exports.signup = async (req, res) => {
       name: name.trim(),
       email: email.trim().toLowerCase(),
       password: password.trim(),
-      role,
       mobNo,
     };
-
-    if (role === "seller" || role === "both") {
-      if (!sellerInfo || !sellerInfo.shopName || !sellerInfo.shopAddress) {
-        return res.status(400).json({
-          message: "Shop name and shop address are required for sellers",
-        });
-      }
-      userData.sellerInfo = sellerInfo;
-    }
 
     const newUser = new User(userData);
     await newUser.save();
@@ -132,6 +127,47 @@ exports.login = async (req, res) => {
   }
 };
 
+<<<<<<< Updated upstream
+=======
+exports.upgradeToSeller = async (req, res) => {
+    try {
+        const { shopName, shopAddress } = req.body;
+        if (!shopName || !shopAddress) {
+             return res.status(400).json({ message: "Shop name and address are required." });
+        }
+
+        const userId = req.user.id; 
+
+        const user = await User.findById(userId);
+
+        if (user.role === 'seller' || user.role === 'both') {
+            return res.status(400).json({ message: "You are already a seller." });
+        }
+
+        user.role = 'both'; 
+        user.sellerInfo = { shopName, shopAddress };
+        
+        await user.save();
+
+        res.status(200).json({
+            message: "Congratulations! Your account has been upgraded to a seller.",
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                sellerInfo: user.sellerInfo
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
+
+>>>>>>> Stashed changes
 exports.googleAuth = (req, res) => {
   res.status(200).json({
     message: "Google login successful",
