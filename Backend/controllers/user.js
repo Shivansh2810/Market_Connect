@@ -1,4 +1,4 @@
-const User = require("../models/user");
+cconst User = require("../models/user");
 const Order = require("../models/order");
 const jwt = require("jsonwebtoken");
 const { updateProfileSchema } = require("../validations/user");
@@ -6,10 +6,6 @@ const addressJoiSchema = require("../validations/sharedSchema");
 
 exports.signup = async (req, res) => {
   try {
-<<<<<<< Updated upstream
-    const { name, email, password, confirmPassword, role, mobNo, sellerInfo } =
-      req.body;
-=======
     const {
       name,
       email,
@@ -17,7 +13,6 @@ exports.signup = async (req, res) => {
       confirmPassword,
       mobNo,
     } = req.body;
->>>>>>> Stashed changes
 
     if (!name || !email || !password || !confirmPassword|| !mobNo) {
       return res
