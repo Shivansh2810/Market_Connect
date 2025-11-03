@@ -12,7 +12,7 @@ const cartRoutes = require("./routes/cart");
 const couponRoutes = require("./routes/coupon");
 const reviewRoutes = require("./routes/review");
 const orderRoutes = require("./routes/order");
-const productRoutes = require("./routes/productRoutes");
+const productRoutes = require("./routes/product");
 
 mongoose
   .connect(process.env.ATLASDB_URL)

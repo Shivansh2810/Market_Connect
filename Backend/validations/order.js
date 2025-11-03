@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const addressSchema = require("./sharedSchemas");
+const addressSchema = require("./sharedSchema");
 
 const orderItemSchema = Joi.object({
     productId: Joi.string().hex().length(24).required(),
