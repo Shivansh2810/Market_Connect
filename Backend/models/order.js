@@ -63,15 +63,17 @@ const orderSchema = new Schema(
     orderStatus: {
         type: String,
         required: true,
-        enum: ["Processing", "Shipped", "Delivered", "Cancelled", "Returned"],
-        default: "Processing",
+        enum: ["Payment Pending", "Order Placed", "Shipped", "Delivered", "Cancelled", "Returned", "Payment Failed"],
+        default: "Payment Pending",
     },
-    deliveredAt: {
-        type: Date,
-    },
+
+    //this is irrelevant for time-being, hence commented
+    // deliveredAt: {
+    //     type: Date,
+    // },
   },
   {
-    timestamps: true, 
+    timestamps: true, //in order to save timestamps for both instances - creation and updation
   }
 );
 
