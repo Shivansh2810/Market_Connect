@@ -2,14 +2,27 @@ const express = require("express");
 const passport = require("passport");
 const router = express.Router();
 const userController = require("../controllers/user");
-const { protect } = require("../middlewares/auth");
-const validate = require("../middlewares/validate");
+
 const { updateProfileSchema } = require("../validations/user");
 const addressSchema = require("../validations/sharedSchema");
+const validate = require("../middlewares/validateSchema");
+const { protect } = require("../middlewares/auth");
+const {
+  signupSchema,
+  loginSchema,
+  upgradeToSellerSchema,
+} = require("../validations/user");
 
-router.post("/api/signup", userController.signup);
+router.post("/api/signup", validate(signupSchema), userController.signup);
 
-router.post("/api/login", userController.login);
+router.post("/api/login",validate(loginSchema), userController.login);
+
+router.put(
+    "/api/upgradetoseller",
+    protect, 
+    validate(upgradeToSellerSchema), 
+    userController.upgradeToSeller 
+);
 
 router.get(
   "/api/auth/google",
