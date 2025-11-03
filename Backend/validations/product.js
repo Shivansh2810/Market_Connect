@@ -3,7 +3,7 @@ const Joi = require("joi");
 const createProductSchema = Joi.object({
     title: Joi.string().trim().min(3).max(140).required(),
     description: Joi.string().trim().max(5000).required(),
-    categoryId: Joi.string().hex().length(24),
+    categoryId: Joi.string().hex().length(24).required(),
     tags: Joi.array().items(Joi.string().trim()).default([]),
     price: Joi.number().min(0).required(),
     currency: Joi.string().valid('INR', 'USD').default('INR'),

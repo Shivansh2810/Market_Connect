@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const reviewController = require("../controllers/reviewController");
 const { protect } = require("../middlewares/auth");
-const validate = require("../middlewares/validate");
+const validate = require("../middlewares/validateSchema");
 const {
   createReviewSchema,
   updateReviewSchema,

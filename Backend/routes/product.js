@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const productController = require('../controllers/');
+const productController = require('../controllers/productController');
 const upload = require('../middlewares/multer'); 
 const validate = require('../middlewares/validateSchema'); 
 const { createProductSchema, updateProductSchema } = require('../validations/product');
@@ -25,7 +25,7 @@ router.put(
     protect,
     isSeller,
     isOwner,
-    upload.array('newImages', 5),//5 max files allowed
+    upload.array('images', 5),//5 max files allowed
     validate(updateProductSchema),
     productController.updateProduct
 );
