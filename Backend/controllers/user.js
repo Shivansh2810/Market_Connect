@@ -1,4 +1,4 @@
-cconst User = require("../models/user");
+const User = require("../models/user");
 const Order = require("../models/order");
 const jwt = require("jsonwebtoken");
 const { updateProfileSchema } = require("../validations/user");
@@ -122,8 +122,6 @@ exports.login = async (req, res) => {
   }
 };
 
-<<<<<<< Updated upstream
-=======
 exports.upgradeToSeller = async (req, res) => {
     try {
         const { shopName, shopAddress } = req.body;
@@ -162,7 +160,6 @@ exports.upgradeToSeller = async (req, res) => {
 
 
 
->>>>>>> Stashed changes
 exports.googleAuth = (req, res) => {
   res.status(200).json({
     message: "Google login successful",
