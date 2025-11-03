@@ -11,6 +11,7 @@ const app = express();
 const cartRoutes = require("./routes/cart");
 const couponRoutes = require("./routes/coupon");
 const reviewRoutes = require("./routes/review");
+const orderRoutes = require("./routes/order");
 
 mongoose
   .connect(process.env.ATLASDB_URL)
@@ -22,9 +23,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
-app.use("/api/cart", cartRoutes);
-app.use("/api/coupons", couponRoutes);
+
 app.use("/api/reviews", reviewRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/orders', orderRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Server is running" });
