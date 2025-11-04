@@ -5,6 +5,9 @@ import Profile from '../profile/Profile';
 import ProductDetail from './ProductDetail';
 import { useAuth } from '../../contexts/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useEffect } from 'react'; // for fetching from backend
+import { getAllProducts } from '../../api/products'; // backend API
+import { getCart, addToCart, updateCartItem, removeCartItem } from '../../api/cart'; // backend API
 import { 
     faSearch, 
     faShoppingCart, 
@@ -20,229 +23,42 @@ import {
     faSignOutAlt
 } from '@fortawesome/free-solid-svg-icons';
 
-// Sample product data - Matching backend Product model structure exactly
-// Backend Product model: sellerId, title, slug, description, categoryId, tags, images, price, currency, stock, condition, specs, ratingAvg, ratingCount, isDeleted
-const sampleProducts = [
-    {
-        _id: "507f1f77bcf86cd799439011",
-        sellerId: "507f191e810c19729de860ea",
-        title: "Wireless Bluetooth Headphones",
-        slug: "wireless-bluetooth-headphones",
-        description: "High-quality wireless Bluetooth headphones with noise cancellation and 20-hour battery life.",
-        categoryId: "507f191e810c19729de860ea", // ObjectId reference to Category
-        category: { // Populated category data (as returned by backend with populate)
-            _id: "507f191e810c19729de860ea",
-            name: "Electronics",
-            slug: "electronics"
-        },
-        price: 1299,
-        currency: "INR",
-        stock: 45,
-        condition: "new", // enum: ["new", "used", "refurbished"]
-        tags: ["wireless", "bluetooth", "audio"],
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
-                publicId: "Market-Connect/Products/headphones-1",
-                isPrimary: true
-            }
-        ],
-        specs: { // Backend uses Map type, but JSON serializes to object
-            "Brand": "AudioTech",
-            "Connectivity": "Bluetooth 5.0",
-            "Battery": "20 hours"
-        },
-        ratingAvg: 4.5,
-        ratingCount: 128,
-        isDeleted: false,
-        createdAt: "2024-01-01T10:00:00Z",
-        updatedAt: "2024-01-15T10:00:00Z"
-    },
-    {
-        _id: "507f1f77bcf86cd799439012",
-        sellerId: "507f191e810c19729de860ea",
-        title: "Smart Fitness Watch",
-        slug: "smart-fitness-watch",
-        description: "Advanced fitness tracking smartwatch with heart rate monitor and GPS.",
-        categoryId: "507f191e810c19729de860ea",
-        category: {
-            _id: "507f191e810c19729de860ea",
-            name: "Electronics",
-            slug: "electronics"
-        },
-        price: 2499,
-        currency: "INR",
-        stock: 12,
-        condition: "new",
-        tags: ["fitness", "smartwatch", "wearable"],
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
-                publicId: "Market-Connect/Products/watch-1",
-                isPrimary: true
-            }
-        ],
-        specs: {
-            "Brand": "FitTech",
-            "Display": "1.4 inch",
-            "Battery": "7 days"
-        },
-        ratingAvg: 4.8,
-        ratingCount: 89,
-        isDeleted: false,
-        createdAt: "2024-01-02T10:00:00Z",
-        updatedAt: "2024-01-16T10:00:00Z"
-    },
-    {
-        _id: "507f1f77bcf86cd799439013",
-        sellerId: "507f191e810c19729de860eb",
-        title: "Organic Cotton T-Shirt",
-        slug: "organic-cotton-t-shirt",
-        description: "100% organic cotton t-shirt, comfortable and eco-friendly.",
-        categoryId: "507f191e810c19729de860eb",
-        category: {
-            _id: "507f191e810c19729de860eb",
-            name: "Clothing",
-            slug: "clothing"
-        },
-        price: 399,
-        currency: "INR",
-        stock: 3,
-        condition: "new",
-        tags: ["organic", "cotton", "casual"],
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
-                publicId: "Market-Connect/Products/tshirt-1",
-                isPrimary: true
-            }
-        ],
-        specs: {
-            "Material": "100% Organic Cotton",
-            "Size": "M, L, XL",
-            "Color": "White"
-        },
-        ratingAvg: 4.2,
-        ratingCount: 45,
-        isDeleted: false,
-        createdAt: "2024-01-03T10:00:00Z",
-        updatedAt: "2024-01-17T10:00:00Z"
-    },
-    {
-        _id: "507f1f77bcf86cd799439014",
-        sellerId: "507f191e810c19729de860ec",
-        title: "Premium Coffee Beans",
-        slug: "premium-coffee-beans",
-        description: "Premium quality coffee beans from Karnataka, medium roast.",
-        categoryId: "507f191e810c19729de860ec",
-        category: {
-            _id: "507f191e810c19729de860ec",
-            name: "Food & Beverages",
-            slug: "food-beverages"
-        },
-        price: 349,
-        currency: "INR",
-        stock: 28,
-        condition: "new",
-        tags: ["coffee", "premium", "organic"],
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=300&h=300&fit=crop",
-                publicId: "Market-Connect/Products/coffee-1",
-                isPrimary: true
-            }
-        ],
-        specs: {
-            "Origin": "Karnataka",
-            "Weight": "500g",
-            "Roast": "Medium"
-        },
-        ratingAvg: 4.7,
-        ratingCount: 67,
-        isDeleted: false,
-        createdAt: "2024-01-04T10:00:00Z",
-        updatedAt: "2024-01-18T10:00:00Z"
-    },
-    {
-        _id: "507f1f77bcf86cd799439015",
-        sellerId: "507f191e810c19729de860ea",
-        title: "Wired Headphone",
-        slug: "wired-headphone",
-        description: "High-quality wired headphones with excellent sound quality.",
-        categoryId: "507f191e810c19729de860ea",
-        category: {
-            _id: "507f191e810c19729de860ea",
-            name: "Electronics",
-            slug: "electronics"
-        },
-        price: 899,
-        currency: "INR",
-        stock: 0,
-        condition: "new",
-        tags: ["wired", "audio", "headphones"],
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop",
-                publicId: "Market-Connect/Products/headphone-wired-1",
-                isPrimary: true
-            }
-        ],
-        specs: {
-            "Brand": "SoundMax",
-            "Type": "Wired",
-            "Length": "1.2m"
-        },
-        ratingAvg: 4.3,
-        ratingCount: 34,
-        isDeleted: false,
-        createdAt: "2024-01-05T10:00:00Z",
-        updatedAt: "2024-01-19T10:00:00Z"
-    },
-    {
-        _id: "507f1f77bcf86cd799439016",
-        sellerId: "507f191e810c19729de860ed",
-        title: "Leather Wallet",
-        slug: "leather-wallet",
-        description: "Genuine leather wallet with multiple card slots and cash compartment.",
-        categoryId: "507f191e810c19729de860ed",
-        category: {
-            _id: "507f191e810c19729de860ed",
-            name: "Accessories",
-            slug: "accessories"
-        },
-        price: 1199,
-        currency: "INR",
-        stock: 15,
-        condition: "new",
-        tags: ["leather", "wallet", "accessories"],
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop",
-                publicId: "Market-Connect/Products/wallet-1",
-                isPrimary: true
-            }
-        ],
-        specs: {
-            "Material": "Genuine Leather",
-            "Color": "Brown",
-            "Slots": "6 card slots"
-        },
-        ratingAvg: 4.6,
-        ratingCount: 23,
-        isDeleted: false,
-        createdAt: "2024-01-06T10:00:00Z",
-        updatedAt: "2024-01-20T10:00:00Z"
-    }
-];
+// Added backend data, loading & error states
+const [products, setProducts] = useState([]); // backend products
+const [categories, setCategories] = useState([]); // will fetch later
+const [cart, setCart] = useState([]); // backend cart
+const [searchTerm, setSearchTerm] = useState('');
+const [selectedCategory, setSelectedCategory] = useState('All');
+const [sortBy, setSortBy] = useState('popularity');
+const [priceRange, setPriceRange] = useState([0, 3000]);
+const [currentView, setCurrentView] = useState('dashboard');
+const [selectedProduct, setSelectedProduct] = useState(null);
+const [isCartOpen, setIsCartOpen] = useState(false);
+const [showMobileMenu, setShowMobileMenu] = useState(false);
+const [loading, setLoading] = useState(true); // NEW
+const [error, setError] = useState(null); // NEW
 
-// Categories matching backend Category model: name, slug, parentId
-const categories = [
-    { _id: "all", name: "All", slug: "all" },
-    { _id: "507f191e810c19729de860ea", name: "Electronics", slug: "electronics" },
-    { _id: "507f191e810c19729de860eb", name: "Clothing", slug: "clothing" },
-    { _id: "507f191e810c19729de860ec", name: "Food & Beverages", slug: "food-beverages" },
-    { _id: "507f191e810c19729de860ed", name: "Accessories", slug: "accessories" }
-];
+// ✅ NEW useEffect — replaces static sample data
+// Fetches real products and cart from backend
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const productRes = await getAllProducts(); // GET /api/products
+      setProducts(productRes.data || []); // update UI with backend data
+
+      const cartRes = await getCart(); // GET /api/cart
+      setCart(cartRes.data?.items || []);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError("Failed to load products or cart");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
 
 const BuyerDashboard = () => {
     const navigate = useNavigate();
@@ -287,7 +103,7 @@ const BuyerDashboard = () => {
 
     // Filter products based on search and category
     // Backend returns products with populated category (category.name)
-    const filteredProducts = sampleProducts.filter(product => {
+    const filteredProducts = products.filter(product => {
         const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesCategory = selectedCategory === 'All' || 
