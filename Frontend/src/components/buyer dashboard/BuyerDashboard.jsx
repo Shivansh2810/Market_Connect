@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './dashboard.css';
 import Profile from '../profile/Profile';
 import ProductDetail from './ProductDetail';
+import { useAuth } from '../../contexts/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faSearch, 
@@ -243,6 +245,8 @@ const categories = [
 ];
 
 const BuyerDashboard = () => {
+    const navigate = useNavigate();
+    const { logout } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [cart, setCart] = useState([]);
@@ -252,6 +256,11 @@ const BuyerDashboard = () => {
     const [currentView, setCurrentView] = useState('dashboard');
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [isCartOpen, setIsCartOpen] = useState(false);
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
 
     // Helper function to get primary image URL
     const getPrimaryImage = (product) => {
@@ -500,7 +509,7 @@ const BuyerDashboard = () => {
                         <button className="action-btn" onClick={() => setCurrentView('profile')}>
                             <FontAwesomeIcon icon={faUser} />
                         </button>
-                        <button className="action-btn logout-btn" onClick={() => setCurrentView('profile')}>
+                        <button className="action-btn logout-btn" onClick={handleLogout} title="Logout">
                             <FontAwesomeIcon icon={faSignOutAlt} />
                         </button>
                     </div>
