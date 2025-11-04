@@ -18,161 +18,229 @@ import {
     faSignOutAlt
 } from '@fortawesome/free-solid-svg-icons';
 
-// Sample product data - Matching backend Product model structure
+// Sample product data - Matching backend Product model structure exactly
+// Backend Product model: sellerId, title, slug, description, categoryId, tags, images, price, currency, stock, condition, specs, ratingAvg, ratingCount, isDeleted
 const sampleProducts = [
     {
         _id: "507f1f77bcf86cd799439011",
+        sellerId: "507f191e810c19729de860ea",
         title: "Wireless Bluetooth Headphones",
+        slug: "wireless-bluetooth-headphones",
+        description: "High-quality wireless Bluetooth headphones with noise cancellation and 20-hour battery life.",
+        categoryId: "507f191e810c19729de860ea", // ObjectId reference to Category
+        category: { // Populated category data (as returned by backend with populate)
+            _id: "507f191e810c19729de860ea",
+            name: "Electronics",
+            slug: "electronics"
+        },
         price: 1299,
         currency: "INR",
-        ratingAvg: 4.5,
-        ratingCount: 128,
+        stock: 45,
+        condition: "new", // enum: ["new", "used", "refurbished"]
+        tags: ["wireless", "bluetooth", "audio"],
         images: [
             {
                 url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
-                publicId: "headphones-1",
+                publicId: "Market-Connect/Products/headphones-1",
                 isPrimary: true
             }
         ],
-        categoryId: "507f191e810c19729de860ea",
-        categoryName: "Electronics", // For display purposes
-        stock: 45,
-        condition: "new",
-        tags: ["wireless", "bluetooth", "audio"],
-        specs: {
+        specs: { // Backend uses Map type, but JSON serializes to object
             "Brand": "AudioTech",
             "Connectivity": "Bluetooth 5.0",
             "Battery": "20 hours"
-        }
+        },
+        ratingAvg: 4.5,
+        ratingCount: 128,
+        isDeleted: false,
+        createdAt: "2024-01-01T10:00:00Z",
+        updatedAt: "2024-01-15T10:00:00Z"
     },
     {
         _id: "507f1f77bcf86cd799439012",
+        sellerId: "507f191e810c19729de860ea",
         title: "Smart Fitness Watch",
+        slug: "smart-fitness-watch",
+        description: "Advanced fitness tracking smartwatch with heart rate monitor and GPS.",
+        categoryId: "507f191e810c19729de860ea",
+        category: {
+            _id: "507f191e810c19729de860ea",
+            name: "Electronics",
+            slug: "electronics"
+        },
         price: 2499,
         currency: "INR",
-        ratingAvg: 4.8,
-        ratingCount: 89,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
-                publicId: "watch-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ea",
-        categoryName: "Electronics",
         stock: 12,
         condition: "new",
         tags: ["fitness", "smartwatch", "wearable"],
+        images: [
+            {
+                url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
+                publicId: "Market-Connect/Products/watch-1",
+                isPrimary: true
+            }
+        ],
         specs: {
             "Brand": "FitTech",
             "Display": "1.4 inch",
             "Battery": "7 days"
-        }
+        },
+        ratingAvg: 4.8,
+        ratingCount: 89,
+        isDeleted: false,
+        createdAt: "2024-01-02T10:00:00Z",
+        updatedAt: "2024-01-16T10:00:00Z"
     },
     {
         _id: "507f1f77bcf86cd799439013",
+        sellerId: "507f191e810c19729de860eb",
         title: "Organic Cotton T-Shirt",
+        slug: "organic-cotton-t-shirt",
+        description: "100% organic cotton t-shirt, comfortable and eco-friendly.",
+        categoryId: "507f191e810c19729de860eb",
+        category: {
+            _id: "507f191e810c19729de860eb",
+            name: "Clothing",
+            slug: "clothing"
+        },
         price: 399,
         currency: "INR",
-        ratingAvg: 4.2,
-        ratingCount: 45,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
-                publicId: "tshirt-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860eb",
-        categoryName: "Clothing",
         stock: 3,
         condition: "new",
         tags: ["organic", "cotton", "casual"],
+        images: [
+            {
+                url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
+                publicId: "Market-Connect/Products/tshirt-1",
+                isPrimary: true
+            }
+        ],
         specs: {
             "Material": "100% Organic Cotton",
             "Size": "M, L, XL",
             "Color": "White"
-        }
+        },
+        ratingAvg: 4.2,
+        ratingCount: 45,
+        isDeleted: false,
+        createdAt: "2024-01-03T10:00:00Z",
+        updatedAt: "2024-01-17T10:00:00Z"
     },
     {
         _id: "507f1f77bcf86cd799439014",
+        sellerId: "507f191e810c19729de860ec",
         title: "Premium Coffee Beans",
+        slug: "premium-coffee-beans",
+        description: "Premium quality coffee beans from Karnataka, medium roast.",
+        categoryId: "507f191e810c19729de860ec",
+        category: {
+            _id: "507f191e810c19729de860ec",
+            name: "Food & Beverages",
+            slug: "food-beverages"
+        },
         price: 349,
         currency: "INR",
-        ratingAvg: 4.7,
-        ratingCount: 67,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=300&h=300&fit=crop",
-                publicId: "coffee-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ec",
-        categoryName: "Food & Beverages",
         stock: 28,
         condition: "new",
         tags: ["coffee", "premium", "organic"],
+        images: [
+            {
+                url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=300&h=300&fit=crop",
+                publicId: "Market-Connect/Products/coffee-1",
+                isPrimary: true
+            }
+        ],
         specs: {
             "Origin": "Karnataka",
             "Weight": "500g",
             "Roast": "Medium"
-        }
+        },
+        ratingAvg: 4.7,
+        ratingCount: 67,
+        isDeleted: false,
+        createdAt: "2024-01-04T10:00:00Z",
+        updatedAt: "2024-01-18T10:00:00Z"
     },
     {
         _id: "507f1f77bcf86cd799439015",
+        sellerId: "507f191e810c19729de860ea",
         title: "Wired Headphone",
+        slug: "wired-headphone",
+        description: "High-quality wired headphones with excellent sound quality.",
+        categoryId: "507f191e810c19729de860ea",
+        category: {
+            _id: "507f191e810c19729de860ea",
+            name: "Electronics",
+            slug: "electronics"
+        },
         price: 899,
         currency: "INR",
-        ratingAvg: 4.3,
-        ratingCount: 34,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop",
-                publicId: "headphone-wired-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ea",
-        categoryName: "Electronics",
         stock: 0,
         condition: "new",
         tags: ["wired", "audio", "headphones"],
+        images: [
+            {
+                url: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop",
+                publicId: "Market-Connect/Products/headphone-wired-1",
+                isPrimary: true
+            }
+        ],
         specs: {
             "Brand": "SoundMax",
             "Type": "Wired",
             "Length": "1.2m"
-        }
+        },
+        ratingAvg: 4.3,
+        ratingCount: 34,
+        isDeleted: false,
+        createdAt: "2024-01-05T10:00:00Z",
+        updatedAt: "2024-01-19T10:00:00Z"
     },
     {
         _id: "507f1f77bcf86cd799439016",
+        sellerId: "507f191e810c19729de860ed",
         title: "Leather Wallet",
+        slug: "leather-wallet",
+        description: "Genuine leather wallet with multiple card slots and cash compartment.",
+        categoryId: "507f191e810c19729de860ed",
+        category: {
+            _id: "507f191e810c19729de860ed",
+            name: "Accessories",
+            slug: "accessories"
+        },
         price: 1199,
         currency: "INR",
-        ratingAvg: 4.6,
-        ratingCount: 23,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop",
-                publicId: "wallet-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ed",
-        categoryName: "Accessories",
         stock: 15,
         condition: "new",
         tags: ["leather", "wallet", "accessories"],
+        images: [
+            {
+                url: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop",
+                publicId: "Market-Connect/Products/wallet-1",
+                isPrimary: true
+            }
+        ],
         specs: {
             "Material": "Genuine Leather",
             "Color": "Brown",
             "Slots": "6 card slots"
-        }
+        },
+        ratingAvg: 4.6,
+        ratingCount: 23,
+        isDeleted: false,
+        createdAt: "2024-01-06T10:00:00Z",
+        updatedAt: "2024-01-20T10:00:00Z"
     }
 ];
 
-const categories = ["All", "Electronics", "Clothing", "Food & Beverages", "Accessories", "Books", "Home & Garden"];
+// Categories matching backend Category model: name, slug, parentId
+const categories = [
+    { _id: "all", name: "All", slug: "all" },
+    { _id: "507f191e810c19729de860ea", name: "Electronics", slug: "electronics" },
+    { _id: "507f191e810c19729de860eb", name: "Clothing", slug: "clothing" },
+    { _id: "507f191e810c19729de860ec", name: "Food & Beverages", slug: "food-beverages" },
+    { _id: "507f191e810c19729de860ed", name: "Accessories", slug: "accessories" }
+];
 
 const BuyerDashboard = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -194,12 +262,31 @@ const BuyerDashboard = () => {
         return '';
     };
 
+    // Helper function to convert specs Map to object for display
+    // Backend Product model uses Map type for specs, frontend converts to object
+    const getSpecsObject = (specs) => {
+        if (!specs) return {};
+        if (specs instanceof Map) {
+            const obj = {};
+            specs.forEach((value, key) => {
+                obj[key] = value;
+            });
+            return obj;
+        }
+        return specs; // Already an object
+    };
+
     // Filter products based on search and category
+    // Backend returns products with populated category (category.name)
     const filteredProducts = sampleProducts.filter(product => {
-        const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategory === 'All' || product.categoryName === selectedCategory;
+        const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesCategory = selectedCategory === 'All' || 
+                               (product.category && product.category.name === selectedCategory) ||
+                               (product.categoryId === selectedCategory);
         const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-        return matchesSearch && matchesCategory && matchesPrice;
+        const notDeleted = !product.isDeleted; // Backend filters out deleted products
+        return matchesSearch && matchesCategory && matchesPrice && notDeleted;
     });
 
     // Sort products
@@ -217,19 +304,29 @@ const BuyerDashboard = () => {
         }
     });
 
-    // Add to cart function - matches backend cart structure {productId, quantity}
+    // Add to cart function - matches backend cartSchema structure
+    // Backend cartSchema: { productId (ObjectId ref Product), quantity, price, addedAt, _id }
+    // Backend cartController.addToCart expects: { productId, quantity }
     const addToCart = (product) => {
         const existingItem = cart.find(item => item.productId === product._id);
         if (existingItem) {
             setCart(cart.map(item => 
                 item.productId === product._id 
-                    ? { ...item, quantity: item.quantity + 1 }
+                    ? { 
+                        ...item, 
+                        quantity: item.quantity + 1,
+                        price: product.price // Update price in case it changed
+                    }
                     : item
             ));
         } else {
-            setCart([...cart, { 
-                productId: product._id, 
+            // Create cart item matching backend cartSchema
+            const newCartItem = {
+                _id: `cart_${Date.now()}`, // Temporary ID for frontend
+                productId: product._id, // ObjectId reference
                 quantity: 1,
+                price: product.price, // Required field in backend
+                addedAt: new Date().toISOString(),
                 // Keep product details for display (not sent to backend)
                 productDetails: {
                     title: product.title,
@@ -237,25 +334,31 @@ const BuyerDashboard = () => {
                     currency: product.currency,
                     image: getPrimaryImage(product)
                 }
-            }]);
+            };
+            setCart([...cart, newCartItem]);
         }
         // Open cart drawer
         setIsCartOpen(true);
     };
 
     // Buy now function - adds to cart and shows checkout
+    // Matches backend cartSchema structure
     const buyNow = (product) => {
         // Clear cart and add only this product
-        setCart([{ 
-            productId: product._id, 
+        const newCartItem = {
+            _id: `cart_${Date.now()}`,
+            productId: product._id,
             quantity: 1,
+            price: product.price,
+            addedAt: new Date().toISOString(),
             productDetails: {
                 title: product.title,
                 price: product.price,
                 currency: product.currency,
                 image: getPrimaryImage(product)
             }
-        }]);
+        };
+        setCart([newCartItem]);
         // Open cart drawer
         setIsCartOpen(true);
     };
@@ -265,7 +368,8 @@ const BuyerDashboard = () => {
         setCart(cart.filter(item => item.productId !== productId));
     };
 
-    // Update quantity function
+    // Update quantity function - matches backend cartController.updateCartItem
+    // Backend expects: { quantity } in body, itemId in params
     const updateQuantity = (productId, newQuantity) => {
         if (newQuantity <= 0) {
             removeFromCart(productId);
@@ -278,9 +382,11 @@ const BuyerDashboard = () => {
         }
     };
 
-    // Calculate cart total
+    // Calculate cart total - matches backend cartController.getCart response structure
+    // Backend returns: { items: [...], summary: { subtotal, totalItems, totalItemsCount } }
     const cartTotal = cart.reduce((total, item) => {
-        const price = item.productDetails?.price || 0;
+        // Backend cart item has price field directly
+        const price = item.price || item.productDetails?.price || 0;
         return total + (price * item.quantity);
     }, 0);
 
@@ -303,36 +409,48 @@ const BuyerDashboard = () => {
                     if (existingItem) {
                         setCart(cart.map(item => 
                             item.productId === product._id 
-                                ? { ...item, quantity: item.quantity + quantity }
+                                ? { 
+                                    ...item, 
+                                    quantity: item.quantity + quantity,
+                                    price: product.price
+                                }
                                 : item
                         ));
                     } else {
-                        setCart([...cart, { 
-                            productId: product._id, 
+                        const newCartItem = {
+                            _id: `cart_${Date.now()}`,
+                            productId: product._id,
                             quantity,
+                            price: product.price,
+                            addedAt: new Date().toISOString(),
                             productDetails: {
                                 title: product.title,
                                 price: product.price,
                                 currency: product.currency,
                                 image: getPrimaryImage(product)
                             }
-                        }]);
+                        };
+                        setCart([...cart, newCartItem]);
                     }
                     setIsCartOpen(true);
                     setCurrentView('dashboard');
                     setSelectedProduct(null);
                 }}
                 onBuyNow={(product, quantity) => {
-                    setCart([{ 
-                        productId: product._id, 
+                    const newCartItem = {
+                        _id: `cart_${Date.now()}`,
+                        productId: product._id,
                         quantity,
+                        price: product.price,
+                        addedAt: new Date().toISOString(),
                         productDetails: {
                             title: product.title,
                             price: product.price,
                             currency: product.currency,
                             image: getPrimaryImage(product)
                         }
-                    }]);
+                    };
+                    setCart([newCartItem]);
                     setIsCartOpen(true);
                     setCurrentView('dashboard');
                     setSelectedProduct(null);
@@ -413,7 +531,7 @@ const BuyerDashboard = () => {
                                 onChange={(e) => setSelectedCategory(e.target.value)}
                             >
                                 {categories.map(category => (
-                                    <option key={category} value={category}>{category}</option>
+                                    <option key={category._id} value={category.name}>{category.name}</option>
                                 ))}
                             </select>
                         </div>
@@ -474,6 +592,12 @@ const BuyerDashboard = () => {
                                     
                                     <div className="product-info">
                                         <h4 className="product-name">{product.title}</h4>
+                                        {/* Category display - matches backend populated category */}
+                                        {product.category && (
+                                            <span className="product-category-badge" style={{fontSize: '12px', color: '#666', marginBottom: '5px', display: 'block'}}>
+                                                {product.category.name}
+                                            </span>
+                                        )}
                                         <div className="product-rating">
                                             <div className="stars">
                                                 {[...Array(5)].map((_, i) => (
