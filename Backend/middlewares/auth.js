@@ -6,7 +6,7 @@ const Product = require("../models/product");
 exports.protect = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer")) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ message: "Access denied. No token provided." });
     } 
 
@@ -28,9 +28,7 @@ exports.protect = async (req, res, next) => {
 };
 
 exports.isAdmin = (req, res, next) => {
-  const adminEmails = ['admin@marketplace.com'];
-  
-  if (adminEmails.includes(req.user.email)) {
+  if (req.user.role === 'admin') {
     next();
   } else {
     res.status(403).json({
