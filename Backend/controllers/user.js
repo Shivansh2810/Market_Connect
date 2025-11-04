@@ -1,8 +1,14 @@
 const User = require("../models/user");
 const Order = require("../models/order");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 const { updateProfileSchema } = require("../validations/user");
 const addressJoiSchema = require("../validations/sharedSchema");
+
+// Admin emails list
+const ADMIN_EMAILS = ['admin@marketplace.com'];
 
 exports.signup = async (req, res) => {
   try {
@@ -64,10 +70,10 @@ exports.login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || !role) {
       return res
         .status(400)
-        .json({ message: "Email and password are required" });
+        .json({ message: "Email, password and role are required" });
     }
 
     const user = await User.findOne({
@@ -78,23 +84,17 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    if (role) {
-      if (user.role === "both") {
-        if (!["buyer", "seller"].includes(role)) {
-          return res
-            .status(403)
-            .json({ message: `Access denied for role: ${role}` });
-        }
-      } else if (user.role !== role) {
-        return res
-          .status(403)
-          .json({ message: `Access denied for role: ${role}` });
-      }
+    // ✅ FIXED LOGIC: Allow login if user has "both" role OR matches selected role
+    if (user.role !== "both" && user.role !== role) {
+      return res
+        .status(403)
+        .json({ message: `Access denied for role: ${role}. Your role is: ${user.role}` });
     }
 
-    if (!user.password) {
+    // Check if it's a Google user
+    if (user.googleId && !user.password) {
       return res.status(401).json({
-        message: "This account is linked with Google. Please use Google login.",
+        message: "This account uses Google login. Please use Google login.",
       });
     }
 
@@ -114,7 +114,7 @@ exports.login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: role || user.role,
+        role: user.role, // Return actual role, not selected role
       },
     });
   } catch (error) {
@@ -139,7 +139,6 @@ exports.adminLogin = async (req, res) => {
     if (!user || user.role !== 'admin') {
       return res.status(401).json({ message: "Invalid admin credentials." });
     }
-
 
     if (!user.password) {
       return res.status(401).json({ message: "Admin account cannot use Google login." });
@@ -166,6 +165,223 @@ exports.adminLogin = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ ADDED: Forgot Password
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ 
+        message: "Email is required" 
+      });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      // For security, don't reveal if email exists or not
+      return res.json({ 
+        message: "If an account with that email exists, a password reset link has been sent" 
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    const resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpire = resetPasswordExpire;
+    await user.save();
+
+    // Create reset URL
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+
+    // Send email using Resend
+    const { data, error } = await resend.emails.send({
+      from: 'Market Connect <onboarding@resend.dev>',
+      to: [user.email],
+      subject: 'Password Reset Request - Market Connect',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { 
+                    font-family: 'Arial', sans-serif; 
+                    line-height: 1.6; 
+                    color: #333; 
+                    margin: 0; 
+                    padding: 0; 
+                    background-color: #f4f4f4;
+                }
+                .container { 
+                    max-width: 600px; 
+                    margin: 0 auto; 
+                    background: white;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                }
+                .header { 
+                    background: linear-gradient(to right, #3b82f6, #8b5cf6);
+                    padding: 30px; 
+                    text-align: center; 
+                    color: white;
+                }
+                .logo {
+                    font-size: 24px;
+                    font-weight: bold;
+                    font-family: monospace;
+                    margin-bottom: 10px;
+                }
+                .content { 
+                    padding: 30px; 
+                }
+                .button { 
+                    display: inline-block; 
+                    padding: 12px 30px; 
+                    background: #3b82f6; 
+                    color: white; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    margin: 20px 0;
+                    font-weight: bold;
+                }
+                .token-box { 
+                    background: #f8f9fa; 
+                    padding: 15px; 
+                    border-radius: 5px; 
+                    font-family: monospace; 
+                    word-break: break-all;
+                    margin: 15px 0;
+                    border: 1px solid #e9ecef;
+                    font-size: 14px;
+                }
+                .footer { 
+                    margin-top: 30px; 
+                    padding-top: 20px; 
+                    border-top: 1px solid #eee; 
+                    font-size: 12px; 
+                    color: #666;
+                    text-align: center;
+                }
+                .instructions {
+                    background: #f0f9ff;
+                    padding: 15px;
+                    border-radius: 5px;
+                    border-left: 4px solid #3b82f6;
+                    margin: 20px 0;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <div class="logo">MARKET CONNECT</div>
+                    <h1>Password Reset Request</h1>
+                </div>
+                <div class="content">
+                    <p>Hello <strong>${user.name}</strong>,</p>
+                    
+                    <p>We received a request to reset your password for your Market Connect account. If you didn't make this request, please ignore this email.</p>
+                    
+                    <div class="instructions">
+                        <p><strong>To reset your password:</strong></p>
+                        <ol>
+                            <li>Click the button below to reset your password</li>
+                            <li>Or copy and paste the reset token on the reset page</li>
+                            <li>Create your new password</li>
+                        </ol>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <a href="${resetUrl}" class="button">Reset Your Password</a>
+                    </div>
+                    
+                    <p><strong>Reset Token:</strong></p>
+                    <div class="token-box">${resetToken}</div>
+                    
+                    <p><strong>Important:</strong> This reset link will expire in 10 minutes for security reasons.</p>
+                    
+                    <p>If you're having trouble clicking the button, copy and paste the following URL into your browser:</p>
+                    <p style="color: #3b82f6; word-break: break-all;">${resetUrl}</p>
+                </div>
+                <div class="footer">
+                    <p>If you didn't request this reset, please contact our support team immediately.</p>
+                    <p>&copy; 2024 Market Connect. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error('Resend error:', error);
+      return res.json({ 
+        message: "If an account with that email exists, a password reset link has been sent" 
+      });
+    }
+
+    console.log('Password reset email sent to:', user.email);
+    
+    res.json({ 
+      message: "If an account with that email exists, a password reset link has been sent"
+    });
+
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.json({ 
+      message: "If an account with that email exists, a password reset link has been sent" 
+    });
+  }
+};
+
+// ✅ ADDED: Reset Password
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+
+    if (!token || !password || !confirmPassword) {
+      return res.status(400).json({ 
+        message: "All fields are required" 
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ 
+        message: "Passwords do not match" 
+      });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ 
+        message: "Invalid or expired reset token" 
+      });
+    }
+
+    // Update password
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    res.json({
+      message: "Password reset successfully"
+    });
+
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ 
+      message: "Internal server error" 
+    });
   }
 };
 
@@ -204,8 +420,6 @@ exports.upgradeToSeller = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-
-
 
 exports.googleAuth = (req, res) => {
   res.status(200).json({

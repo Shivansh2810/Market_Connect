@@ -10,11 +10,17 @@ const {
   signupSchema,
   loginSchema,
   upgradeToSellerSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema
 } = require("../validations/user");
 
-router.post("/api/signup", validate(signupSchema), userController.signup);
+router.post("/signup", validate(signupSchema), userController.signup);
 
-router.post("/api/login",validate(loginSchema), userController.login);
+router.post("/login", validate(loginSchema), userController.login);
+
+
+router.post("/forgot-password", validate(forgotPasswordSchema), userController.forgotPassword);
+router.post("/reset-password", validate(resetPasswordSchema), userController.resetPassword);
 
 //admin login
 router.post(
@@ -42,7 +48,7 @@ router.get(
 );
 
 // Protected user profile routes
-router.get("/api/me", protect, userController.getMe);
+router.get("/me", protect, userController.getMe);
 router.put(
   "/api/me/profile",
   protect,
