@@ -8,10 +8,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useEffect } from 'react'; // for fetching from backend
 import { getAllProducts } from '../../api/products'; // backend API
 import { getCart, addToCart, updateCartItem, removeCartItem } from '../../api/cart'; // backend API
-import { 
-    faSearch, 
-    faShoppingCart, 
-    faUser, 
+import {
+    faSearch,
+    faShoppingCart,
+    faUser,
     faFilter,
     faStar,
     faChevronDown,
@@ -41,23 +41,23 @@ const [error, setError] = useState(null); // NEW
 // ✅ NEW useEffect — replaces static sample data
 // Fetches real products and cart from backend
 useEffect(() => {
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const productRes = await getAllProducts(); // GET /api/products
-      setProducts(productRes.data || []); // update UI with backend data
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const productRes = await getAllProducts(); // GET /api/products
+            setProducts(productRes.data || []); // update UI with backend data
 
-      const cartRes = await getCart(); // GET /api/cart
-      setCart(cartRes.data?.items || []);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError("Failed to load products or cart");
-    } finally {
-      setLoading(false);
-    }
-  };
+            const cartRes = await getCart(); // GET /api/cart
+            setCart(cartRes.data?.items || []);
+        } catch (err) {
+            console.error("Error fetching data:", err);
+            setError("Failed to load products or cart");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  fetchData();
+    fetchData();
 }, []);
 
 const BuyerDashboard = () => {
@@ -105,10 +105,10 @@ const BuyerDashboard = () => {
     // Backend returns products with populated category (category.name)
     const filteredProducts = products.filter(product => {
         const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesCategory = selectedCategory === 'All' || 
-                               (product.category && product.category.name === selectedCategory) ||
-                               (product.categoryId === selectedCategory);
+            (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesCategory = selectedCategory === 'All' ||
+            (product.category && product.category.name === selectedCategory) ||
+            (product.categoryId === selectedCategory);
         const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
         const notDeleted = !product.isDeleted; // Backend filters out deleted products
         return matchesSearch && matchesCategory && matchesPrice && notDeleted;
@@ -129,41 +129,36 @@ const BuyerDashboard = () => {
         }
     });
 
-    // Add to cart function - matches backend cartSchema structure
-    // Backend cartSchema: { productId (ObjectId ref Product), quantity, price, addedAt, _id }
-    // Backend cartController.addToCart expects: { productId, quantity }
-    const addToCart = (product) => {
-        const existingItem = cart.find(item => item.productId === product._id);
-        if (existingItem) {
-            setCart(cart.map(item => 
-                item.productId === product._id 
-                    ? { 
-                        ...item, 
-                        quantity: item.quantity + 1,
-                        price: product.price // Update price in case it changed
-                    }
-                    : item
-            ));
-        } else {
-            // Create cart item matching backend cartSchema
-            const newCartItem = {
-                _id: `cart_${Date.now()}`, // Temporary ID for frontend
-                productId: product._id, // ObjectId reference
-                quantity: 1,
-                price: product.price, // Required field in backend
-                addedAt: new Date().toISOString(),
-                // Keep product details for display (not sent to backend)
-                productDetails: {
-                    title: product.title,
-                    price: product.price,
-                    currency: product.currency,
-                    image: getPrimaryImage(product)
-                }
-            };
-            setCart([...cart, newCartItem]);
+    // Add to Cart — backend integration
+    const handleAddToCart = async (product) => {
+        try {
+            const res = await addToCart(product._id, 1);
+            setCart(res.data); // backend returns full cart
+            setIsCartOpen(true);
+        } catch (err) {
+            console.error("Add to cart error:", err);
+            alert(err.response?.data?.message || "Failed to add item to cart");
         }
-        // Open cart drawer
-        setIsCartOpen(true);
+    };
+
+    // Update quantity — backend integration
+    const handleUpdateQuantity = async (itemId, quantity) => {
+        try {
+            const res = await updateCartItem(itemId, quantity);
+            setCart(res.data);
+        } catch (err) {
+            console.error("Update cart error:", err);
+        }
+    };
+
+    // Remove from cart — backend integration
+    const handleRemoveFromCart = async (itemId) => {
+        try {
+            const res = await removeCartItem(itemId);
+            setCart(res.data);
+        } catch (err) {
+            console.error("Remove cart item error:", err);
+        }
     };
 
     // Buy now function - adds to cart and shows checkout
@@ -188,24 +183,7 @@ const BuyerDashboard = () => {
         setIsCartOpen(true);
     };
 
-    // Remove item from cart function
-    const removeFromCart = (productId) => {
-        setCart(cart.filter(item => item.productId !== productId));
-    };
 
-    // Update quantity function - matches backend cartController.updateCartItem
-    // Backend expects: { quantity } in body, itemId in params
-    const updateQuantity = (productId, newQuantity) => {
-        if (newQuantity <= 0) {
-            removeFromCart(productId);
-        } else {
-            setCart(cart.map(item => 
-                item.productId === productId 
-                    ? { ...item, quantity: newQuantity }
-                    : item
-            ));
-        }
-    };
 
     // Calculate cart total - matches backend cartController.getCart response structure
     // Backend returns: { items: [...], summary: { subtotal, totalItems, totalItemsCount } }
@@ -223,7 +201,7 @@ const BuyerDashboard = () => {
     // Render product detail page if currentView is 'productDetail'
     if (currentView === 'productDetail' && selectedProduct) {
         return (
-            <ProductDetail 
+            <ProductDetail
                 product={selectedProduct}
                 onBack={() => {
                     setCurrentView('dashboard');
@@ -232,10 +210,10 @@ const BuyerDashboard = () => {
                 onAddToCart={(product, quantity) => {
                     const existingItem = cart.find(item => item.productId === product._id);
                     if (existingItem) {
-                        setCart(cart.map(item => 
-                            item.productId === product._id 
-                                ? { 
-                                    ...item, 
+                        setCart(cart.map(item =>
+                            item.productId === product._id
+                                ? {
+                                    ...item,
                                     quantity: item.quantity + quantity,
                                     price: product.price
                                 }
@@ -283,6 +261,9 @@ const BuyerDashboard = () => {
             />
         );
     }
+    // add loading and error placeholders before return
+    if (loading) return <div className="loading-screen">Loading products...</div>;
+    if (error) return <div className="error-screen">{error}</div>;
 
     return (
         <div className="dashboard">
@@ -291,14 +272,14 @@ const BuyerDashboard = () => {
                 <div className="header-content">
                     <div className="logo-section">
                         <h1>Market Connect</h1>
-                        <button 
+                        <button
                             className="mobile-menu-btn"
                             onClick={() => setShowMobileMenu(!showMobileMenu)}
                         >
                             <FontAwesomeIcon icon={showMobileMenu ? faTimes : faBars} />
                         </button>
                     </div>
-                    
+
                     <div className="search-section">
                         <div className="search-bar">
                             <FontAwesomeIcon icon={faSearch} className="search-icon" />
@@ -312,8 +293,8 @@ const BuyerDashboard = () => {
                     </div>
 
                     <div className="header-actions">
-                        <button 
-                            className="action-btn cart-toggle-btn" 
+                        <button
+                            className="action-btn cart-toggle-btn"
                             onClick={() => setIsCartOpen(!isCartOpen)}
                             title="Cart"
                         >
@@ -348,11 +329,11 @@ const BuyerDashboard = () => {
                             <h3>Featured Products</h3>
                             <span className="product-count">{sortedProducts.length} products</span>
                         </div>
-                        
+
                         <div className="filter-group">
                             <label>Category</label>
-                            <select 
-                                value={selectedCategory} 
+                            <select
+                                value={selectedCategory}
                                 onChange={(e) => setSelectedCategory(e.target.value)}
                             >
                                 {categories.map(category => (
@@ -363,8 +344,8 @@ const BuyerDashboard = () => {
 
                         <div className="filter-group">
                             <label>Sort By</label>
-                            <select 
-                                value={sortBy} 
+                            <select
+                                value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
                             >
                                 <option value="popularity">Popularity</option>
@@ -402,70 +383,71 @@ const BuyerDashboard = () => {
                                 const isInStock = product.stock > 0;
                                 const primaryImage = getPrimaryImage(product);
                                 return (
-                                <div 
-                                    key={product._id} 
-                                    className="product-card"
-                                    style={{ cursor: 'pointer' }}
-                                    onClick={() => {
-                                        setSelectedProduct(product);
-                                        setCurrentView('productDetail');
-                                    }}
-                                >
-                                    <div className="product-image">
-                                        <img src={primaryImage} alt={product.title} />
-                                    </div>
-                                    
-                                    <div className="product-info">
-                                        <h4 className="product-name">{product.title}</h4>
-                                        {/* Category display - matches backend populated category */}
-                                        {product.category && (
-                                            <span className="product-category-badge" style={{fontSize: '12px', color: '#666', marginBottom: '5px', display: 'block'}}>
-                                                {product.category.name}
-                                            </span>
-                                        )}
-                                        <div className="product-rating">
-                                            <div className="stars">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <FontAwesomeIcon 
-                                                        key={i} 
-                                                        icon={faStar} 
-                                                        className={i < Math.floor(product.ratingAvg || 0) ? 'filled' : ''}
-                                                    />
-                                                ))}
-                                            </div>
-                                            <span className="rating-text">({product.ratingCount || 0})</span>
+                                    <div
+                                        key={product._id}
+                                        className="product-card"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => {
+                                            setSelectedProduct(product);
+                                            setCurrentView('productDetail');
+                                        }}
+                                    >
+                                        <div className="product-image">
+                                            <img src={primaryImage} alt={product.title} />
                                         </div>
-                                        
-                                        <div className="product-price">
-                                            <span className="current-price">
-                                                {product.currency === 'USD' ? '$' : '₹'}{product.price}
-                                            </span>
-                                            {product.stock <= 5 && product.stock > 0 && (
-                                                <span className="stock-warning" style={{fontSize: '12px', color: '#ff9800', marginLeft: '10px'}}>
-                                                    Only {product.stock} left!
+
+                                        <div className="product-info">
+                                            <h4 className="product-name">{product.title}</h4>
+                                            {/* Category display - matches backend populated category */}
+                                            {product.category && (
+                                                <span className="product-category-badge" style={{ fontSize: '12px', color: '#666', marginBottom: '5px', display: 'block' }}>
+                                                    {product.category.name}
                                                 </span>
                                             )}
-                                        </div>
-                                        
-                                        <div className="product-actions" onClick={(e) => e.stopPropagation()}>
-                                            <button 
-                                                className={`add-to-cart-btn ${!isInStock ? 'out-of-stock' : ''}`}
-                                                onClick={() => isInStock && addToCart(product)}
-                                                disabled={!isInStock}
-                                            >
-                                                {isInStock ? 'Add to Cart' : 'Out of Stock'}
-                                            </button>
-                                            <button 
-                                                className={`buy-now-btn ${!isInStock ? 'out-of-stock' : ''}`}
-                                                onClick={() => isInStock && buyNow(product)}
-                                                disabled={!isInStock}
-                                            >
-                                                {isInStock ? 'Buy Now' : 'Out of Stock'}
-                                            </button>
+                                            <div className="product-rating">
+                                                <div className="stars">
+                                                    {[...Array(5)].map((_, i) => (
+                                                        <FontAwesomeIcon
+                                                            key={i}
+                                                            icon={faStar}
+                                                            className={i < Math.floor(product.ratingAvg || 0) ? 'filled' : ''}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <span className="rating-text">({product.ratingCount || 0})</span>
+                                            </div>
+
+                                            <div className="product-price">
+                                                <span className="current-price">
+                                                    {product.currency === 'USD' ? '$' : '₹'}{product.price}
+                                                </span>
+                                                {product.stock <= 5 && product.stock > 0 && (
+                                                    <span className="stock-warning" style={{ fontSize: '12px', color: '#ff9800', marginLeft: '10px' }}>
+                                                        Only {product.stock} left!
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="product-actions" onClick={(e) => e.stopPropagation()}>
+                                                <button
+                                                    className={`add-to-cart-btn ${!isInStock ? 'out-of-stock' : ''}`}
+                                                    onClick={() => isInStock && handleAddToCart(product)}
+                                                    disabled={!isInStock}
+                                                >
+                                                    {isInStock ? 'Add to Cart' : 'Out of Stock'}
+                                                </button>
+                                                <button
+                                                    className={`buy-now-btn ${!isInStock ? 'out-of-stock' : ''}`}
+                                                    onClick={() => isInStock && handleAddToCart(product)}
+                                                    disabled={!isInStock}
+                                                >
+                                                    {isInStock ? 'Buy Now' : 'Out of Stock'}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )})}
+                                )
+                            })}
                         </div>
                     </section>
                 </main>
@@ -494,16 +476,16 @@ const BuyerDashboard = () => {
                                                     {item.productDetails?.currency === 'USD' ? '$' : '₹'}{item.productDetails?.price || 0}
                                                 </span>
                                                 <div className="quantity-controls-drawer">
-                                                    <button 
+                                                    <button
                                                         className="quantity-btn-drawer"
-                                                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                                                        onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)}
                                                     >
                                                         -
                                                     </button>
                                                     <span className="quantity-drawer">{item.quantity}</span>
-                                                    <button 
+                                                    <button
                                                         className="quantity-btn-drawer"
-                                                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                                                        onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)}
                                                     >
                                                         +
                                                     </button>
@@ -525,7 +507,7 @@ const BuyerDashboard = () => {
                         </>
                     ) : (
                         <div className="empty-cart">
-                            <FontAwesomeIcon icon={faShoppingCart} style={{fontSize: '48px', color: '#ccc', marginBottom: '20px'}} />
+                            <FontAwesomeIcon icon={faShoppingCart} style={{ fontSize: '48px', color: '#ccc', marginBottom: '20px' }} />
                             <p>Your cart is empty</p>
                             <button className="continue-shopping-btn" onClick={() => setIsCartOpen(false)}>
                                 Continue Shopping
