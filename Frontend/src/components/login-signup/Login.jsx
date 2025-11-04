@@ -22,6 +22,13 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  // Forgot Password State
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,6 +72,47 @@ export default function Login() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotSuccess("");
+    
+    if (!forgotEmail) {
+      setForgotError("Email is required!");
+      return;
+    }
+
+    const emailRegex = /\S+@\S+\.\S+/;
+    if (!emailRegex.test(forgotEmail)) {
+      setForgotError("Please enter a valid email address!");
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/forgot-password`, {
+        email: forgotEmail.toLowerCase().trim()
+      });
+
+      if (response.data.message) {
+        setForgotSuccess(response.data.message);
+        setForgotEmail("");
+        // Close modal after 3 seconds
+        setTimeout(() => {
+          setShowForgotPassword(false);
+          setForgotSuccess("");
+        }, 3000);
+      }
+    } catch (err) {
+      setForgotError(
+        err.response?.data?.message || 
+        "Failed to send reset email. Please try again."
+      );
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -149,10 +197,102 @@ export default function Login() {
                 Signup
               </span>
             </p>
-            <p className="forgot">Forgot your password?</p>
+            <p 
+              className="forgot link" 
+              onClick={() => setShowForgotPassword(true)}
+              style={{ cursor: 'pointer' }}
+            >
+              Forgot your password?
+            </p>
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="modal-overlay" onClick={() => {
+          setShowForgotPassword(false);
+          setForgotEmail("");
+          setForgotError("");
+          setForgotSuccess("");
+        }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Forgot Password</h2>
+              <button 
+                className="modal-close" 
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setForgotEmail("");
+                  setForgotError("");
+                  setForgotSuccess("");
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <p style={{ marginBottom: '20px', color: '#666' }}>
+                Enter your email address and we'll send you a link to reset your password.
+              </p>
+
+              {forgotError && (
+                <div style={{ 
+                  color: 'red', 
+                  marginBottom: '15px', 
+                  padding: '10px', 
+                  backgroundColor: '#ffe6e6', 
+                  borderRadius: '5px',
+                  fontSize: '14px'
+                }}>
+                  {forgotError}
+                </div>
+              )}
+
+              {forgotSuccess && (
+                <div style={{ 
+                  color: 'green', 
+                  marginBottom: '15px', 
+                  padding: '10px', 
+                  backgroundColor: '#e6ffe6', 
+                  borderRadius: '5px',
+                  fontSize: '14px'
+                }}>
+                  {forgotSuccess}
+                </div>
+              )}
+
+              <form onSubmit={handleForgotPassword}>
+                <input
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ccc',
+                    borderRadius: '6px',
+                    fontSize: '15px',
+                    marginBottom: '15px',
+                    outline: 'none'
+                  }}
+                />
+                <button 
+                  type="submit" 
+                  className="btn-login" 
+                  disabled={forgotLoading}
+                  style={{ width: '100%' }}
+                >
+                  {forgotLoading ? "SENDING..." : "SEND RESET LINK"}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
