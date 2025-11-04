@@ -20,47 +20,81 @@ const Profile = ({ onBack }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [activeTab, setActiveTab] = useState('personal');
     
-    // Profile data state - Matching backend User model structure
+    // Profile data state - Matching backend User model structure exactly
+    // Backend User model: name, email, password, googleId, role, mobNo, sellerInfo, buyerInfo, timestamps
+    // Backend addressSchema: street, city, state, pincode (6 chars), country (default "India")
     const [profileData, setProfileData] = useState({
+        _id: '507f1f77bcf86cd799439010',
         name: 'John Doe',
         email: 'john.doe@example.com',
         mobNo: '9876543210', // 10-digit Indian mobile number (no country code prefix)
+        role: 'buyer', // enum: ["buyer", "seller", "both"]
+        sellerInfo: null, // { shopName, shopAddress } - only if role is "seller" or "both"
         buyerInfo: {
             shippingAddresses: [
                 {
+                    _id: '507f1f77bcf86cd799439011', // Address subdocument has _id
                     street: '123 Main Street',
                     city: 'Mumbai',
                     state: 'Maharashtra',
-                    pincode: '400001',
-                    country: 'India'
+                    pincode: '400001', // 6 characters exactly
+                    country: 'India' // Default value
                 },
                 {
+                    _id: '507f1f77bcf86cd799439012',
                     street: '456 Park Avenue',
                     city: 'Delhi',
                     state: 'Delhi',
                     pincode: '110001',
                     country: 'India'
                 }
-            ]
-        }
+            ],
+            cart: [] // Backend cartSchema: [{ productId, quantity, price, addedAt, _id }]
+        },
+        createdAt: '2024-01-01T10:00:00Z',
+        updatedAt: '2024-01-15T10:00:00Z'
     });
 
-    // Order history data - Matching backend Order model structure
+    // Order history data - Matching backend Order model structure exactly
+    // Backend Order model: shippingInfo (addressSchema), buyer, seller, orderItems, payment, itemsPrice, taxPrice, shippingPrice, totalPrice, orderStatus, timestamps
+    // Backend orderItemSchema: name, quantity, image, price, product (ObjectId ref)
+    // Backend orderStatus enum: ["Payment Pending", "Order Placed", "Shipped", "Delivered", "Cancelled", "Returned", "Payment Failed"]
     const orderHistory = [
         {
             _id: '507f1f77bcf86cd799439021',
+            buyer: '507f1f77bcf86cd799439010', // ObjectId reference to User
+            seller: '507f191e810c19729de860ea', // ObjectId reference to User
             createdAt: '2024-01-15T10:30:00Z',
+            updatedAt: '2024-01-18T14:00:00Z',
             orderItems: [
-                { name: 'Wireless Bluetooth Headphones', quantity: 1, price: 1299, image: '' },
-                { name: 'Premium Coffee Beans', quantity: 1, price: 349, image: '' },
-                { name: 'Organic Cotton T-Shirt', quantity: 1, price: 399, image: '' }
+                { 
+                    name: 'Wireless Bluetooth Headphones', 
+                    quantity: 1, 
+                    price: 1299, 
+                    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop',
+                    product: '507f1f77bcf86cd799439011' // ObjectId reference
+                },
+                { 
+                    name: 'Premium Coffee Beans', 
+                    quantity: 1, 
+                    price: 349, 
+                    image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=300&h=300&fit=crop',
+                    product: '507f1f77bcf86cd799439014'
+                },
+                { 
+                    name: 'Organic Cotton T-Shirt', 
+                    quantity: 1, 
+                    price: 399, 
+                    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop',
+                    product: '507f1f77bcf86cd799439013'
+                }
             ],
-            totalPrice: 2499,
             itemsPrice: 2047,
-            taxPrice: 368,
-            shippingPrice: 84,
-            orderStatus: 'Delivered',
-            deliveredAt: '2024-01-18T14:00:00Z',
+            taxPrice: 368.46, // 18% GST
+            shippingPrice: 50,
+            totalPrice: 2465.46,
+            orderStatus: 'Delivered', // enum value
+            payment: null, // ObjectId reference to Payment (null if not paid)
             shippingInfo: {
                 street: '123 Main Street',
                 city: 'Mumbai',
@@ -71,16 +105,32 @@ const Profile = ({ onBack }) => {
         },
         {
             _id: '507f1f77bcf86cd799439022',
+            buyer: '507f1f77bcf86cd799439010',
+            seller: '507f191e810c19729de860ea',
             createdAt: '2024-01-10T08:15:00Z',
+            updatedAt: '2024-01-12T10:00:00Z',
             orderItems: [
-                { name: 'Smart Fitness Watch', quantity: 1, price: 2499, image: '' },
-                { name: 'Leather Wallet', quantity: 1, price: 1199, image: '' }
+                { 
+                    name: 'Smart Fitness Watch', 
+                    quantity: 1, 
+                    price: 2499, 
+                    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop',
+                    product: '507f1f77bcf86cd799439012'
+                },
+                { 
+                    name: 'Leather Wallet', 
+                    quantity: 1, 
+                    price: 1199, 
+                    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop',
+                    product: '507f1f77bcf86cd799439016'
+                }
             ],
-            totalPrice: 3698,
             itemsPrice: 3698,
-            taxPrice: 666,
-            shippingPrice: 0,
+            taxPrice: 665.64,
+            shippingPrice: 0, // Free shipping for orders above ₹1000
+            totalPrice: 4363.64,
             orderStatus: 'Shipped',
+            payment: '507f1f77bcf86cd799439030',
             shippingInfo: {
                 street: '123 Main Street',
                 city: 'Mumbai',
@@ -91,16 +141,25 @@ const Profile = ({ onBack }) => {
         },
         {
             _id: '507f1f77bcf86cd799439023',
+            buyer: '507f1f77bcf86cd799439010',
+            seller: '507f191e810c19729de860ea',
             createdAt: '2024-01-05T16:45:00Z',
+            updatedAt: '2024-01-08T12:00:00Z',
             orderItems: [
-                { name: 'Wired Headphone', quantity: 1, price: 899, image: '' }
+                { 
+                    name: 'Wired Headphone', 
+                    quantity: 1, 
+                    price: 899, 
+                    image: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop',
+                    product: '507f1f77bcf86cd799439015'
+                }
             ],
-            totalPrice: 899,
             itemsPrice: 899,
-            taxPrice: 162,
-            shippingPrice: 0,
+            taxPrice: 161.82,
+            shippingPrice: 50,
+            totalPrice: 1110.82,
             orderStatus: 'Delivered',
-            deliveredAt: '2024-01-08T12:00:00Z',
+            payment: '507f1f77bcf86cd799439031',
             shippingInfo: {
                 street: '456 Park Avenue',
                 city: 'Delhi',
@@ -169,7 +228,7 @@ const Profile = ({ onBack }) => {
                             className="form-input"
                         />
                     ) : (
-                        <span className="form-value">{profileData.email}</span>
+                                        <span className="form-value">{profileData.email}</span>
                     )}
                 </div>
 
@@ -191,6 +250,18 @@ const Profile = ({ onBack }) => {
                     ) : (
                         <span className="form-value">+91 {profileData.mobNo || 'Not provided'}</span>
                     )}
+                </div>
+
+                {/* Role display - matches backend User model role enum */}
+                <div className="form-group">
+                    <label>
+                        <FontAwesomeIcon icon={faUser} />
+                        Account Role
+                    </label>
+                    <span className="form-value">
+                        {profileData.role === 'both' ? 'Buyer & Seller' : 
+                         profileData.role === 'seller' ? 'Seller' : 'Buyer'}
+                    </span>
                 </div>
 
                 <div className="form-group">
@@ -272,7 +343,25 @@ const Profile = ({ onBack }) => {
                                                 className="form-input"
                                                 placeholder="Pincode (6 digits)"
                                                 pattern="[0-9]{6}"
+                                                minLength="6"
                                                 maxLength="6"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={address.country || 'India'}
+                                                onChange={(e) => {
+                                                    const newAddresses = [...profileData.buyerInfo.shippingAddresses];
+                                                    newAddresses[index].country = e.target.value;
+                                                    setProfileData(prev => ({
+                                                        ...prev,
+                                                        buyerInfo: {
+                                                            ...prev.buyerInfo,
+                                                            shippingAddresses: newAddresses
+                                                        }
+                                                    }));
+                                                }}
+                                                className="form-input"
+                                                placeholder="Country (default: India)"
                                             />
                                         </div>
                                     ) : (
@@ -328,13 +417,13 @@ const Profile = ({ onBack }) => {
                             <div key={order._id} className="order-item">
                                 <div className="order-header">
                                     <div className="order-info">
-                                        <span className="order-id">#{order._id.substring(order._id.length - 8)}</span>
-                                        <span className="order-date">{formatDate(order.createdAt)}</span>
-                                        {order.deliveredAt && (
-                                            <span className="delivery-date">Delivered: {formatDate(order.deliveredAt)}</span>
+                                        <span className="order-id">Order #{order._id.substring(order._id.length - 8)}</span>
+                                        <span className="order-date">Placed: {formatDate(order.createdAt)}</span>
+                                        {order.updatedAt && order.orderStatus === 'Delivered' && (
+                                            <span className="delivery-date">Delivered: {formatDate(order.updatedAt)}</span>
                                         )}
                                     </div>
-                                    <span className={`order-status ${order.orderStatus.toLowerCase()}`}>
+                                    <span className={`order-status ${order.orderStatus.toLowerCase().replace(' ', '-')}`}>
                                         {order.orderStatus}
                                     </span>
                                 </div>
@@ -343,23 +432,33 @@ const Profile = ({ onBack }) => {
                                         <strong>Items ({totalItems}):</strong>
                                         <ul>
                                             {order.orderItems.map((item, index) => (
-                                                <li key={index}>
-                                                    {item.name} x {item.quantity} - ₹{item.price * item.quantity}
+                                                <li key={index} style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px'}}>
+                                                    {item.image && (
+                                                        <img 
+                                                            src={item.image} 
+                                                            alt={item.name}
+                                                            style={{width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px'}}
+                                                        />
+                                                    )}
+                                                    <span>{item.name} x {item.quantity} - ₹{item.price * item.quantity}</span>
                                                 </li>
                                             ))}
                                         </ul>
                                         {order.shippingInfo && (
-                                            <div className="shipping-info">
-                                                <strong>Ship to:</strong> {order.shippingInfo.street}, {order.shippingInfo.city}, {order.shippingInfo.state} {order.shippingInfo.pincode}
+                                            <div className="shipping-info" style={{marginTop: '10px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px'}}>
+                                                <strong>Ship to:</strong> {order.shippingInfo.street}, {order.shippingInfo.city}, {order.shippingInfo.state} {order.shippingInfo.pincode}, {order.shippingInfo.country}
                                             </div>
                                         )}
                                     </div>
                                     <div className="order-pricing">
-                                        <div>Items: ₹{order.itemsPrice}</div>
-                                        {order.taxPrice > 0 && <div>Tax: ₹{order.taxPrice}</div>}
-                                        {order.shippingPrice > 0 && <div>Shipping: ₹{order.shippingPrice}</div>}
-                                        <div className="order-total">
-                                            <strong>Total: ₹{order.totalPrice}</strong>
+                                        <div>Items: ₹{order.itemsPrice.toFixed(2)}</div>
+                                        {order.taxPrice > 0 && <div>Tax (18% GST): ₹{order.taxPrice.toFixed(2)}</div>}
+                                        {order.shippingPrice > 0 && <div>Shipping: ₹{order.shippingPrice.toFixed(2)}</div>}
+                                        {order.shippingPrice === 0 && order.itemsPrice > 1000 && (
+                                            <div style={{color: '#28a745', fontSize: '12px'}}>Free Shipping (Order above ₹1000)</div>
+                                        )}
+                                        <div className="order-total" style={{marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #ddd'}}>
+                                            <strong>Total: ₹{order.totalPrice.toFixed(2)}</strong>
                                         </div>
                                     </div>
                                 </div>
