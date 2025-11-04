@@ -13,6 +13,7 @@ const couponRoutes = require("./routes/coupon");
 const reviewRoutes = require("./routes/review");
 const orderRoutes = require("./routes/order");
 const productRoutes = require("./routes/product");
+const categoryRoutes = require('./routes/category');
 
 mongoose
   .connect(process.env.ATLASDB_URL)
@@ -25,6 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
 app.use("/api", productRoutes);
+app.use('/api', categoryRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/coupons', couponRoutes);

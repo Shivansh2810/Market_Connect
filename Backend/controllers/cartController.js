@@ -1,6 +1,13 @@
 const User = require("../models/user");
 const Product = require("../models/product");
 const { addToCartSchema, updateCartSchema } = require("../validations/cart");
+const Joi = require("joi");
+
+const itemIdSchema = Joi.string().hex().length(24).required().messages({
+  'string.hex': 'Item ID must be a valid MongoDB ID',
+  'string.length': 'Item ID must be 24 characters long',
+  'any.required': 'Item ID is required'
+});
 
 const getCart = async (req, res) => {
   try {
@@ -17,9 +24,23 @@ const getCart = async (req, res) => {
     const cartItems = user.buyerInfo.cart || [];
 
     const cartWithTotals = cartItems.map(item => {
-      const itemTotal = item.price * item.quantity;
+      const currentPrice = item.productId.price;
+      const itemTotal = currentPrice * item.quantity;
+      
       return {
-        ...item.toObject(),
+        _id: item._id,
+        productId: item.productId._id,
+        quantity: item.quantity,
+        addedAt: item.addedAt,
+        productDetails: {
+          _id: item.productId._id,
+          title: item.productId.title,
+          images: item.productId.images,
+          price: item.productId.price,
+          stock: item.productId.stock,
+          sellerId: item.productId.sellerId
+        },
+        currentPrice: currentPrice,
         itemTotal: itemTotal
       };
     });
@@ -71,28 +92,75 @@ const addToCart = async (req, res) => {
       });
     }
 
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+    if (product.stock < quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Only ${product.stock} items available in stock`
+      });
+    }
+
+    if (product.sellerId.toString() === req.user._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot add your own product to cart"
+      });
+    }
+
     const existingCartItem = user.buyerInfo.cart.find(
       item => item.productId.toString() === productId
     );
 
     if (existingCartItem) {
-      existingCartItem.quantity += quantity;
+      const newQuantity = existingCartItem.quantity + quantity;
+      
+      if (product.stock < newQuantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Only ${product.stock} items available. You already have ${existingCartItem.quantity} in cart`
+        });
+      }
+      
+      existingCartItem.quantity = newQuantity;
     } else {
       user.buyerInfo.cart.push({
         productId: productId,
         quantity: quantity,
-        price: 1000,
         addedAt: new Date()
       });
     }
 
     await user.save();
-    await user.populate('buyerInfo.cart.productId', 'title images price stock');
+    
+    const updatedUser = await User.findById(req.user._id)
+      .populate('buyerInfo.cart.productId', 'title images price stock sellerId');
+
+    const formattedCart = updatedUser.buyerInfo.cart.map(item => ({
+      _id: item._id,
+      productId: item.productId._id,
+      quantity: item.quantity,
+      addedAt: item.addedAt,
+      productDetails: {
+        title: item.productId.title,
+        images: item.productId.images,
+        price: item.productId.price,
+        stock: item.productId.stock
+      },
+      currentPrice: item.productId.price,
+      itemTotal: item.productId.price * item.quantity
+    }));
 
     res.status(200).json({
       success: true,
       message: existingCartItem ? "Item quantity updated in cart" : "Item added to cart",
-      data: user.buyerInfo.cart
+      data: formattedCart
     });
 
   } catch (error) {
@@ -107,6 +175,15 @@ const addToCart = async (req, res) => {
 
 const updateCartItem = async (req, res) => {
   try {
+    const { error: paramError } = itemIdSchema.validate(req.params.itemId);
+    if (paramError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid item ID",
+        error: paramError.details[0].message
+      });
+    }
+
     const { itemId } = req.params;
     
     const { error, value } = updateCartSchema.validate(req.body);
@@ -136,14 +213,46 @@ const updateCartItem = async (req, res) => {
       });
     }
 
+    const product = await Product.findById(cartItem.productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+    if (product.stock < quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Only ${product.stock} items available in stock`
+      });
+    }
+
     cartItem.quantity = quantity;
     await user.save();
-    await user.populate('buyerInfo.cart.productId', 'title images price stock');
+    
+    const updatedUser = await User.findById(req.user._id)
+      .populate('buyerInfo.cart.productId', 'title images price stock sellerId');
+
+    const formattedCart = updatedUser.buyerInfo.cart.map(item => ({
+      _id: item._id,
+      productId: item.productId._id,
+      quantity: item.quantity,
+      addedAt: item.addedAt,
+      productDetails: {
+        title: item.productId.title,
+        images: item.productId.images,
+        price: item.productId.price,
+        stock: item.productId.stock
+      },
+      currentPrice: item.productId.price,
+      itemTotal: item.productId.price * item.quantity
+    }));
 
     res.json({
       success: true,
       message: "Cart item updated",
-      data: user.buyerInfo.cart
+      data: formattedCart
     });
 
   } catch (error) {
@@ -158,6 +267,16 @@ const updateCartItem = async (req, res) => {
 
 const removeCartItem = async (req, res) => {
   try {
+
+    const { error: paramError } = itemIdSchema.validate(req.params.itemId);
+    if (paramError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid item ID",
+        error: paramError.details[0].message
+      });
+    }
+
     const { itemId } = req.params;
 
     const user = await User.findById(req.user._id);
@@ -173,12 +292,29 @@ const removeCartItem = async (req, res) => {
     );
 
     await user.save();
-    await user.populate('buyerInfo.cart.productId', 'title images price stock');
+    
+    const updatedUser = await User.findById(req.user._id)
+      .populate('buyerInfo.cart.productId', 'title images price stock sellerId');
+
+    const formattedCart = updatedUser.buyerInfo.cart.map(item => ({
+      _id: item._id,
+      productId: item.productId._id,
+      quantity: item.quantity,
+      addedAt: item.addedAt,
+      productDetails: {
+        title: item.productId.title,
+        images: item.productId.images,
+        price: item.productId.price,
+        stock: item.productId.stock
+      },
+      currentPrice: item.productId.price,
+      itemTotal: item.productId.price * item.quantity
+    }));
 
     res.json({
       success: true,
       message: "Item removed from cart",
-      data: user.buyerInfo.cart
+      data: formattedCart
     });
 
   } catch (error) {

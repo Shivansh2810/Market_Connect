@@ -18,14 +18,11 @@ const cartSchema = new Schema(
       min: [1, "Quantity cannot be less than 1"],
       default: 1,
     },
-    price: {  
-      type: Number,
-      required: true
-    },
     addedAt: {  
       type: Date,
       default: Date.now
     }
+    
   },
   { _id: true } 
 );
@@ -59,7 +56,7 @@ const userSchema = new Schema(
 
     role: {
       type: String,
-      enum: ["buyer", "seller", "both"],
+      enum: ["buyer", "seller", "both","admin"],
       default:"buyer",
     },
 
