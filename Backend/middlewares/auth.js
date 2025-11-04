@@ -8,7 +8,7 @@ exports.protect = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer")) {
       return res.status(401).json({ message: "Access denied. No token provided." });
-    }
+    } 
 
     const token = authHeader.split(" ")[1];
 
@@ -40,7 +40,6 @@ exports.isAdmin = (req, res, next) => {
   }
 };
 
-//to check if user is logged in as seller
 exports.isSeller = (req, res, next) => {
   const isSeller = req.user.role === 'seller' || req.user.role === 'both';
   
