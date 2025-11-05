@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import './dashboard.css';
 import Profile from '../profile/Profile';
 import ProductDetail from './ProductDetail';
 import { useAuth } from '../../contexts/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useEffect } from 'react'; // for fetching from backend
-import { getAllProducts } from '../../api/products'; // backend API
-import { getCart, addToCart, updateCartItem, removeCartItem } from '../../api/cart'; // backend API
 import {
     faSearch,
     faShoppingCart,
@@ -22,6 +19,17 @@ import {
     faBell,
     faSignOutAlt
 } from '@fortawesome/free-solid-svg-icons';
+import { getAllProducts } from "../../../api/product";
+import {
+  getCart,
+  addToCart as addCartItem,
+  updateCartItem,
+  removeCartItem,
+} from "../../../api/cart";
+
+const BuyerDashboard = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
 // Added backend data, loading & error states
 const [products, setProducts] = useState([]); // backend products
@@ -38,7 +46,7 @@ const [showMobileMenu, setShowMobileMenu] = useState(false);
 const [loading, setLoading] = useState(true); // NEW
 const [error, setError] = useState(null); // NEW
 
-// ✅ NEW useEffect — replaces static sample data
+// NEW useEffect — replaces static sample data
 // Fetches real products and cart from backend
 useEffect(() => {
     const fetchData = async () => {
@@ -60,23 +68,10 @@ useEffect(() => {
     fetchData();
 }, []);
 
-const BuyerDashboard = () => {
-    const navigate = useNavigate();
-    const { logout } = useAuth();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('All');
-    const [cart, setCart] = useState([]);
-    const [showMobileMenu, setShowMobileMenu] = useState(false);
-    const [sortBy, setSortBy] = useState('popularity');
-    const [priceRange, setPriceRange] = useState([0, 3000]);
-    const [currentView, setCurrentView] = useState('dashboard');
-    const [selectedProduct, setSelectedProduct] = useState(null);
-    const [isCartOpen, setIsCartOpen] = useState(false);
-
-    const handleLogout = () => {
-        logout();
-        navigate('/');
-    };
+const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
     // Helper function to get primary image URL
     const getPrimaryImage = (product) => {
@@ -87,19 +82,45 @@ const BuyerDashboard = () => {
         return '';
     };
 
+    const addToCart = async (product) => {
+    try {
+      const response = await addCartItem(product._id, 1);
+      setCart(response.data.items);
+      setIsCartOpen(true);
+    } catch (err) {
+      console.error("Add to cart error:", err);
+    }
+  };
+
+  const updateQuantity = async (itemId, newQuantity) => {
+    if (newQuantity <= 0) {
+      await removeFromCart(itemId);
+      return;
+    }
+    try {
+      const response = await updateCartItem(itemId, newQuantity);
+      setCart(response.data.items);
+    } catch (err) {
+      console.error("Update cart error:", err);
+    }
+  };
+
+   const removeFromCart = async (itemId) => {
+    try {
+      const response = await removeCartItem(itemId);
+      setCart(response.data.items);
+    } catch (err) {
+      console.error("Remove from cart error:", err);
+    }
+  };
+
+  const cartTotal = cart.reduce(
+    (total, item) => total + (item.price || 0) * item.quantity,
+    0
+  );
+
     // Helper function to convert specs Map to object for display
     // Backend Product model uses Map type for specs, frontend converts to object
-    const getSpecsObject = (specs) => {
-        if (!specs) return {};
-        if (specs instanceof Map) {
-            const obj = {};
-            specs.forEach((value, key) => {
-                obj[key] = value;
-            });
-            return obj;
-        }
-        return specs; // Already an object
-    };
 
     // Filter products based on search and category
     // Backend returns products with populated category (category.name)
@@ -129,37 +150,7 @@ const BuyerDashboard = () => {
         }
     });
 
-    // Add to Cart — backend integration
-    const handleAddToCart = async (product) => {
-        try {
-            const res = await addToCart(product._id, 1);
-            setCart(res.data); // backend returns full cart
-            setIsCartOpen(true);
-        } catch (err) {
-            console.error("Add to cart error:", err);
-            alert(err.response?.data?.message || "Failed to add item to cart");
-        }
-    };
-
-    // Update quantity — backend integration
-    const handleUpdateQuantity = async (itemId, quantity) => {
-        try {
-            const res = await updateCartItem(itemId, quantity);
-            setCart(res.data);
-        } catch (err) {
-            console.error("Update cart error:", err);
-        }
-    };
-
-    // Remove from cart — backend integration
-    const handleRemoveFromCart = async (itemId) => {
-        try {
-            const res = await removeCartItem(itemId);
-            setCart(res.data);
-        } catch (err) {
-            console.error("Remove cart item error:", err);
-        }
-    };
+    
 
     // Buy now function - adds to cart and shows checkout
     // Matches backend cartSchema structure
@@ -182,16 +173,6 @@ const BuyerDashboard = () => {
         // Open cart drawer
         setIsCartOpen(true);
     };
-
-
-
-    // Calculate cart total - matches backend cartController.getCart response structure
-    // Backend returns: { items: [...], summary: { subtotal, totalItems, totalItemsCount } }
-    const cartTotal = cart.reduce((total, item) => {
-        // Backend cart item has price field directly
-        const price = item.price || item.productDetails?.price || 0;
-        return total + (price * item.quantity);
-    }, 0);
 
     // Render profile page if currentView is 'profile'
     if (currentView === 'profile') {
