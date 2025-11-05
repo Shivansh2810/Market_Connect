@@ -64,7 +64,8 @@ const userSchema = new Schema(
       type: String,
       trim: true,
     },
-
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
     sellerInfo: {
       shopName: { type: String, trim: true },
       shopAddress: addressSchema,

@@ -7,7 +7,6 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const { updateProfileSchema } = require("../validations/user");
 const addressJoiSchema = require("../validations/sharedSchema");
 
-// Admin emails list
 const ADMIN_EMAILS = ['admin@marketplace.com'];
 
 exports.signup = async (req, res) => {
@@ -84,14 +83,13 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // ✅ FIXED LOGIC: Allow login if user has "both" role OR matches selected role
+  
     if (user.role !== "both" && user.role !== role) {
       return res
         .status(403)
         .json({ message: `Access denied for role: ${role}. Your role is: ${user.role}` });
     }
 
-    // Check if it's a Google user
     if (user.googleId && !user.password) {
       return res.status(401).json({
         message: "This account uses Google login. Please use Google login.",
@@ -114,7 +112,7 @@ exports.login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role, // Return actual role, not selected role
+        role: user.role, 
       },
     });
   } catch (error) {
@@ -168,7 +166,6 @@ exports.adminLogin = async (req, res) => {
   }
 };
 
-// ✅ ADDED: Forgot Password
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -181,13 +178,12 @@ exports.forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
-      // For security, don't reveal if email exists or not
+      
       return res.json({ 
         message: "If an account with that email exists, a password reset link has been sent" 
       });
     }
 
-    // Generate reset token
     const resetToken = crypto.randomBytes(20).toString('hex');
     const resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
 
@@ -195,10 +191,9 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpire = resetPasswordExpire;
     await user.save();
 
-    // Create reset URL
+    
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
 
-    // Send email using Resend
     const { data, error } = await resend.emails.send({
       from: 'Market Connect <onboarding@resend.dev>',
       to: [user.email],
@@ -339,7 +334,6 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// ✅ ADDED: Reset Password
 exports.resetPassword = async (req, res) => {
   try {
     const { token, password, confirmPassword } = req.body;
@@ -367,7 +361,6 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    // Update password
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
