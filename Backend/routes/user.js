@@ -22,7 +22,6 @@ router.post("/login", validate(loginSchema), userController.login);
 router.post("/forgot-password", validate(forgotPasswordSchema), userController.forgotPassword);
 router.post("/reset-password", validate(resetPasswordSchema), userController.resetPassword);
 
-//admin login
 router.post(
     "/admin/login",
     validate(loginSchema), 
@@ -30,7 +29,7 @@ router.post(
 );
 
 router.put(
-    "/api/upgradetoseller",
+    "/upgradetoseller",
     protect, 
     validate(upgradeToSellerSchema), 
     userController.upgradeToSeller 
@@ -47,7 +46,6 @@ router.get(
   userController.googleAuth
 );
 
-// Protected user profile routes
 router.get("/me", protect, userController.getMe);
 router.put(
   "/api/me/profile",
@@ -56,7 +54,6 @@ router.put(
   userController.updateProfile
 );
 
-// Addresses
 router.get("/api/me/addresses", protect, userController.getAddresses);
 router.post(
   "/api/me/addresses",
@@ -76,7 +73,6 @@ router.delete(
   userController.deleteAddress
 );
 
-// Orders
 router.get("/api/me/orders", protect, userController.getMyOrders);
 
 module.exports = router;
