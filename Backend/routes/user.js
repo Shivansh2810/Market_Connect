@@ -36,43 +36,43 @@ router.put(
 );
 
 router.get(
-  "/api/auth/google",
+  "/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
 router.get(
-  "/api/auth/google/callback",
+  "/auth/google/callback",
   passport.authenticate("google", { session: false, failureRedirect: "/" }),
   userController.googleAuth
 );
 
 router.get("/me", protect, userController.getMe);
 router.put(
-  "/api/me/profile",
+  "/me/profile",
   protect,
   validate(updateProfileSchema, "body"),
   userController.updateProfile
 );
 
-router.get("/api/me/addresses", protect, userController.getAddresses);
+router.get("/me/addresses", protect, userController.getAddresses);
 router.post(
-  "/api/me/addresses",
+  "/me/addresses",
   protect,
   validate(addressSchema, "body"),
   userController.addAddress
 );
 router.put(
-  "/api/me/addresses/:addressId",
+  "/me/addresses/:addressId",
   protect,
   validate(addressSchema, "body"),
   userController.updateAddress
 );
 router.delete(
-  "/api/me/addresses/:addressId",
+  "/me/addresses/:addressId",
   protect,
   userController.deleteAddress
 );
 
-router.get("/api/me/orders", protect, userController.getMyOrders);
+router.get("/me/orders", protect, userController.getMyOrders);
 
 module.exports = router;
