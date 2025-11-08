@@ -85,8 +85,20 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow }) => {
                     {/* Right Side - Product Info */}
                     <div className="product-info">
                         <div className="product-header">
-                            <span className="product-category">{product.categoryName || 'Category'}</span>
+                            {/* Category display - matches backend populated category */}
+                            {product.category && (
+                                <span className="product-category">{product.category.name || 'Category'}</span>
+                            )}
+                            {!product.category && product.categoryId && (
+                                <span className="product-category">Category ID: {product.categoryId}</span>
+                            )}
                             <h1 className="product-title">{product.title}</h1>
+                            {/* Slug display - matches backend Product model */}
+                            {product.slug && (
+                                <span className="product-slug" style={{fontSize: '12px', color: '#666', display: 'block', marginBottom: '10px'}}>
+                                    {product.slug}
+                                </span>
+                            )}
                             <div className="product-rating">
                                 <div className="stars">
                                     {[...Array(5)].map((_, i) => (
@@ -113,19 +125,32 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow }) => {
                         </div>
 
                         {/* Product Specifications */}
-                        {product.specs && Object.keys(product.specs).length > 0 && (
-                            <div className="product-specs">
-                                <h3>Specifications</h3>
-                                <div className="specs-grid">
-                                    {Object.entries(product.specs).map(([key, value]) => (
-                                        <div key={key} className="spec-item">
-                                            <span className="spec-key">{key}:</span>
-                                            <span className="spec-value">{value}</span>
-                                        </div>
-                                    ))}
+                        {/* Backend Product model uses Map type for specs, frontend converts to object */}
+                        {product.specs && (() => {
+                            // Convert Map to object if needed
+                            let specsObj = {};
+                            if (product.specs instanceof Map) {
+                                product.specs.forEach((value, key) => {
+                                    specsObj[key] = value;
+                                });
+                            } else {
+                                specsObj = product.specs;
+                            }
+                            
+                            return Object.keys(specsObj).length > 0 ? (
+                                <div className="product-specs">
+                                    <h3>Specifications</h3>
+                                    <div className="specs-grid">
+                                        {Object.entries(specsObj).map(([key, value]) => (
+                                            <div key={key} className="spec-item">
+                                                <span className="spec-key">{key}:</span>
+                                                <span className="spec-value">{value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            ) : null;
+                        })()}
 
                         {/* Tags */}
                         {product.tags && product.tags.length > 0 && (
@@ -136,11 +161,20 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow }) => {
                             </div>
                         )}
 
-                        {/* Product Condition */}
+                        {/* Product Condition - matches backend Product model condition enum */}
+                        {/* Backend condition enum: ["new", "used", "refurbished"] */}
                         <div className="product-condition">
                             <FontAwesomeIcon icon={conditionInfo.icon} style={{ color: conditionInfo.color }} />
                             <span>Condition: <strong>{conditionInfo.text}</strong></span>
                         </div>
+
+                        {/* Seller Info - matches backend Product model sellerId reference */}
+                        {product.sellerId && (
+                            <div className="seller-info" style={{marginTop: '15px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px'}}>
+                                <span style={{fontSize: '14px', color: '#666'}}>Sold by: Seller ID {product.sellerId}</span>
+                                {/* When populated: product.sellerId.sellerInfo.shopName */}
+                            </div>
+                        )}
 
                         {/* Stock Status */}
                         <div className="stock-status">
