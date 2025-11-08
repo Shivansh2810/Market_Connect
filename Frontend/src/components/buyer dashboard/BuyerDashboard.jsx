@@ -19,7 +19,7 @@ import {
 
 // Sample product data
 const sampleProducts = [
-    {
+    {git pull 
         _id: "507f1f77bcf86cd799439011",
         title: "Wireless Bluetooth Headphones",
         price: 1299,
