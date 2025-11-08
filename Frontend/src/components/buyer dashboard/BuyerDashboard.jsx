@@ -1,77 +1,110 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import './dashboard.css';
 import Profile from '../profile/Profile';
 import ProductDetail from './ProductDetail';
-import { useAuth } from '../../contexts/AuthContext';
+import CustomerService from '../customerservice/CustomerService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-    faSearch,
-    faShoppingCart,
+import { 
+    faSearch, 
+    faShoppingCart, 
     faUser,
-    faFilter,
     faStar,
-    faChevronDown,
     faBars,
     faTimes,
     faHome,
-    faShoppingBag,
-    faBell,
-    faSignOutAlt
+    faSignOutAlt,
+    faHeadset,
+    faQuestionCircle
 } from '@fortawesome/free-solid-svg-icons';
-import { getAllProducts } from "../../../api/product";
-import {
-  getCart,
-  addToCart as addCartItem,
-  updateCartItem,
-  removeCartItem,
-} from "../../../api/cart";
+
+// Sample product data
+const sampleProducts = [
+    {
+        _id: "507f1f77bcf86cd799439011",
+        title: "Wireless Bluetooth Headphones",
+        price: 1299,
+        currency: "INR",
+        ratingAvg: 4.5,
+        ratingCount: 128,
+        images: [
+            {
+                url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
+                publicId: "headphones-1",
+                isPrimary: true
+            }
+        ],
+        categoryName: "Electronics",
+        stock: 45,
+        condition: "new",
+        tags: ["wireless", "bluetooth", "audio"],
+        specs: {
+            "Brand": "AudioTech",
+            "Connectivity": "Bluetooth 5.0",
+            "Battery": "20 hours"
+        }
+    },
+    {
+        _id: "507f1f77bcf86cd799439012",
+        title: "Smart Fitness Watch",
+        price: 2499,
+        currency: "INR",
+        ratingAvg: 4.8,
+        ratingCount: 89,
+        images: [
+            {
+                url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
+                publicId: "watch-1",
+                isPrimary: true
+            }
+        ],
+        categoryName: "Electronics",
+        stock: 12,
+        condition: "new",
+        tags: ["fitness", "smartwatch", "wearable"],
+        specs: {
+            "Brand": "FitTech",
+            "Display": "1.4 inch",
+            "Battery": "7 days"
+        }
+    },
+    {
+        _id: "507f1f77bcf86cd799439013",
+        title: "Organic Cotton T-Shirt",
+        price: 399,
+        currency: "INR",
+        ratingAvg: 4.2,
+        ratingCount: 45,
+        images: [
+            {
+                url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
+                publicId: "tshirt-1",
+                isPrimary: true
+            }
+        ],
+        categoryName: "Clothing",
+        stock: 3,
+        condition: "new",
+        tags: ["organic", "cotton", "casual"],
+        specs: {
+            "Material": "100% Organic Cotton",
+            "Size": "M, L, XL",
+            "Color": "White"
+        }
+    }
+];
+
+const categories = ["All", "Electronics", "Clothing", "Food & Beverages", "Accessories"];
 
 const BuyerDashboard = () => {
-  const navigate = useNavigate();
-  const { logout } = useAuth();
-
-// Added backend data, loading & error states
-const [products, setProducts] = useState([]); // backend products
-const [categories, setCategories] = useState([]); // will fetch later
-const [cart, setCart] = useState([]); // backend cart
-const [searchTerm, setSearchTerm] = useState('');
-const [selectedCategory, setSelectedCategory] = useState('All');
-const [sortBy, setSortBy] = useState('popularity');
-const [priceRange, setPriceRange] = useState([0, 3000]);
-const [currentView, setCurrentView] = useState('dashboard');
-const [selectedProduct, setSelectedProduct] = useState(null);
-const [isCartOpen, setIsCartOpen] = useState(false);
-const [showMobileMenu, setShowMobileMenu] = useState(false);
-const [loading, setLoading] = useState(true); // NEW
-const [error, setError] = useState(null); // NEW
-
-// NEW useEffect — replaces static sample data
-// Fetches real products and cart from backend
-useEffect(() => {
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const productRes = await getAllProducts(); // GET /api/products
-            setProducts(productRes.data || []); // update UI with backend data
-
-            const cartRes = await getCart(); // GET /api/cart
-            setCart(cartRes.data?.items || []);
-        } catch (err) {
-            console.error("Error fetching data:", err);
-            setError("Failed to load products or cart");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    fetchData();
-}, []);
-
-const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('All');
+    const [cart, setCart] = useState([]);
+    const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [sortBy, setSortBy] = useState('popularity');
+    const [priceRange, setPriceRange] = useState([0, 3000]);
+    const [currentView, setCurrentView] = useState('dashboard');
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [isCartOpen, setIsCartOpen] = useState(false);
 
     // Helper function to get primary image URL
     const getPrimaryImage = (product) => {
@@ -82,57 +115,12 @@ const handleLogout = () => {
         return '';
     };
 
-    const addToCart = async (product) => {
-    try {
-      const response = await addCartItem(product._id, 1);
-      setCart(response.data.items);
-      setIsCartOpen(true);
-    } catch (err) {
-      console.error("Add to cart error:", err);
-    }
-  };
-
-  const updateQuantity = async (itemId, newQuantity) => {
-    if (newQuantity <= 0) {
-      await removeFromCart(itemId);
-      return;
-    }
-    try {
-      const response = await updateCartItem(itemId, newQuantity);
-      setCart(response.data.items);
-    } catch (err) {
-      console.error("Update cart error:", err);
-    }
-  };
-
-   const removeFromCart = async (itemId) => {
-    try {
-      const response = await removeCartItem(itemId);
-      setCart(response.data.items);
-    } catch (err) {
-      console.error("Remove from cart error:", err);
-    }
-  };
-
-  const cartTotal = cart.reduce(
-    (total, item) => total + (item.price || 0) * item.quantity,
-    0
-  );
-
-    // Helper function to convert specs Map to object for display
-    // Backend Product model uses Map type for specs, frontend converts to object
-
     // Filter products based on search and category
-    // Backend returns products with populated category (category.name)
-    const filteredProducts = products.filter(product => {
-        const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesCategory = selectedCategory === 'All' ||
-            (product.category && product.category.name === selectedCategory) ||
-            (product.categoryId === selectedCategory);
+    const filteredProducts = sampleProducts.filter(product => {
+        const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = selectedCategory === 'All' || product.categoryName === selectedCategory;
         const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-        const notDeleted = !product.isDeleted; // Backend filters out deleted products
-        return matchesSearch && matchesCategory && matchesPrice && notDeleted;
+        return matchesSearch && matchesCategory && matchesPrice;
     });
 
     // Sort products
@@ -150,39 +138,83 @@ const handleLogout = () => {
         }
     });
 
-    
+    // Add to cart function
+    const addToCart = (product) => {
+        const existingItem = cart.find(item => item.productId === product._id);
+        if (existingItem) {
+            setCart(cart.map(item => 
+                item.productId === product._id 
+                    ? { ...item, quantity: item.quantity + 1 }
+                    : item
+            ));
+        } else {
+            setCart([...cart, { 
+                productId: product._id, 
+                quantity: 1,
+                productDetails: {
+                    title: product.title,
+                    price: product.price,
+                    currency: product.currency,
+                    image: getPrimaryImage(product)
+                }
+            }]);
+        }
+        setIsCartOpen(true);
+    };
 
-    // Buy now function - adds to cart and shows checkout
-    // Matches backend cartSchema structure
+    // Buy now function
     const buyNow = (product) => {
-        // Clear cart and add only this product
-        const newCartItem = {
-            _id: `cart_${Date.now()}`,
-            productId: product._id,
+        setCart([{ 
+            productId: product._id, 
             quantity: 1,
-            price: product.price,
-            addedAt: new Date().toISOString(),
             productDetails: {
                 title: product.title,
                 price: product.price,
                 currency: product.currency,
                 image: getPrimaryImage(product)
             }
-        };
-        setCart([newCartItem]);
-        // Open cart drawer
+        }]);
         setIsCartOpen(true);
     };
 
-    // Render profile page if currentView is 'profile'
+    // Remove item from cart
+    const removeFromCart = (productId) => {
+        setCart(cart.filter(item => item.productId !== productId));
+    };
+
+    // Update quantity
+    const updateQuantity = (productId, newQuantity) => {
+        if (newQuantity <= 0) {
+            removeFromCart(productId);
+        } else {
+            setCart(cart.map(item => 
+                item.productId === productId 
+                    ? { ...item, quantity: newQuantity }
+                    : item
+            ));
+        }
+    };
+
+    // Calculate cart total
+    const cartTotal = cart.reduce((total, item) => {
+        const price = item.productDetails?.price || 0;
+        return total + (price * item.quantity);
+    }, 0);
+
+    // Render profile page
     if (currentView === 'profile') {
         return <Profile onBack={() => setCurrentView('dashboard')} />;
     }
 
-    // Render product detail page if currentView is 'productDetail'
+    // Render customer service page
+    if (currentView === 'customerService') {
+        return <CustomerService onBack={() => setCurrentView('dashboard')} />;
+    }
+
+    // Render product detail page
     if (currentView === 'productDetail' && selectedProduct) {
         return (
-            <ProductDetail
+            <ProductDetail 
                 product={selectedProduct}
                 onBack={() => {
                     setCurrentView('dashboard');
@@ -191,50 +223,38 @@ const handleLogout = () => {
                 onAddToCart={(product, quantity) => {
                     const existingItem = cart.find(item => item.productId === product._id);
                     if (existingItem) {
-                        setCart(cart.map(item =>
-                            item.productId === product._id
-                                ? {
-                                    ...item,
-                                    quantity: item.quantity + quantity,
-                                    price: product.price
-                                }
+                        setCart(cart.map(item => 
+                            item.productId === product._id 
+                                ? { ...item, quantity: item.quantity + quantity }
                                 : item
                         ));
                     } else {
-                        const newCartItem = {
-                            _id: `cart_${Date.now()}`,
-                            productId: product._id,
+                        setCart([...cart, { 
+                            productId: product._id, 
                             quantity,
-                            price: product.price,
-                            addedAt: new Date().toISOString(),
                             productDetails: {
                                 title: product.title,
                                 price: product.price,
                                 currency: product.currency,
                                 image: getPrimaryImage(product)
                             }
-                        };
-                        setCart([...cart, newCartItem]);
+                        }]);
                     }
                     setIsCartOpen(true);
                     setCurrentView('dashboard');
                     setSelectedProduct(null);
                 }}
                 onBuyNow={(product, quantity) => {
-                    const newCartItem = {
-                        _id: `cart_${Date.now()}`,
-                        productId: product._id,
+                    setCart([{ 
+                        productId: product._id, 
                         quantity,
-                        price: product.price,
-                        addedAt: new Date().toISOString(),
                         productDetails: {
                             title: product.title,
                             price: product.price,
                             currency: product.currency,
                             image: getPrimaryImage(product)
                         }
-                    };
-                    setCart([newCartItem]);
+                    }]);
                     setIsCartOpen(true);
                     setCurrentView('dashboard');
                     setSelectedProduct(null);
@@ -242,9 +262,6 @@ const handleLogout = () => {
             />
         );
     }
-    // add loading and error placeholders before return
-    if (loading) return <div className="loading-screen">Loading products...</div>;
-    if (error) return <div className="error-screen">{error}</div>;
 
     return (
         <div className="dashboard">
@@ -253,14 +270,14 @@ const handleLogout = () => {
                 <div className="header-content">
                     <div className="logo-section">
                         <h1>Market Connect</h1>
-                        <button
+                        <button 
                             className="mobile-menu-btn"
                             onClick={() => setShowMobileMenu(!showMobileMenu)}
                         >
                             <FontAwesomeIcon icon={showMobileMenu ? faTimes : faBars} />
                         </button>
                     </div>
-
+                    
                     <div className="search-section">
                         <div className="search-bar">
                             <FontAwesomeIcon icon={faSearch} className="search-icon" />
@@ -274,8 +291,15 @@ const handleLogout = () => {
                     </div>
 
                     <div className="header-actions">
-                        <button
-                            className="action-btn cart-toggle-btn"
+                        <button 
+                            className="action-btn customer-service-btn" 
+                            onClick={() => setCurrentView('customerService')}
+                            title="Customer Service"
+                        >
+                            <FontAwesomeIcon icon={faHeadset} />
+                        </button>
+                        <button 
+                            className="action-btn cart-toggle-btn" 
                             onClick={() => setIsCartOpen(!isCartOpen)}
                             title="Cart"
                         >
@@ -286,9 +310,6 @@ const handleLogout = () => {
                         </button>
                         <button className="action-btn" onClick={() => setCurrentView('profile')}>
                             <FontAwesomeIcon icon={faUser} />
-                        </button>
-                        <button className="action-btn logout-btn" onClick={handleLogout} title="Logout">
-                            <FontAwesomeIcon icon={faSignOutAlt} />
                         </button>
                     </div>
                 </div>
@@ -310,23 +331,23 @@ const handleLogout = () => {
                             <h3>Featured Products</h3>
                             <span className="product-count">{sortedProducts.length} products</span>
                         </div>
-
+                        
                         <div className="filter-group">
                             <label>Category</label>
-                            <select
-                                value={selectedCategory}
+                            <select 
+                                value={selectedCategory} 
                                 onChange={(e) => setSelectedCategory(e.target.value)}
                             >
                                 {categories.map(category => (
-                                    <option key={category._id} value={category.name}>{category.name}</option>
+                                    <option key={category} value={category}>{category}</option>
                                 ))}
                             </select>
                         </div>
 
                         <div className="filter-group">
                             <label>Sort By</label>
-                            <select
-                                value={sortBy}
+                            <select 
+                                value={sortBy} 
                                 onChange={(e) => setSortBy(e.target.value)}
                             >
                                 <option value="popularity">Popularity</option>
@@ -358,83 +379,75 @@ const handleLogout = () => {
 
                     {/* Featured Products */}
                     <section className="products-section">
-
                         <div className="products-grid">
                             {sortedProducts.map(product => {
                                 const isInStock = product.stock > 0;
                                 const primaryImage = getPrimaryImage(product);
                                 return (
-                                    <div
-                                        key={product._id}
-                                        className="product-card"
-                                        style={{ cursor: 'pointer' }}
-                                        onClick={() => {
-                                            setSelectedProduct(product);
-                                            setCurrentView('productDetail');
-                                        }}
-                                    >
-                                        <div className="product-image">
-                                            <img src={primaryImage} alt={product.title} />
+                                <div 
+                                    key={product._id} 
+                                    className="product-card"
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => {
+                                        setSelectedProduct(product);
+                                        setCurrentView('productDetail');
+                                    }}
+                                >
+                                    <div className="product-image">
+                                        <img src={primaryImage} alt={product.title} />
+                                    </div>
+                                    
+                                    <div className="product-info">
+                                        <h4 className="product-name">{product.title}</h4>
+                                        <div className="product-rating">
+                                            <div className="stars">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <FontAwesomeIcon 
+                                                        key={i} 
+                                                        icon={faStar} 
+                                                        className={i < Math.floor(product.ratingAvg || 0) ? 'filled' : ''}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <span className="rating-text">({product.ratingCount || 0})</span>
                                         </div>
-
-                                        <div className="product-info">
-                                            <h4 className="product-name">{product.title}</h4>
-                                            {/* Category display - matches backend populated category */}
-                                            {product.category && (
-                                                <span className="product-category-badge" style={{ fontSize: '12px', color: '#666', marginBottom: '5px', display: 'block' }}>
-                                                    {product.category.name}
+                                        
+                                        <div className="product-price">
+                                            <span className="current-price">
+                                                {product.currency === 'USD' ? '$' : '₹'}{product.price}
+                                            </span>
+                                            {product.stock <= 5 && product.stock > 0 && (
+                                                <span className="stock-warning" style={{fontSize: '12px', color: '#ff9800', marginLeft: '10px'}}>
+                                                    Only {product.stock} left!
                                                 </span>
                                             )}
-                                            <div className="product-rating">
-                                                <div className="stars">
-                                                    {[...Array(5)].map((_, i) => (
-                                                        <FontAwesomeIcon
-                                                            key={i}
-                                                            icon={faStar}
-                                                            className={i < Math.floor(product.ratingAvg || 0) ? 'filled' : ''}
-                                                        />
-                                                    ))}
-                                                </div>
-                                                <span className="rating-text">({product.ratingCount || 0})</span>
-                                            </div>
-
-                                            <div className="product-price">
-                                                <span className="current-price">
-                                                    {product.currency === 'USD' ? '$' : '₹'}{product.price}
-                                                </span>
-                                                {product.stock <= 5 && product.stock > 0 && (
-                                                    <span className="stock-warning" style={{ fontSize: '12px', color: '#ff9800', marginLeft: '10px' }}>
-                                                        Only {product.stock} left!
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="product-actions" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    className={`add-to-cart-btn ${!isInStock ? 'out-of-stock' : ''}`}
-                                                    onClick={() => isInStock && handleAddToCart(product)}
-                                                    disabled={!isInStock}
-                                                >
-                                                    {isInStock ? 'Add to Cart' : 'Out of Stock'}
-                                                </button>
-                                                <button
-                                                    className={`buy-now-btn ${!isInStock ? 'out-of-stock' : ''}`}
-                                                    onClick={() => isInStock && handleAddToCart(product)}
-                                                    disabled={!isInStock}
-                                                >
-                                                    {isInStock ? 'Buy Now' : 'Out of Stock'}
-                                                </button>
-                                            </div>
+                                        </div>
+                                        
+                                        <div className="product-actions" onClick={(e) => e.stopPropagation()}>
+                                            <button 
+                                                className={`add-to-cart-btn ${!isInStock ? 'out-of-stock' : ''}`}
+                                                onClick={() => isInStock && addToCart(product)}
+                                                disabled={!isInStock}
+                                            >
+                                                {isInStock ? 'Add to Cart' : 'Out of Stock'}
+                                            </button>
+                                            <button 
+                                                className={`buy-now-btn ${!isInStock ? 'out-of-stock' : ''}`}
+                                                onClick={() => isInStock && buyNow(product)}
+                                                disabled={!isInStock}
+                                            >
+                                                {isInStock ? 'Buy Now' : 'Out of Stock'}
+                                            </button>
                                         </div>
                                     </div>
-                                )
-                            })}
+                                </div>
+                            )})}
                         </div>
                     </section>
                 </main>
             </div>
 
-            {/* Cart Drawer - Right Side Panel (Amazon Style) */}
+            {/* Cart Drawer */}
             <div className={`cart-drawer-overlay ${isCartOpen ? 'open' : ''}`} onClick={() => setIsCartOpen(false)}></div>
             <div className={`cart-drawer ${isCartOpen ? 'open' : ''}`}>
                 <div className="cart-drawer-header">
@@ -457,16 +470,16 @@ const handleLogout = () => {
                                                     {item.productDetails?.currency === 'USD' ? '$' : '₹'}{item.productDetails?.price || 0}
                                                 </span>
                                                 <div className="quantity-controls-drawer">
-                                                    <button
+                                                    <button 
                                                         className="quantity-btn-drawer"
-                                                        onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)}
+                                                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                                     >
                                                         -
                                                     </button>
                                                     <span className="quantity-drawer">{item.quantity}</span>
-                                                    <button
+                                                    <button 
                                                         className="quantity-btn-drawer"
-                                                        onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)}
+                                                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                                                     >
                                                         +
                                                     </button>
@@ -488,7 +501,7 @@ const handleLogout = () => {
                         </>
                     ) : (
                         <div className="empty-cart">
-                            <FontAwesomeIcon icon={faShoppingCart} style={{ fontSize: '48px', color: '#ccc', marginBottom: '20px' }} />
+                            <FontAwesomeIcon icon={faShoppingCart} style={{fontSize: '48px', color: '#ccc', marginBottom: '20px'}} />
                             <p>Your cart is empty</p>
                             <button className="continue-shopping-btn" onClick={() => setIsCartOpen(false)}>
                                 Continue Shopping
