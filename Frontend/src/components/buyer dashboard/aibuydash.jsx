@@ -1,606 +1,427 @@
-import React, { useState } from 'react';
-import './dashboard.css';
-import Profile from '../profile/Profile';
-import ProductDetail from './ProductDetail';
-import CustomerService from '../customer service/CustomerService';
+import React, { useState, useEffect, useRef } from 'react';
+import './aiChatbotDashboard.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-    faSearch, 
-    faShoppingCart, 
-    faUser, 
-    faFilter,
-    faStar,
-    faChevronDown,
-    faBars,
-    faTimes,
-    faHome,
-    faShoppingBag,
-    faBell,
-    faSignOutAlt,
-    faHeadset
+    faRobot,
+    faPaperPlane,
+    faSpinner,
+    faRedo,
+    faHeadset,
+    faComments,
+    faQuestionCircle,
+    faArrowLeft,
+    faTimes
 } from '@fortawesome/free-solid-svg-icons';
 
-// Sample product data - Matching backend Product model structure
-const sampleProducts = [
-    {
-        _id: "507f1f77bcf86cd799439011",
-        title: "Wireless Bluetooth Headphones",
-        price: 1299,
-        currency: "INR",
-        ratingAvg: 4.5,
-        ratingCount: 128,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
-                publicId: "headphones-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ea",
-        categoryName: "Electronics", // For display purposes
-        stock: 45,
-        condition: "new",
-        tags: ["wireless", "bluetooth", "audio"],
-        specs: {
-            "Brand": "AudioTech",
-            "Connectivity": "Bluetooth 5.0",
-            "Battery": "20 hours"
-        }
-    },
-    {
-        _id: "507f1f77bcf86cd799439012",
-        title: "Smart Fitness Watch",
-        price: 2499,
-        currency: "INR",
-        ratingAvg: 4.8,
-        ratingCount: 89,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
-                publicId: "watch-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ea",
-        categoryName: "Electronics",
-        stock: 12,
-        condition: "new",
-        tags: ["fitness", "smartwatch", "wearable"],
-        specs: {
-            "Brand": "FitTech",
-            "Display": "1.4 inch",
-            "Battery": "7 days"
-        }
-    },
-    {
-        _id: "507f1f77bcf86cd799439013",
-        title: "Organic Cotton T-Shirt",
-        price: 399,
-        currency: "INR",
-        ratingAvg: 4.2,
-        ratingCount: 45,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
-                publicId: "tshirt-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860eb",
-        categoryName: "Clothing",
-        stock: 3,
-        condition: "new",
-        tags: ["organic", "cotton", "casual"],
-        specs: {
-            "Material": "100% Organic Cotton",
-            "Size": "M, L, XL",
-            "Color": "White"
-        }
-    },
-    {
-        _id: "507f1f77bcf86cd799439014",
-        title: "Premium Coffee Beans",
-        price: 349,
-        currency: "INR",
-        ratingAvg: 4.7,
-        ratingCount: 67,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=300&h=300&fit=crop",
-                publicId: "coffee-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ec",
-        categoryName: "Food & Beverages",
-        stock: 28,
-        condition: "new",
-        tags: ["coffee", "premium", "organic"],
-        specs: {
-            "Origin": "Karnataka",
-            "Weight": "500g",
-            "Roast": "Medium"
-        }
-    },
-    {
-        _id: "507f1f77bcf86cd799439015",
-        title: "Wired Headphone",
-        price: 899,
-        currency: "INR",
-        ratingAvg: 4.3,
-        ratingCount: 34,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop",
-                publicId: "headphone-wired-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ea",
-        categoryName: "Electronics",
-        stock: 0,
-        condition: "new",
-        tags: ["wired", "audio", "headphones"],
-        specs: {
-            "Brand": "SoundMax",
-            "Type": "Wired",
-            "Length": "1.2m"
-        }
-    },
-    {
-        _id: "507f1f77bcf86cd799439016",
-        title: "Leather Wallet",
-        price: 1199,
-        currency: "INR",
-        ratingAvg: 4.6,
-        ratingCount: 23,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop",
-                publicId: "wallet-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ed",
-        categoryName: "Accessories",
-        stock: 15,
-        condition: "new",
-        tags: ["leather", "wallet", "accessories"],
-        specs: {
-            "Material": "Genuine Leather",
-            "Color": "Brown",
-            "Slots": "6 card slots"
-        }
-    }
-];
+// Chatbot API endpoints
+const CHATBOT_API_URL = 'http://localhost:5000/api/chatbot';
+const FAQ_API_URL = 'http://localhost:8080/api/faqs';
 
-const categories = ["All", "Electronics", "Clothing", "Food & Beverages", "Accessories", "Books", "Home & Garden"];
+const AIChatbotDashboard = ({ onBack }) => {
+    const [messages, setMessages] = useState([]);
+    const [inputMessage, setInputMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+    const [faqs, setFaqs] = useState([]);
+    const [openFaqIndex, setOpenFaqIndex] = useState(null);
+    const [isMinimized, setIsMinimized] = useState(false);
+    const messagesEndRef = useRef(null);
 
-const BuyerDashboard = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('All');
-    const [cart, setCart] = useState([]);
-    const [showMobileMenu, setShowMobileMenu] = useState(false);
-    const [sortBy, setSortBy] = useState('popularity');
-    const [priceRange, setPriceRange] = useState([0, 3000]);
-    const [currentView, setCurrentView] = useState('dashboard');
-    const [selectedProduct, setSelectedProduct] = useState(null);
-    const [isCartOpen, setIsCartOpen] = useState(false);
+    // Auto-scroll to bottom when new messages arrive
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
 
-    // Helper function to get primary image URL
-    const getPrimaryImage = (product) => {
-        if (product.images && product.images.length > 0) {
-            const primaryImage = product.images.find(img => img.isPrimary);
-            return primaryImage ? primaryImage.url : product.images[0].url;
-        }
-        return '';
+    useEffect(() => {
+        // Fetch FAQs
+        const fetchFaqs = async () => {
+            try {
+                const res = await fetch(FAQ_API_URL);
+                if (!res.ok) throw new Error('Failed to load FAQs');
+                const data = await res.json();
+                setFaqs(Array.isArray(data.faqs) ? data.faqs : []);
+            } catch (e) {
+                console.error('Failed to fetch FAQs:', e);
+                setFaqs([]);
+            }
+        };
+        fetchFaqs();
+    }, []);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    // Filter products based on search and category
-    const filteredProducts = sampleProducts.filter(product => {
-        const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategory === 'All' || product.categoryName === selectedCategory;
-        const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-        return matchesSearch && matchesCategory && matchesPrice;
-    });
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (inputMessage.trim() && !isLoading) {
+            const userMessage = inputMessage.trim();
+            setInputMessage('');
+            setError(null);
+            
+            // Add user message immediately
+            const userMessageObj = {
+                id: Date.now(),
+                text: userMessage,
+                sender: 'user',
+                timestamp: new Date().toISOString()
+            };
+            setMessages(prev => [...prev, userMessageObj]);
+            setIsLoading(true);
 
-    // Sort products
-    const sortedProducts = [...filteredProducts].sort((a, b) => {
-        switch (sortBy) {
-            case 'price-low':
-                return a.price - b.price;
-            case 'price-high':
-                return b.price - a.price;
-            case 'rating':
-                return b.ratingAvg - a.ratingAvg;
-            case 'popularity':
-            default:
-                return b.ratingCount - a.ratingCount;
-        }
-    });
+            try {
+                // Send message to Python chatbot API
+                const response = await fetch(`${CHATBOT_API_URL}/message`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: userMessage,
+                        sessionId: sessionId
+                    })
+                });
 
-    // Add to cart function - matches backend cart structure {productId, quantity}
-    const addToCart = (product) => {
-        const existingItem = cart.find(item => item.productId === product._id);
-        if (existingItem) {
-            setCart(cart.map(item => 
-                item.productId === product._id 
-                    ? { ...item, quantity: item.quantity + 1 }
-                    : item
-            ));
-        } else {
-            setCart([...cart, { 
-                productId: product._id, 
-                quantity: 1,
-                // Keep product details for display (not sent to backend)
-                productDetails: {
-                    title: product.title,
-                    price: product.price,
-                    currency: product.currency,
-                    image: getPrimaryImage(product)
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            }]);
-        }
-        // Open cart drawer
-        setIsCartOpen(true);
-    };
 
-    // Buy now function - adds to cart and shows checkout
-    const buyNow = (product) => {
-        // Clear cart and add only this product
-        setCart([{ 
-            productId: product._id, 
-            quantity: 1,
-            productDetails: {
-                title: product.title,
-                price: product.price,
-                currency: product.currency,
-                image: getPrimaryImage(product)
+                const data = await response.json();
+                
+                // Add bot response
+                const botMessage = {
+                    id: Date.now() + 1,
+                    text: data.response || 'Sorry, I could not process your request.',
+                    sender: 'bot',
+                    timestamp: new Date().toISOString()
+                };
+                
+                setMessages(prev => [...prev, botMessage]);
+            } catch (err) {
+                console.error('Error sending message to chatbot:', err);
+                setError('Failed to connect to chatbot. Please ensure the chatbot server is running.');
+                
+                // Add error message
+                const errorMessage = {
+                    id: Date.now() + 1,
+                    text: 'Sorry, I\'m having trouble connecting right now. Please try again later or contact support at support@marketconnect.com',
+                    sender: 'bot',
+                    timestamp: new Date().toISOString(),
+                    isError: true
+                };
+                
+                setMessages(prev => [...prev, errorMessage]);
+            } finally {
+                setIsLoading(false);
             }
-        }]);
-        // Open cart drawer
-        setIsCartOpen(true);
-    };
-
-    // Remove item from cart function
-    const removeFromCart = (productId) => {
-        setCart(cart.filter(item => item.productId !== productId));
-    };
-
-    // Update quantity function
-    const updateQuantity = (productId, newQuantity) => {
-        if (newQuantity <= 0) {
-            removeFromCart(productId);
-        } else {
-            setCart(cart.map(item => 
-                item.productId === productId 
-                    ? { ...item, quantity: newQuantity }
-                    : item
-            ));
         }
     };
 
-    // Calculate cart total
-    const cartTotal = cart.reduce((total, item) => {
-        const price = item.productDetails?.price || 0;
-        return total + (price * item.quantity);
-    }, 0);
+    const handleQuickQuestion = async (question) => {
+        if (isLoading) return;
+        
+        setInputMessage('');
+        setError(null);
+        
+        // Add user message immediately
+        const userMessageObj = {
+            id: Date.now(),
+            text: question,
+            sender: 'user',
+            timestamp: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, userMessageObj]);
+        setIsLoading(true);
 
-    // Render profile page if currentView is 'profile'
-    if (currentView === 'profile') {
-        return <Profile onBack={() => setCurrentView('dashboard')} />;
-    }
+        try {
+            // Send message to Python chatbot API
+            const response = await fetch(`${CHATBOT_API_URL}/message`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: question,
+                    sessionId: sessionId
+                })
+            });
 
-    // Render customer service page if currentView is 'customerService'
-    if (currentView === 'customerService') {
-        return <CustomerService onBack={() => setCurrentView('dashboard')} />;
-    }
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-    // Render product detail page if currentView is 'productDetail'
-    if (currentView === 'productDetail' && selectedProduct) {
+            const data = await response.json();
+            
+            // Add bot response
+            const botMessage = {
+                id: Date.now() + 1,
+                text: data.response || 'Sorry, I could not process your request.',
+                sender: 'bot',
+                timestamp: new Date().toISOString()
+            };
+            
+            setMessages(prev => [...prev, botMessage]);
+        } catch (err) {
+            console.error('Error sending message to chatbot:', err);
+            setError('Failed to connect to chatbot. Please ensure the chatbot server is running.');
+            
+            // Add error message
+            const errorMessage = {
+                id: Date.now() + 1,
+                text: 'Sorry, I\'m having trouble connecting right now. Please try again later or contact support at support@marketconnect.com',
+                sender: 'bot',
+                timestamp: new Date().toISOString(),
+                isError: true
+            };
+            
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleResetConversation = async () => {
+        try {
+            await fetch(`${CHATBOT_API_URL}/reset`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sessionId: sessionId
+                })
+            });
+            setMessages([]);
+            setError(null);
+        } catch (err) {
+            console.error('Error resetting conversation:', err);
+            // Still clear messages locally even if API call fails
+            setMessages([]);
+        }
+    };
+
+    const quickQuestions = [
+        'I need help with my order',
+        'I want to return a product',
+        'I have a payment issue',
+        'I need to track my shipment',
+        'What is your return policy?',
+        'How do I contact customer support?'
+    ];
+
+    if (isMinimized) {
         return (
-            <ProductDetail 
-                product={selectedProduct}
-                onBack={() => {
-                    setCurrentView('dashboard');
-                    setSelectedProduct(null);
-                }}
-                onAddToCart={(product, quantity) => {
-                    const existingItem = cart.find(item => item.productId === product._id);
-                    if (existingItem) {
-                        setCart(cart.map(item => 
-                            item.productId === product._id 
-                                ? { ...item, quantity: item.quantity + quantity }
-                                : item
-                        ));
-                    } else {
-                        setCart([...cart, { 
-                            productId: product._id, 
-                            quantity,
-                            productDetails: {
-                                title: product.title,
-                                price: product.price,
-                                currency: product.currency,
-                                image: getPrimaryImage(product)
-                            }
-                        }]);
-                    }
-                    setIsCartOpen(true);
-                    setCurrentView('dashboard');
-                    setSelectedProduct(null);
-                }}
-                onBuyNow={(product, quantity) => {
-                    setCart([{ 
-                        productId: product._id, 
-                        quantity,
-                        productDetails: {
-                            title: product.title,
-                            price: product.price,
-                            currency: product.currency,
-                            image: getPrimaryImage(product)
-                        }
-                    }]);
-                    setIsCartOpen(true);
-                    setCurrentView('dashboard');
-                    setSelectedProduct(null);
-                }}
-            />
+            <div className="ai-chatbot-minimized">
+                <button 
+                    className="chatbot-toggle-btn"
+                    onClick={() => setIsMinimized(false)}
+                    title="Open Chat"
+                >
+                    <FontAwesomeIcon icon={faComments} />
+                    <span>AI Assistant</span>
+                </button>
+            </div>
         );
     }
 
     return (
-        <div className="dashboard">
-            {/* Header */}
-            <header className="dashboard-header">
-                <div className="header-content">
-                    <div className="logo-section">
-                        <h1>Market Connect</h1>
-                        <button 
-                            className="mobile-menu-btn"
-                            onClick={() => setShowMobileMenu(!showMobileMenu)}
-                        >
-                            <FontAwesomeIcon icon={showMobileMenu ? faTimes : faBars} />
+        <div className="ai-chatbot-dashboard">
+            <div className="chatbot-container">
+                {/* Header */}
+                <div className="chatbot-header">
+                    <div className="chatbot-header-left">
+                        <button className="back-btn" onClick={onBack}>
+                            <FontAwesomeIcon icon={faArrowLeft} />
+                            Back to Dashboard
                         </button>
                     </div>
-                    
-                    <div className="search-section">
-                        <div className="search-bar">
-                            <FontAwesomeIcon icon={faSearch} className="search-icon" />
-                            <input
-                                type="text"
-                                placeholder="Search for products..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
+                    <div className="chatbot-header-center">
+                        <FontAwesomeIcon icon={faRobot} className="header-icon" />
+                        <h1>AI Customer Service Assistant</h1>
                     </div>
-
-                    <div className="header-actions">
+                    <div className="chatbot-header-right">
                         <button 
-                            className="action-btn customer-service-btn" 
-                            onClick={() => setCurrentView('customerService')}
-                            title="Customer Service"
+                            className="minimize-btn"
+                            onClick={() => setIsMinimized(true)}
+                            title="Minimize"
                         >
-                            <FontAwesomeIcon icon={faHeadset} />
-                        </button>
-                        <button 
-                            className="action-btn cart-toggle-btn" 
-                            onClick={() => setIsCartOpen(!isCartOpen)}
-                            title="Cart"
-                        >
-                            <FontAwesomeIcon icon={faShoppingCart} />
-                            {cart.length > 0 && (
-                                <span className="cart-badge">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>
-                            )}
-                        </button>
-                        <button className="action-btn" onClick={() => setCurrentView('profile')}>
-                            <FontAwesomeIcon icon={faUser} />
-                        </button>
-                        <button className="action-btn logout-btn" onClick={() => setCurrentView('profile')}>
-                            <FontAwesomeIcon icon={faSignOutAlt} />
+                            <FontAwesomeIcon icon={faTimes} />
                         </button>
                     </div>
                 </div>
-            </header>
 
-            <div className="dashboard-content">
-                {/* Sidebar */}
-                <aside className={`sidebar ${showMobileMenu ? 'mobile-open' : ''}`}>
-                    <nav className="sidebar-nav">
-                        <div className="nav-item active">
-                            <FontAwesomeIcon icon={faHome} />
-                            <span>Dashboard</span>
-                        </div>
-                    </nav>
-
-                    {/* Filters */}
-                    <div className="filters-section">
-                        <div className="section-header-left">
-                            <h3>Featured Products</h3>
-                            <span className="product-count">{sortedProducts.length} products</span>
-                        </div>
-                        
-                        <div className="filter-group">
-                            <label>Category</label>
-                            <select 
-                                value={selectedCategory} 
-                                onChange={(e) => setSelectedCategory(e.target.value)}
-                            >
-                                {categories.map(category => (
-                                    <option key={category} value={category}>{category}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="filter-group">
-                            <label>Sort By</label>
-                            <select 
-                                value={sortBy} 
-                                onChange={(e) => setSortBy(e.target.value)}
-                            >
-                                <option value="popularity">Popularity</option>
-                                <option value="price-low">Price: Low to High</option>
-                                <option value="price-high">Price: High to Low</option>
-                                <option value="rating">Rating</option>
-                            </select>
-                        </div>
-
-                        <div className="filter-group">
-                            <label>Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}</label>
-                            <input
-                                type="range"
-                                min="0"
-                                max="3000"
-                                value={priceRange[1]}
-                                onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                            />
-                        </div>
-                    </div>
-                </aside>
-
-                {/* Main Content */}
-                <main className="main-content">
-                    <div className="content-header">
-                        <h2>Welcome to Market Connect</h2>
-                        <p>Discover amazing products at great prices</p>
-                    </div>
-
-                    {/* Featured Products */}
-                    <section className="products-section">
-
-                        <div className="products-grid">
-                            {sortedProducts.map(product => {
-                                const isInStock = product.stock > 0;
-                                const primaryImage = getPrimaryImage(product);
-                                return (
-                                <div 
-                                    key={product._id} 
-                                    className="product-card"
-                                    style={{ cursor: 'pointer' }}
-                                    onClick={() => {
-                                        setSelectedProduct(product);
-                                        setCurrentView('productDetail');
-                                    }}
-                                >
-                                    <div className="product-image">
-                                        <img src={primaryImage} alt={product.title} />
-                                    </div>
-                                    
-                                    <div className="product-info">
-                                        <h4 className="product-name">{product.title}</h4>
-                                        <div className="product-rating">
-                                            <div className="stars">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <FontAwesomeIcon 
-                                                        key={i} 
-                                                        icon={faStar} 
-                                                        className={i < Math.floor(product.ratingAvg || 0) ? 'filled' : ''}
-                                                    />
-                                                ))}
-                                            </div>
-                                            <span className="rating-text">({product.ratingCount || 0})</span>
+                <div className="chatbot-content">
+                    {/* Main Chat Area */}
+                    <div className="chatbot-main">
+                        <div className="chatbot-messages-container">
+                            <div className="chatbot-messages" ref={messagesEndRef}>
+                                {messages.length === 0 ? (
+                                    <div className="welcome-section">
+                                        <div className="welcome-header">
+                                            <FontAwesomeIcon icon={faHeadset} className="welcome-icon" />
+                                            <h2>How can I help you today?</h2>
+                                            <p>I'm your AI assistant here to help with any questions about orders, returns, payments, and more.</p>
                                         </div>
                                         
-                                        <div className="product-price">
-                                            <span className="current-price">
-                                                {product.currency === 'USD' ? '$' : '₹'}{product.price}
-                                            </span>
-                                            {product.stock <= 5 && product.stock > 0 && (
-                                                <span className="stock-warning" style={{fontSize: '12px', color: '#ff9800', marginLeft: '10px'}}>
-                                                    Only {product.stock} left!
-                                                </span>
-                                            )}
-                                        </div>
-                                        
-                                        <div className="product-actions" onClick={(e) => e.stopPropagation()}>
-                                            <button 
-                                                className={`add-to-cart-btn ${!isInStock ? 'out-of-stock' : ''}`}
-                                                onClick={() => isInStock && addToCart(product)}
-                                                disabled={!isInStock}
-                                            >
-                                                {isInStock ? 'Add to Cart' : 'Out of Stock'}
-                                            </button>
-                                            <button 
-                                                className={`buy-now-btn ${!isInStock ? 'out-of-stock' : ''}`}
-                                                onClick={() => isInStock && buyNow(product)}
-                                                disabled={!isInStock}
-                                            >
-                                                {isInStock ? 'Buy Now' : 'Out of Stock'}
-                                            </button>
+                                        <div className="quick-questions-grid">
+                                            {quickQuestions.map((question, index) => (
+                                                <button
+                                                    key={index}
+                                                    className="quick-question-card"
+                                                    onClick={() => handleQuickQuestion(question)}
+                                                >
+                                                    <FontAwesomeIcon icon={faQuestionCircle} />
+                                                    {question}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
-                                </div>
-                            )})}
-                        </div>
-                    </section>
-                </main>
-            </div>
-
-            {/* Cart Drawer - Right Side Panel (Amazon Style) */}
-            <div className={`cart-drawer-overlay ${isCartOpen ? 'open' : ''}`} onClick={() => setIsCartOpen(false)}></div>
-            <div className={`cart-drawer ${isCartOpen ? 'open' : ''}`}>
-                <div className="cart-drawer-header">
-                    <h3>Your Cart ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)</h3>
-                    <button className="cart-close-btn" onClick={() => setIsCartOpen(false)}>
-                        <FontAwesomeIcon icon={faTimes} />
-                    </button>
-                </div>
-                <div className="cart-drawer-content">
-                    {cart.length > 0 ? (
-                        <>
-                            <div className="cart-items-list">
-                                {cart.map(item => (
-                                    <div key={item.productId} className="cart-item-drawer">
-                                        <img src={item.productDetails?.image || ''} alt={item.productDetails?.title || 'Product'} />
-                                        <div className="cart-item-info">
-                                            <span className="cart-item-title">{item.productDetails?.title || 'Product'}</span>
-                                            <div className="cart-item-pricing">
-                                                <span className="cart-item-price">
-                                                    {item.productDetails?.currency === 'USD' ? '$' : '₹'}{item.productDetails?.price || 0}
-                                                </span>
-                                                <div className="quantity-controls-drawer">
-                                                    <button 
-                                                        className="quantity-btn-drawer"
-                                                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                                                    >
-                                                        -
-                                                    </button>
-                                                    <span className="quantity-drawer">{item.quantity}</span>
-                                                    <button 
-                                                        className="quantity-btn-drawer"
-                                                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                                                    >
-                                                        +
-                                                    </button>
+                                ) : (
+                                    <div className="messages-list">
+                                        {messages.map(message => (
+                                            <div 
+                                                key={message.id} 
+                                                className={`message ${message.sender === 'user' ? 'user-message' : 'bot-message'} ${message.isError ? 'error-message' : ''}`}
+                                            >
+                                                <div className="message-avatar">
+                                                    {message.sender === 'bot' ? (
+                                                        <FontAwesomeIcon icon={faRobot} />
+                                                    ) : (
+                                                        <FontAwesomeIcon icon={faHeadset} />
+                                                    )}
+                                                </div>
+                                                <div className="message-content">
+                                                    <p>{message.text}</p>
+                                                    <span className="message-time">
+                                                        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
                                                 </div>
                                             </div>
-                                        </div>
+                                        ))}
+                                        {isLoading && (
+                                            <div className="message bot-message typing">
+                                                <div className="message-avatar">
+                                                    <FontAwesomeIcon icon={faRobot} />
+                                                </div>
+                                                <div className="message-content">
+                                                    <div className="typing-indicator">
+                                                        <span></span>
+                                                        <span></span>
+                                                        <span></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div ref={messagesEndRef} />
                                     </div>
-                                ))}
+                                )}
                             </div>
-                            <div className="cart-drawer-footer">
-                                <div className="cart-total-drawer">
-                                    <div className="subtotal">
-                                        <span>Subtotal ({cart.reduce((sum, item) => sum + item.quantity, 0)} items):</span>
-                                        <strong>₹{cartTotal.toFixed(2)}</strong>
-                                    </div>
+
+                            {/* Input Area */}
+                            <form className="chatbot-input-container" onSubmit={handleSendMessage}>
+                                <div className="input-wrapper">
+                                    <input
+                                        type="text"
+                                        className="chatbot-input"
+                                        placeholder="Type your message here..."
+                                        value={inputMessage}
+                                        onChange={(e) => setInputMessage(e.target.value)}
+                                        disabled={isLoading}
+                                    />
+                                    <button 
+                                        type="submit" 
+                                        className="send-message-btn"
+                                        disabled={!inputMessage.trim() || isLoading}
+                                    >
+                                        {isLoading ? (
+                                            <FontAwesomeIcon icon={faSpinner} className="spinning" />
+                                        ) : (
+                                            <FontAwesomeIcon icon={faPaperPlane} />
+                                        )}
+                                    </button>
                                 </div>
-                                <button className="checkout-btn-drawer">Proceed to Checkout</button>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="empty-cart">
-                            <FontAwesomeIcon icon={faShoppingCart} style={{fontSize: '48px', color: '#ccc', marginBottom: '20px'}} />
-                            <p>Your cart is empty</p>
-                            <button className="continue-shopping-btn" onClick={() => setIsCartOpen(false)}>
-                                Continue Shopping
-                            </button>
+                            </form>
                         </div>
-                    )}
+
+                        {/* Actions Bar */}
+                        {messages.length > 0 && (
+                            <div className="chatbot-actions">
+                                <button 
+                                    className="action-btn reset-btn"
+                                    onClick={handleResetConversation}
+                                >
+                                    <FontAwesomeIcon icon={faRedo} />
+                                    Start New Conversation
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Sidebar with FAQ and Info */}
+                    <div className="chatbot-sidebar">
+                        {/* Contact Info */}
+                        <div className="info-card">
+                            <h3>
+                                <FontAwesomeIcon icon={faHeadset} />
+                                Contact Support
+                            </h3>
+                            <div className="contact-info">
+                                <p><strong>Email:</strong> support@marketconnect.com</p>
+                                <p><strong>Phone:</strong> +91 1800-123-4567</p>
+                                <p><strong>Hours:</strong> 24/7 Available</p>
+                            </div>
+                        </div>
+
+                        {/* FAQ Section */}
+                        <div className="info-card">
+                            <h3>
+                                <FontAwesomeIcon icon={faComments} />
+                                Frequently Asked Questions
+                            </h3>
+                            <div className="faq-section">
+                                {faqs.length === 0 ? (
+                                    <p className="no-faqs">Loading FAQs...</p>
+                                ) : (
+                                    <div className="faq-list">
+                                        {faqs.map((faq, index) => (
+                                            <div key={faq._id || index} className={`faq-item ${openFaqIndex === index ? 'open' : ''}`}>
+                                                <button 
+                                                    className="faq-question"
+                                                    onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
+                                                >
+                                                    {faq.question}
+                                                </button>
+                                                {openFaqIndex === index && (
+                                                    <div className="faq-answer">
+                                                        <p>{faq.answer}</p>
+                                                        <button 
+                                                            className="ask-faq-btn"
+                                                            onClick={() => handleQuickQuestion(faq.question)}
+                                                        >
+                                                            Ask about this
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                {/* Error Banner */}
+                {error && (
+                    <div className="error-banner">
+                        <p>{error}</p>
+                        <button onClick={() => setError(null)}>×</button>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
-export default BuyerDashboard;
+export default AIChatbotDashboard;
