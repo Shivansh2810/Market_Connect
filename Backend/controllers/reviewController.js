@@ -111,6 +111,17 @@ const createReview = async (req, res) => {
         .status(400)
         .json({ message: "You can only review products you have purchased" });
 
+    // Hardening: ensure the order's seller matches the product's seller
+    if (
+      order.seller &&
+      product.sellerId &&
+      order.seller.toString() !== product.sellerId.toString()
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Order seller does not match product seller" });
+    }
+
     const review = new Review({
       productId,
       sellerId: product.sellerId,
