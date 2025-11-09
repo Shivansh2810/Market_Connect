@@ -1,6 +1,8 @@
 const Order = require("../models/order");
 const Return = require("../models/return");
 const mongoose = require("mongoose");
+const Product = require("../models/product");
+const Review = require("../models/review");
 
 // GET /api/seller/my-sales
 const getMySales = async (req, res) => {
@@ -94,9 +96,115 @@ const updateReturnStatus = async (req, res) => {
   }
 };
 
+// GET /api/seller/dashboard
+const getDashboardStats = async (req, res) => {
+  try {
+    const sellerId = req.user._id;
+
+    // total orders and revenue (exclude cancelled/payment failed)
+    const ordersMatch = {
+      seller: sellerId,
+      orderStatus: { $nin: ["Cancelled", "Payment Failed"] },
+    };
+    const [orderAgg] = await Order.aggregate([
+      { $match: ordersMatch },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: "$totalPrice" },
+        },
+      },
+    ]);
+
+    const totalOrders = orderAgg ? orderAgg.totalOrders : 0;
+    const totalRevenue = orderAgg ? orderAgg.totalRevenue : 0;
+
+    // total products
+    const totalProducts = await Product.countDocuments({
+      sellerId: sellerId,
+      isDeleted: false,
+    });
+
+    // pending returns
+    const pendingReturns = await Return.countDocuments({
+      seller: sellerId,
+      status: "Requested",
+    });
+
+    // average rating for seller
+    const [ratingAgg] = await Review.aggregate([
+      {
+        $match: {
+          sellerId: mongoose.Types.ObjectId(sellerId),
+          status: "visible",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          avgRating: { $avg: "$rating" },
+          ratingCount: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const avgRating = ratingAgg ? ratingAgg.avgRating : 0;
+    const ratingCount = ratingAgg ? ratingAgg.ratingCount : 0;
+
+    // top products by quantity sold (from orders)
+    const topProducts = await Order.aggregate([
+      { $match: { seller: sellerId } },
+      { $unwind: "$orderItems" },
+      {
+        $group: {
+          _id: "$orderItems.product",
+          qtySold: { $sum: "$orderItems.quantity" },
+        },
+      },
+      { $sort: { qtySold: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          productId: "$_id",
+          qtySold: 1,
+          "product.title": "$product.title",
+          "product.price": "$product.price",
+          "product.images": "$product.images",
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalOrders,
+        totalRevenue,
+        totalProducts,
+        pendingReturns,
+        avgRating,
+        ratingCount,
+        topProducts,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getMySales,
   getMySaleById,
   getMyReturns,
   updateReturnStatus,
+  getDashboardStats,
 };
