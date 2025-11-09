@@ -1,0 +1,102 @@
+const Order = require("../models/order");
+const Return = require("../models/return");
+const mongoose = require("mongoose");
+
+// GET /api/seller/my-sales
+const getMySales = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const query = { seller: req.user._id };
+
+    const [orders, total] = await Promise.all([
+      Order.find(query)
+        .populate("buyer", "name email")
+        .populate("orderItems.product", "title price images")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Order.countDocuments(query),
+    ]);
+
+    res.json({
+      success: true,
+      data: { orders, totalPages: Math.ceil(total / limit), currentPage: page },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET /api/seller/my-sales/:id
+const getMySaleById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ message: "Invalid order id" });
+
+    const order = await Order.findById(id)
+      .populate("buyer", "name email")
+      .populate("orderItems.product", "title images price");
+
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (order.seller.toString() !== req.user._id.toString())
+      return res.status(403).json({ message: "Access denied" });
+
+    res.json({ success: true, data: order });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET /api/seller/my-returns
+const getMyReturns = async (req, res) => {
+  try {
+    const returns = await Return.find({ seller: req.user._id })
+      .populate("order", "totalPrice orderStatus")
+      .populate("buyer", "name email")
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, data: returns });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/seller/my-returns/:id/status
+const updateReturnStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, resolution, refundInfo } = req.body;
+
+    const ret = await Return.findById(id);
+    if (!ret)
+      return res.status(404).json({ message: "Return request not found" });
+    if (ret.seller.toString() !== req.user._id.toString())
+      return res.status(403).json({ message: "Access denied" });
+
+    // basic allowed statuses for seller actions
+    const allowed = ["Approved", "Rejected", "Received by Seller", "Completed"];
+    if (status && !allowed.includes(status))
+      return res.status(400).json({ message: "Invalid status" });
+
+    if (status) ret.status = status;
+    if (resolution) ret.resolution = resolution;
+    if (refundInfo) ret.refundInfo = refundInfo;
+
+    await ret.save();
+
+    res.json({ success: true, message: "Return updated", data: ret });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  getMySales,
+  getMySaleById,
+  getMyReturns,
+  updateReturnStatus,
+};
