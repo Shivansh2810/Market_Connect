@@ -11,6 +11,21 @@ const {
 // Public - get visible reviews for product
 router.get("/product/:productId", reviewController.getProductReviews);
 
+// Public - seller stats (avg rating, per-product breakdown)
+router.get("/seller/:sellerId/stats", reviewController.getSellerStats);
+
+// Protected - current seller stats
+router.get(
+  "/me/seller/stats",
+  protect,
+  require("../middlewares/auth").isSeller,
+  (req, res, next) => {
+    req.params.sellerId = req.user._id.toString();
+    next();
+  },
+  reviewController.getSellerStats
+);
+
 // Protected - create review (buyer must have purchased product)
 router.post(
   "/",
