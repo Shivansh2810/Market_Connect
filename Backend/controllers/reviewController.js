@@ -21,6 +21,72 @@ const getProductReviews = async (req, res) => {
   }
 };
 
+// GET /api/reviews/seller/:sellerId/stats
+const getSellerStats = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+
+    const stats = await Review.aggregate([
+      {
+        $match: {
+          sellerId: require("mongoose").Types.ObjectId(sellerId),
+          status: "visible",
+        },
+      },
+      {
+        $group: {
+          _id: "$sellerId",
+          ratingCount: { $sum: 1 },
+          ratingAvg: { $avg: "$rating" },
+        },
+      },
+    ]);
+
+    const result =
+      stats.length > 0
+        ? { ratingAvg: stats[0].ratingAvg, ratingCount: stats[0].ratingCount }
+        : { ratingAvg: 0, ratingCount: 0 };
+
+    // include per-product breakdown
+    const perProduct = await Review.aggregate([
+      {
+        $match: {
+          sellerId: require("mongoose").Types.ObjectId(sellerId),
+          status: "visible",
+        },
+      },
+      {
+        $group: {
+          _id: "$productId",
+          ratingAvg: { $avg: "$rating" },
+          ratingCount: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          productId: "$_id",
+          ratingAvg: 1,
+          ratingCount: 1,
+          "product.title": "$product.title",
+        },
+      },
+    ]);
+
+    res.json({ success: true, data: { seller: result, perProduct } });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // POST /api/reviews
 const createReview = async (req, res) => {
   try {
@@ -44,6 +110,17 @@ const createReview = async (req, res) => {
       return res
         .status(400)
         .json({ message: "You can only review products you have purchased" });
+
+    // Hardening: ensure the order's seller matches the product's seller
+    if (
+      order.seller &&
+      product.sellerId &&
+      order.seller.toString() !== product.sellerId.toString()
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Order seller does not match product seller" });
+    }
 
     const review = new Review({
       productId,
@@ -127,4 +204,5 @@ module.exports = {
   createReview,
   updateReview,
   deleteReview,
+  getSellerStats,
 };
