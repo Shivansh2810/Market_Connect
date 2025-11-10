@@ -3,176 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import './dashboard.css';
 import Profile from '../profile/Profile';
 import ProductDetail from './ProductDetail';
+import { useAuth } from '../../contexts/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-    faSearch, 
-    faShoppingCart, 
-    faUser, 
+import {
+    faSearch,
+    faShoppingCart,
+    faUser,
     faFilter,
     faStar,
+    faChevronDown,
     faBars,
     faTimes,
     faHome,
-    faSignOutAlt,
-    faHeadset,
-    faQuestionCircle
+    faShoppingBag,
+    faBell,
+    faSignOutAlt
 } from '@fortawesome/free-solid-svg-icons';
-
-// Sample product data - Matching backend Product model structure
-const sampleProducts = [
-    {
-        _id: "507f1f77bcf86cd799439011",
-        title: "Wireless Bluetooth Headphones",
-        price: 1299,
-        currency: "INR",
-        ratingAvg: 4.5,
-        ratingCount: 128,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
-                publicId: "headphones-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ea",
-        categoryName: "Electronics", // For display purposes
-        stock: 45,
-        condition: "new",
-        tags: ["wireless", "bluetooth", "audio"],
-        specs: {
-            "Brand": "AudioTech",
-            "Connectivity": "Bluetooth 5.0",
-            "Battery": "20 hours"
-        }
-    },
-    {
-        _id: "507f1f77bcf86cd799439012",
-        title: "Smart Fitness Watch",
-        price: 2499,
-        currency: "INR",
-        ratingAvg: 4.8,
-        ratingCount: 89,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
-                publicId: "watch-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ea",
-        categoryName: "Electronics",
-        stock: 12,
-        condition: "new",
-        tags: ["fitness", "smartwatch", "wearable"],
-        specs: {
-            "Brand": "FitTech",
-            "Display": "1.4 inch",
-            "Battery": "7 days"
-        }
-    },
-    {
-        _id: "507f1f77bcf86cd799439013",
-        title: "Organic Cotton T-Shirt",
-        price: 399,
-        currency: "INR",
-        ratingAvg: 4.2,
-        ratingCount: 45,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
-                publicId: "tshirt-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860eb",
-        categoryName: "Clothing",
-        stock: 3,
-        condition: "new",
-        tags: ["organic", "cotton", "casual"],
-        specs: {
-            "Material": "100% Organic Cotton",
-            "Size": "M, L, XL",
-            "Color": "White"
-        }
-    },
-    {
-        _id: "507f1f77bcf86cd799439014",
-        title: "Premium Coffee Beans",
-        price: 349,
-        currency: "INR",
-        ratingAvg: 4.7,
-        ratingCount: 67,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=300&h=300&fit=crop",
-                publicId: "coffee-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ec",
-        categoryName: "Food & Beverages",
-        stock: 28,
-        condition: "new",
-        tags: ["coffee", "premium", "organic"],
-        specs: {
-            "Origin": "Karnataka",
-            "Weight": "500g",
-            "Roast": "Medium"
-        }
-    },
-    {
-        _id: "507f1f77bcf86cd799439015",
-        title: "Wired Headphone",
-        price: 899,
-        currency: "INR",
-        ratingAvg: 4.3,
-        ratingCount: 34,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop",
-                publicId: "headphone-wired-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ea",
-        categoryName: "Electronics",
-        stock: 0,
-        condition: "new",
-        tags: ["wired", "audio", "headphones"],
-        specs: {
-            "Brand": "SoundMax",
-            "Type": "Wired",
-            "Length": "1.2m"
-        }
-    },
-    {
-        _id: "507f1f77bcf86cd799439016",
-        title: "Leather Wallet",
-        price: 1199,
-        currency: "INR",
-        ratingAvg: 4.6,
-        ratingCount: 23,
-        images: [
-            {
-                url: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop",
-                publicId: "wallet-1",
-                isPrimary: true
-            }
-        ],
-        categoryId: "507f191e810c19729de860ed",
-        categoryName: "Accessories",
-        stock: 15,
-        condition: "new",
-        tags: ["leather", "wallet", "accessories"],
-        specs: {
-            "Material": "Genuine Leather",
-            "Color": "Brown",
-            "Slots": "6 card slots"
-        }
-    }
-];
-
-const categories = ["All", "Electronics", "Clothing", "Food & Beverages", "Accessories", "Books", "Home & Garden"];
+import { getAllProducts } from "../../../api/product";
+import {
+  getCart,
+  addToCart as addCartItem,
+  updateCartItem,
+  removeCartItem,
+} from "../../../api/cart";
 
 const BuyerDashboard = () => {
   const navigate = useNavigate();
@@ -297,37 +150,15 @@ const handleLogout = () => {
         }
     });
 
-    // Add to cart function - matches backend cart structure {productId, quantity}
-    const addToCart = (product) => {
-        const existingItem = cart.find(item => item.productId === product._id);
-        if (existingItem) {
-            setCart(cart.map(item => 
-                item.productId === product._id 
-                    ? { ...item, quantity: item.quantity + 1 }
-                    : item
-            ));
-        } else {
-            setCart([...cart, { 
-                productId: product._id, 
-                quantity: 1,
-                // Keep product details for display (not sent to backend)
-                productDetails: {
-                    title: product.title,
-                    price: product.price,
-                    currency: product.currency,
-                    image: getPrimaryImage(product)
-                }
-            }]);
-        }
-        // Open cart drawer
-        setIsCartOpen(true);
-    };
+    
 
     // Buy now function - adds to cart and shows checkout
+    // Matches backend cartSchema structure
     const buyNow = (product) => {
         // Clear cart and add only this product
-        setCart([{ 
-            productId: product._id, 
+        const newCartItem = {
+            _id: `cart_${Date.now()}`,
+            productId: product._id,
             quantity: 1,
             price: product.price,
             addedAt: new Date().toISOString(),
@@ -337,46 +168,18 @@ const handleLogout = () => {
                 currency: product.currency,
                 image: getPrimaryImage(product)
             }
-        }]);
+        };
+        setCart([newCartItem]);
         // Open cart drawer
         setIsCartOpen(true);
     };
 
-    // Remove item from cart function
-    const removeFromCart = (productId) => {
-        setCart(cart.filter(item => item.productId !== productId));
-    };
-
-    // Update quantity function
-    const updateQuantity = (productId, newQuantity) => {
-        if (newQuantity <= 0) {
-            removeFromCart(productId);
-        } else {
-            setCart(cart.map(item => 
-                item.productId === productId 
-                    ? { ...item, quantity: newQuantity }
-                    : item
-            ));
-        }
-    };
-
-    // Calculate cart total
-    const cartTotal = cart.reduce((total, item) => {
-        const price = item.productDetails?.price || 0;
-        return total + (price * item.quantity);
-    }, 0);
-
-    // Render profile page
+    // Render profile page if currentView is 'profile'
     if (currentView === 'profile') {
         return <Profile onBack={() => setCurrentView('dashboard')} />;
     }
 
-    // Render customer service page
-    if (currentView === 'customerService') {
-        return <CustomerService onBack={() => setCurrentView('dashboard')} />;
-    }
-
-    // Render product detail page
+    // Render product detail page if currentView is 'productDetail'
     if (currentView === 'productDetail' && selectedProduct) {
         return (
             <ProductDetail
@@ -471,8 +274,8 @@ const handleLogout = () => {
                     </div>
 
                     <div className="header-actions">
-                        <button 
-                            className="action-btn cart-toggle-btn" 
+                        <button
+                            className="action-btn cart-toggle-btn"
                             onClick={() => setIsCartOpen(!isCartOpen)}
                             title="Cart"
                         >
@@ -484,7 +287,7 @@ const handleLogout = () => {
                         <button className="action-btn" onClick={() => setCurrentView('profile')}>
                             <FontAwesomeIcon icon={faUser} />
                         </button>
-                        <button className="action-btn logout-btn" onClick={() => setCurrentView('profile')}>
+                        <button className="action-btn logout-btn" onClick={handleLogout} title="Logout">
                             <FontAwesomeIcon icon={faSignOutAlt} />
                         </button>
                     </div>
@@ -555,6 +358,7 @@ const handleLogout = () => {
 
                     {/* Featured Products */}
                     <section className="products-section">
+
                         <div className="products-grid">
                             {sortedProducts.map(product => {
                                 const isInStock = product.stock > 0;
@@ -630,7 +434,7 @@ const handleLogout = () => {
                 </main>
             </div>
 
-            {/* Cart Drawer */}
+            {/* Cart Drawer - Right Side Panel (Amazon Style) */}
             <div className={`cart-drawer-overlay ${isCartOpen ? 'open' : ''}`} onClick={() => setIsCartOpen(false)}></div>
             <div className={`cart-drawer ${isCartOpen ? 'open' : ''}`}>
                 <div className="cart-drawer-header">
