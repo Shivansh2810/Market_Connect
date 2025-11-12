@@ -17,6 +17,7 @@ export default function Login() {
       navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
+
   const [accountType, setAccountType] = useState("");
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -73,6 +74,11 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    // Redirect to Google OAuth
+    window.location.href = `${API_BASE_URL}/auth/google`;
   };
 
   const handleForgotPassword = async (e) => {
@@ -182,7 +188,7 @@ export default function Login() {
 
           <div className="mt-4">
             <button
-              onClick={() => alert('Google Sign-In coming soon!')}
+              onClick={handleGoogleLogin}
               className="btn-google"
             >
               <FcGoogle size={22} />
