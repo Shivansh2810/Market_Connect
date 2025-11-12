@@ -18,7 +18,6 @@ router.post("/signup", validate(signupSchema), userController.signup);
 
 router.post("/login", validate(loginSchema), userController.login);
 
-
 router.post("/forgot-password", validate(forgotPasswordSchema), userController.forgotPassword);
 router.post("/reset-password", validate(resetPasswordSchema), userController.resetPassword);
 
@@ -42,9 +41,20 @@ router.get(
 
 router.get(
   "/auth/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "/" }),
+  passport.authenticate("google", { 
+    session: false, 
+    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_auth_failed` 
+  }),
   userController.googleAuth
 );
+
+router.get("/auth/google/success", protect, (req, res) => {
+  res.json({
+    success: true,
+    user: req.user,
+    requiresPhoneUpdate: req.user.mobNo === "0000000000"
+  });
+});
 
 router.get("/me", protect, userController.getMe);
 router.put(

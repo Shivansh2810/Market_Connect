@@ -83,17 +83,17 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-  
-    if (user.role !== "both" && user.role !== role) {
-      return res
-        .status(403)
-        .json({ message: `Access denied for role: ${role}. Your role is: ${user.role}` });
-    }
-
+    // Check if user signed up with Google
     if (user.googleId && !user.password) {
       return res.status(401).json({
         message: "This account uses Google login. Please use Google login.",
       });
+    }
+
+    if (user.role !== "both" && user.role !== role) {
+      return res
+        .status(403)
+        .json({ message: `Access denied for role: ${role}. Your role is: ${user.role}` });
     }
 
     const isPasswordValid = await user.comparePassword(password);
@@ -415,11 +415,20 @@ exports.upgradeToSeller = async (req, res) => {
 };
 
 exports.googleAuth = (req, res) => {
-  res.status(200).json({
-    message: "Google login successful",
-    token: req.user.token,
-    user: req.user.user,
-  });
+  const userData = {
+    id: req.user.user._id,
+    name: req.user.user.name,
+    email: req.user.user.email,
+    role: req.user.user.role,
+    mobNo: req.user.user.mobNo,
+    googleId: req.user.user.googleId
+  };
+
+  // Redirect to frontend with token as query parameter
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const redirectUrl = `${frontendUrl}/google-callback?token=${req.user.token}&userId=${req.user.user._id}`;
+  
+  res.redirect(redirectUrl);
 };
 
 /**
@@ -442,6 +451,7 @@ exports.getMe = async (req, res) => {
       email: user.email,
       role: user.role,
       mobNo: user.mobNo,
+      googleId: user.googleId,
       sellerInfo: user.sellerInfo || null,
       buyerInfo: {
         shippingAddresses:
@@ -601,6 +611,34 @@ exports.getMyOrders = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json({ success: true, data: orders });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// New endpoint to handle Google OAuth success
+exports.googleAuthSuccess = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password");
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const userData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      mobNo: user.mobNo,
+      googleId: user.googleId
+    };
+
+    res.json({
+      success: true,
+      user: userData,
+      requiresPhoneUpdate: user.mobNo === "0000000000" || !user.mobNo
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

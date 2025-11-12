@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -12,44 +12,56 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Check for stored auth data on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
     
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    if (token && userData) {
+      setToken(token);
+      setUser(JSON.parse(userData));
+      setIsAuthenticated(true);
     }
     setLoading(false);
   }, []);
 
   const login = (userData, authToken) => {
-    setUser(userData);
-    setToken(authToken);
     localStorage.setItem('token', authToken);
     localStorage.setItem('user', JSON.stringify(userData));
+    setToken(authToken);
+    setUser(userData);
+    setIsAuthenticated(true);
   };
 
   const logout = () => {
-    setUser(null);
-    setToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
+    setIsAuthenticated(false);
+  };
+
+  const updateUser = (userData) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
   };
 
   const value = {
     user,
     token,
+    isAuthenticated,
     login,
     logout,
-    isAuthenticated: !!user && !!token,
+    updateUser,
     loading
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
-

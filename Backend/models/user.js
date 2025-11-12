@@ -4,7 +4,6 @@ const { Schema } = mongoose;
 
 const addressSchema = require("./sharedSchemas.js");
 
-
 const cartSchema = new Schema(
   {
     productId: {
@@ -63,7 +62,17 @@ const userSchema = new Schema(
     mobNo: {
       type: String,
       trim: true,
+      validate: {
+        validator: function(v) {
+          if (this.password && !this.googleId) {
+            return /^[6-9]\d{9}$/.test(v);
+          }
+          return true; // Google users can have any phone or none
+        },
+        message: "Please provide a valid 10-digit Indian mobile number"
+      }
     },
+
     resetPasswordToken: String,
     resetPasswordExpire: Date,
     sellerInfo: {
@@ -79,7 +88,6 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password") || !this.password) {
     return next();
@@ -93,7 +101,6 @@ userSchema.pre("save", async function (next) {
     next(error);
   }
 });
-
 
 userSchema.methods.comparePassword = async function (enteredPassword) {
   if (!this.password) return false; 
