@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
@@ -33,7 +34,10 @@ app.use("/api/seller", sellerRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/orders", orderRoutes);
-
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+}));
 app.get("/", (req, res) => {
   res.json({ message: "Server is running" });
 });

@@ -2,10 +2,27 @@ const User = require("../models/user");
 const Order = require("../models/order");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
+const nodemailer = require("nodemailer");
 const { updateProfileSchema } = require("../validations/user");
 const addressJoiSchema = require("../validations/sharedSchema");
+
+// Create Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
+  }
+});
+
+// Test transporter connection
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log('Email transporter error:', error);
+  } else {
+    console.log('Email server is ready to send messages');
+  }
+});
 
 const ADMIN_EMAILS = ['admin@marketplace.com'];
 
@@ -178,7 +195,6 @@ exports.forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
-      
       return res.json({ 
         message: "If an account with that email exists, a password reset link has been sent" 
       });
@@ -191,12 +207,14 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpire = resetPasswordExpire;
     await user.save();
 
-    
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+    const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
 
-    const { data, error } = await resend.emails.send({
-      from: 'Market Connect <onboarding@resend.dev>',
-      to: [user.email],
+    const mailOptions = {
+      from: {
+        name: 'Market Connect',
+        address: process.env.EMAIL_USER
+      },
+      to: user.email,
       subject: 'Password Reset Request - Market Connect',
       html: `
         <!DOCTYPE html>
@@ -220,7 +238,7 @@ exports.forgotPassword = async (req, res) => {
                     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
                 }
                 .header { 
-                    background: linear-gradient(to right, #3b82f6, #8b5cf6);
+                    background: linear-gradient(to right, #3c009d, #5832a8);
                     padding: 30px; 
                     text-align: center; 
                     color: white;
@@ -237,7 +255,7 @@ exports.forgotPassword = async (req, res) => {
                 .button { 
                     display: inline-block; 
                     padding: 12px 30px; 
-                    background: #3b82f6; 
+                    background: #3c009d; 
                     color: white; 
                     text-decoration: none; 
                     border-radius: 5px; 
@@ -266,7 +284,7 @@ exports.forgotPassword = async (req, res) => {
                     background: #f0f9ff;
                     padding: 15px;
                     border-radius: 5px;
-                    border-left: 4px solid #3b82f6;
+                    border-left: 4px solid #3c009d;
                     margin: 20px 0;
                 }
             </style>
@@ -301,7 +319,7 @@ exports.forgotPassword = async (req, res) => {
                     <p><strong>Important:</strong> This reset link will expire in 10 minutes for security reasons.</p>
                     
                     <p>If you're having trouble clicking the button, copy and paste the following URL into your browser:</p>
-                    <p style="color: #3b82f6; word-break: break-all;">${resetUrl}</p>
+                    <p style="color: #3c009d; word-break: break-all;">${resetUrl}</p>
                 </div>
                 <div class="footer">
                     <p>If you didn't request this reset, please contact our support team immediately.</p>
@@ -311,14 +329,9 @@ exports.forgotPassword = async (req, res) => {
         </body>
         </html>
       `,
-    });
+    };
 
-    if (error) {
-      console.error('Resend error:', error);
-      return res.json({ 
-        message: "If an account with that email exists, a password reset link has been sent" 
-      });
-    }
+    await transporter.sendMail(mailOptions);
 
     console.log('Password reset email sent to:', user.email);
     
@@ -328,6 +341,12 @@ exports.forgotPassword = async (req, res) => {
 
   } catch (error) {
     console.error("Forgot password error:", error);
+    
+    if (error.code) {
+      console.error('Nodemailer error code:', error.code);
+      console.error('Nodemailer error message:', error.message);
+    }
+    
     res.json({ 
       message: "If an account with that email exists, a password reset link has been sent" 
     });
@@ -350,6 +369,20 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
+    // Add password validation here (same as signup)
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        message: "Password must be at least 6 characters long" 
+      });
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({ 
+        message: "Password must contain at least one uppercase letter, one lowercase letter, and one number" 
+      });
+    }
+
     const user = await User.findOne({
       resetPasswordToken: token,
       resetPasswordExpire: { $gt: Date.now() }
@@ -361,6 +394,7 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
+    // Set the password - this will trigger the pre-save hook to hash it
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
@@ -424,17 +458,12 @@ exports.googleAuth = (req, res) => {
     googleId: req.user.user.googleId
   };
 
-  // Redirect to frontend with token as query parameter
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   const redirectUrl = `${frontendUrl}/google-callback?token=${req.user.token}&userId=${req.user.user._id}`;
   
   res.redirect(redirectUrl);
 };
 
-/**
- * GET /api/me
- * Fetch full profile of logged-in user (addresses, cart, wishlist if present)
- */
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
@@ -472,10 +501,6 @@ exports.getMe = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/me/profile
- * Update basic profile information (name, mobNo, sellerInfo)
- */
 exports.updateProfile = async (req, res) => {
   try {
     const { error, value } = updateProfileSchema.validate(req.body);
@@ -498,8 +523,6 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-/** Address related handlers */
 
 exports.getAddresses = async (req, res) => {
   try {
@@ -595,10 +618,6 @@ exports.deleteAddress = async (req, res) => {
   }
 };
 
-/**
- * GET /api/me/orders
- * Fetch order history for logged-in buyer
- */
 exports.getMyOrders = async (req, res) => {
   try {
     if (req.user.role === "seller") {
@@ -616,7 +635,6 @@ exports.getMyOrders = async (req, res) => {
   }
 };
 
-// New endpoint to handle Google OAuth success
 exports.googleAuthSuccess = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select("-password");
