@@ -20,7 +20,7 @@ import {
 const BuyerDashboard = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const { products, categories } = useProducts();
+  const { products, categories, loading: productsLoading, error: productsError, refresh } = useProducts();
   const {
     items,
     addToCart,
@@ -40,12 +40,15 @@ const BuyerDashboard = () => {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const categoryOptions = useMemo(() => {
-    const uniqueNames = categories
-      .filter((category) => category && category.name && category.name !== 'All')
-      .map((category) => category.name);
-    const deduped = Array.from(new Set(uniqueNames));
-    return ['All', ...deduped];
-  }, [categories]);
+    const categoryNames = (categories || [])
+      .map((category) => category?.name || category?.title)
+      .filter(Boolean);
+    const derivedNames = products
+      .map((product) => product?.category?.name || product?.category)
+      .filter(Boolean);
+    const unique = Array.from(new Set(['All', ...categoryNames, ...derivedNames]));
+    return unique;
+  }, [categories, products]);
 
   const getPrimaryImage = (product) => {
     if (product.images && product.images.length > 0) {
@@ -66,7 +69,8 @@ const BuyerDashboard = () => {
       const matchesCategory =
         selectedCategory === 'All' ||
         product.category?.name === selectedCategory ||
-        product.categoryId === selectedCategory;
+        product.categoryId === selectedCategory ||
+        product.category === selectedCategory;
 
       const price = product.price || 0;
       const matchesPrice = price >= priceRange[0] && price <= priceRange[1];
@@ -115,6 +119,36 @@ const BuyerDashboard = () => {
     setIsCartOpen(false);
     navigate('/checkout');
   };
+
+  if (productsLoading) {
+    return (
+      <div className="dashboard loading-state">
+        <div className="loading-screen">
+          <div className="spinner"></div>
+          <h3>Loading products...</h3>
+          <p>Please wait while we fetch the latest catalogue</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (productsError) {
+    return (
+      <div className="dashboard error-state">
+        <div className="error-screen">
+          <div className="error-icon">⚠️</div>
+          <h3>We couldn’t load products</h3>
+          <p>{productsError}</p>
+          <button onClick={refresh} className="retry-btn">
+            Try Again
+          </button>
+          <button onClick={handleLogout} className="retry-btn secondary">
+            Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (currentView === 'profile') {
     return <Profile onBack={() => setCurrentView('dashboard')} />;

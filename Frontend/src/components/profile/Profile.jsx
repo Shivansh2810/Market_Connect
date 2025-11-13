@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './profile.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -15,160 +15,60 @@ import {
     faSignOutAlt,
     faArrowLeft
 } from '@fortawesome/free-solid-svg-icons';
+import { getCurrentUserProfile, getCurrentUserOrders, updateCurrentUserProfile } from '../../../api/user';
 
 const Profile = ({ onBack }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [activeTab, setActiveTab] = useState('personal');
-    
-    // Profile data state - Matching backend User model structure exactly
-    // Backend User model: name, email, password, googleId, role, mobNo, sellerInfo, buyerInfo, timestamps
-    // Backend addressSchema: street, city, state, pincode (6 chars), country (default "India")
-    const [profileData, setProfileData] = useState({
-        _id: '507f1f77bcf86cd799439010',
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        mobNo: '9876543210', // 10-digit Indian mobile number (no country code prefix)
-        role: 'buyer', // enum: ["buyer", "seller", "both"]
-        sellerInfo: null, // { shopName, shopAddress } - only if role is "seller" or "both"
-        buyerInfo: {
-            shippingAddresses: [
-                {
-                    _id: '507f1f77bcf86cd799439011', // Address subdocument has _id
-                    street: '123 Main Street',
-                    city: 'Mumbai',
-                    state: 'Maharashtra',
-                    pincode: '400001', // 6 characters exactly
-                    country: 'India' // Default value
-                },
-                {
-                    _id: '507f1f77bcf86cd799439012',
-                    street: '456 Park Avenue',
-                    city: 'Delhi',
-                    state: 'Delhi',
-                    pincode: '110001',
-                    country: 'India'
-                }
-            ],
-            cart: [] // Backend cartSchema: [{ productId, quantity, price, addedAt, _id }]
-        },
-        createdAt: '2024-01-01T10:00:00Z',
-        updatedAt: '2024-01-15T10:00:00Z'
-    });
+    const [profileData, setProfileData] = useState(null);
+    const [orderHistory, setOrderHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [saving, setSaving] = useState(false);
 
-    // Order history data - Matching backend Order model structure exactly
-    // Backend Order model: shippingInfo (addressSchema), buyer, seller, orderItems, payment, itemsPrice, taxPrice, shippingPrice, totalPrice, orderStatus, timestamps
-    // Backend orderItemSchema: name, quantity, image, price, product (ObjectId ref)
-    // Backend orderStatus enum: ["Payment Pending", "Order Placed", "Shipped", "Delivered", "Cancelled", "Returned", "Payment Failed"]
-    const orderHistory = [
-        {
-            _id: '507f1f77bcf86cd799439021',
-            buyer: '507f1f77bcf86cd799439010', // ObjectId reference to User
-            seller: '507f191e810c19729de860ea', // ObjectId reference to User
-            createdAt: '2024-01-15T10:30:00Z',
-            updatedAt: '2024-01-18T14:00:00Z',
-            orderItems: [
-                { 
-                    name: 'Wireless Bluetooth Headphones', 
-                    quantity: 1, 
-                    price: 1299, 
-                    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop',
-                    product: '507f1f77bcf86cd799439011' // ObjectId reference
-                },
-                { 
-                    name: 'Premium Coffee Beans', 
-                    quantity: 1, 
-                    price: 349, 
-                    image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=300&h=300&fit=crop',
-                    product: '507f1f77bcf86cd799439014'
-                },
-                { 
-                    name: 'Organic Cotton T-Shirt', 
-                    quantity: 1, 
-                    price: 399, 
-                    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop',
-                    product: '507f1f77bcf86cd799439013'
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                setError('');
+
+                const [profileResponse, ordersResponse] = await Promise.all([
+                    getCurrentUserProfile(),
+                    getCurrentUserOrders().catch(() => ({ success: false, data: [] }))
+                ]);
+
+                if (profileResponse?.success && profileResponse.data) {
+                    const profile = profileResponse.data;
+                    setProfileData({
+                        ...profile,
+                        buyerInfo: {
+                            shippingAddresses:
+                                profile.buyerInfo?.shippingAddresses &&
+                                Array.isArray(profile.buyerInfo.shippingAddresses)
+                                    ? profile.buyerInfo.shippingAddresses
+                                    : [],
+                            cart: profile.buyerInfo?.cart || []
+                        }
+                    });
+                } else {
+                    setProfileData(null);
                 }
-            ],
-            itemsPrice: 2047,
-            taxPrice: 368.46, // 18% GST
-            shippingPrice: 50,
-            totalPrice: 2465.46,
-            orderStatus: 'Delivered', // enum value
-            payment: null, // ObjectId reference to Payment (null if not paid)
-            shippingInfo: {
-                street: '123 Main Street',
-                city: 'Mumbai',
-                state: 'Maharashtra',
-                pincode: '400001',
-                country: 'India'
-            }
-        },
-        {
-            _id: '507f1f77bcf86cd799439022',
-            buyer: '507f1f77bcf86cd799439010',
-            seller: '507f191e810c19729de860ea',
-            createdAt: '2024-01-10T08:15:00Z',
-            updatedAt: '2024-01-12T10:00:00Z',
-            orderItems: [
-                { 
-                    name: 'Smart Fitness Watch', 
-                    quantity: 1, 
-                    price: 2499, 
-                    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop',
-                    product: '507f1f77bcf86cd799439012'
-                },
-                { 
-                    name: 'Leather Wallet', 
-                    quantity: 1, 
-                    price: 1199, 
-                    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop',
-                    product: '507f1f77bcf86cd799439016'
+
+                if (ordersResponse?.success && Array.isArray(ordersResponse.data)) {
+                    setOrderHistory(ordersResponse.data);
+                } else {
+                    setOrderHistory([]);
                 }
-            ],
-            itemsPrice: 3698,
-            taxPrice: 665.64,
-            shippingPrice: 0, // Free shipping for orders above ₹1000
-            totalPrice: 4363.64,
-            orderStatus: 'Shipped',
-            payment: '507f1f77bcf86cd799439030',
-            shippingInfo: {
-                street: '123 Main Street',
-                city: 'Mumbai',
-                state: 'Maharashtra',
-                pincode: '400001',
-                country: 'India'
+            } catch (fetchError) {
+                console.error('Failed to load profile data', fetchError);
+                setError(fetchError.response?.data?.message || 'Unable to load profile.');
+            } finally {
+                setLoading(false);
             }
-        },
-        {
-            _id: '507f1f77bcf86cd799439023',
-            buyer: '507f1f77bcf86cd799439010',
-            seller: '507f191e810c19729de860ea',
-            createdAt: '2024-01-05T16:45:00Z',
-            updatedAt: '2024-01-08T12:00:00Z',
-            orderItems: [
-                { 
-                    name: 'Wired Headphone', 
-                    quantity: 1, 
-                    price: 899, 
-                    image: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop',
-                    product: '507f1f77bcf86cd799439015'
-                }
-            ],
-            itemsPrice: 899,
-            taxPrice: 161.82,
-            shippingPrice: 50,
-            totalPrice: 1110.82,
-            orderStatus: 'Delivered',
-            payment: '507f1f77bcf86cd799439031',
-            shippingInfo: {
-                street: '456 Park Avenue',
-                city: 'Delhi',
-                state: 'Delhi',
-                pincode: '110001',
-                country: 'India'
-            }
-        }
-    ];
+        };
+
+        fetchData();
+    }, []);
 
     const handleInputChange = (field, value) => {
         setProfileData(prev => ({
@@ -177,10 +77,22 @@ const Profile = ({ onBack }) => {
         }));
     };
 
-    const handleSave = () => {
-        setIsEditing(false);
-        // Here you would typically save to backend
-        console.log('Profile saved:', profileData);
+    const handleSave = async () => {
+        if (!profileData) return;
+        try {
+            setSaving(true);
+            await updateCurrentUserProfile({
+                name: profileData.name,
+                mobNo: profileData.mobNo,
+                sellerInfo: profileData.sellerInfo
+            });
+            setIsEditing(false);
+        } catch (updateError) {
+            console.error('Failed to update profile', updateError);
+            setError(updateError.response?.data?.message || 'Failed to update profile.');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleCancel = () => {
@@ -188,7 +100,18 @@ const Profile = ({ onBack }) => {
         // Reset to original data if needed
     };
 
-    const renderPersonalInfo = () => (
+    const renderPersonalInfo = () => {
+        if (!profileData) {
+            return (
+                <div className="profile-section">
+                    <p className="profile-empty-state">No profile information available.</p>
+                </div>
+            );
+        }
+
+        const addresses = profileData.buyerInfo?.shippingAddresses || [];
+
+        return (
         <div className="profile-section">
             <div className="profile-header">
                 <div className="profile-info">
@@ -269,122 +192,33 @@ const Profile = ({ onBack }) => {
                         <FontAwesomeIcon icon={faMapMarkerAlt} />
                         Shipping Addresses
                     </label>
-                    {profileData.buyerInfo?.shippingAddresses?.length > 0 ? (
+                    {addresses.length > 0 ? (
                         <div className="addresses-list">
-                            {profileData.buyerInfo.shippingAddresses.map((address, index) => (
-                                <div key={index} className="address-card">
-                                    {isEditing ? (
-                                        <div className="address-form">
-                                            <input
-                                                type="text"
-                                                value={address.street}
-                                                onChange={(e) => {
-                                                    const newAddresses = [...profileData.buyerInfo.shippingAddresses];
-                                                    newAddresses[index].street = e.target.value;
-                                                    setProfileData(prev => ({
-                                                        ...prev,
-                                                        buyerInfo: {
-                                                            ...prev.buyerInfo,
-                                                            shippingAddresses: newAddresses
-                                                        }
-                                                    }));
-                                                }}
-                                                className="form-input"
-                                                placeholder="Street"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={address.city}
-                                                onChange={(e) => {
-                                                    const newAddresses = [...profileData.buyerInfo.shippingAddresses];
-                                                    newAddresses[index].city = e.target.value;
-                                                    setProfileData(prev => ({
-                                                        ...prev,
-                                                        buyerInfo: {
-                                                            ...prev.buyerInfo,
-                                                            shippingAddresses: newAddresses
-                                                        }
-                                                    }));
-                                                }}
-                                                className="form-input"
-                                                placeholder="City"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={address.state}
-                                                onChange={(e) => {
-                                                    const newAddresses = [...profileData.buyerInfo.shippingAddresses];
-                                                    newAddresses[index].state = e.target.value;
-                                                    setProfileData(prev => ({
-                                                        ...prev,
-                                                        buyerInfo: {
-                                                            ...prev.buyerInfo,
-                                                            shippingAddresses: newAddresses
-                                                        }
-                                                    }));
-                                                }}
-                                                className="form-input"
-                                                placeholder="State"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={address.pincode}
-                                                onChange={(e) => {
-                                                    const newAddresses = [...profileData.buyerInfo.shippingAddresses];
-                                                    newAddresses[index].pincode = e.target.value;
-                                                    setProfileData(prev => ({
-                                                        ...prev,
-                                                        buyerInfo: {
-                                                            ...prev.buyerInfo,
-                                                            shippingAddresses: newAddresses
-                                                        }
-                                                    }));
-                                                }}
-                                                className="form-input"
-                                                placeholder="Pincode (6 digits)"
-                                                pattern="[0-9]{6}"
-                                                minLength="6"
-                                                maxLength="6"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={address.country || 'India'}
-                                                onChange={(e) => {
-                                                    const newAddresses = [...profileData.buyerInfo.shippingAddresses];
-                                                    newAddresses[index].country = e.target.value;
-                                                    setProfileData(prev => ({
-                                                        ...prev,
-                                                        buyerInfo: {
-                                                            ...prev.buyerInfo,
-                                                            shippingAddresses: newAddresses
-                                                        }
-                                                    }));
-                                                }}
-                                                className="form-input"
-                                                placeholder="Country (default: India)"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <span className="form-value">
-                                            {address.street}, {address.city}, {address.state} {address.pincode}, {address.country}
-                                        </span>
-                                    )}
+                            {addresses.map((address) => (
+                                <div key={address._id || address.street} className="address-card">
+                                    <span className="form-value">
+                                        {address.street}, {address.city}, {address.state}{' '}
+                                        {address.pincode}, {address.country || 'India'}
+                                    </span>
                                 </div>
                             ))}
                         </div>
                     ) : (
                         <span className="form-value">No shipping addresses added</span>
                     )}
+                    <p className="address-hint">
+                        Manage your addresses from the checkout flow. Address editing from profile is coming soon.
+                    </p>
                 </div>
 
                 <div className="form-actions">
                     {isEditing ? (
                         <>
-                            <button className="btn btn-save" onClick={handleSave}>
+                            <button className="btn btn-save" onClick={handleSave} disabled={saving}>
                                 <FontAwesomeIcon icon={faSave} />
-                                Save Changes
+                                {saving ? 'Saving...' : 'Save Changes'}
                             </button>
-                            <button className="btn btn-cancel" onClick={handleCancel}>
+                            <button className="btn btn-cancel" onClick={handleCancel} disabled={saving}>
                                 <FontAwesomeIcon icon={faTimes} />
                                 Cancel
                             </button>
@@ -398,7 +232,8 @@ const Profile = ({ onBack }) => {
                 </div>
             </div>
         </div>
-    );
+        );
+    };
 
     const renderOrderHistory = () => {
         const formatDate = (dateString) => {
@@ -411,6 +246,9 @@ const Profile = ({ onBack }) => {
             <div className="profile-section">
                 <h3>Order History</h3>
                 <div className="order-list">
+                    {orderHistory.length === 0 && (
+                        <p className="profile-empty-state">No orders found yet.</p>
+                    )}
                     {orderHistory.map(order => {
                         const totalItems = order.orderItems.reduce((sum, item) => sum + item.quantity, 0);
                         return (
@@ -451,14 +289,14 @@ const Profile = ({ onBack }) => {
                                         )}
                                     </div>
                                     <div className="order-pricing">
-                                        <div>Items: ₹{order.itemsPrice.toFixed(2)}</div>
+                                        <div>Items: ₹{order.itemsPrice?.toFixed(2) || '0.00'}</div>
                                         {order.taxPrice > 0 && <div>Tax (18% GST): ₹{order.taxPrice.toFixed(2)}</div>}
                                         {order.shippingPrice > 0 && <div>Shipping: ₹{order.shippingPrice.toFixed(2)}</div>}
                                         {order.shippingPrice === 0 && order.itemsPrice > 1000 && (
                                             <div style={{color: '#28a745', fontSize: '12px'}}>Free Shipping (Order above ₹1000)</div>
                                         )}
                                         <div className="order-total" style={{marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #ddd'}}>
-                                            <strong>Total: ₹{order.totalPrice.toFixed(2)}</strong>
+                                            <strong>Total: ₹{order.totalPrice?.toFixed(2) || '0.00'}</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -499,6 +337,28 @@ const Profile = ({ onBack }) => {
         </div>
     );
 
+    if (loading) {
+        return (
+            <div className="profile-page">
+                <div className="profile-loading">
+                    <div className="spinner" />
+                    <p>Loading your profile...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error && !profileData) {
+        return (
+            <div className="profile-page">
+                <div className="profile-error">
+                    <p>{error}</p>
+                    <button className="btn btn-primary" onClick={onBack}>Back to Dashboard</button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="profile-page">
             <div className="profile-container">
@@ -509,6 +369,10 @@ const Profile = ({ onBack }) => {
                     </button>
                     <h1>My Profile</h1>
                 </div>
+
+                {error && profileData && (
+                    <div className="profile-error-inline">{error}</div>
+                )}
 
                 <div className="profile-content">
                     <div className="profile-sidebar">

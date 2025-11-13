@@ -1,22 +1,72 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ProductDetail from '../components/buyer dashboard/ProductDetail';
 import { useProducts } from '../contexts/ProductsContext';
 import { useCart } from '../contexts/CartContext';
+import { getProductById as fetchProductById } from '../../api/product';
 
 const ProductDetailPage = () => {
   const navigate = useNavigate();
   const { productId } = useParams();
-  const { getProductById } = useProducts();
+  const { getProductById, loading: productsLoading } = useProducts();
   const { addToCart, replaceCartWith } = useCart();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const product = getProductById(productId);
+  useEffect(() => {
+    const loadProduct = async () => {
+      const existingProduct = getProductById(productId);
+      if (existingProduct) {
+        setProduct(existingProduct);
+        setLoading(false);
+        return;
+      }
 
-  if (!product) {
+      try {
+        setLoading(true);
+        setError('');
+        const response = await fetchProductById(productId);
+
+        let fetchedProduct = null;
+        if (response?.success && response.product) {
+          fetchedProduct = response.product;
+        } else if (response?.data) {
+          fetchedProduct = response.data;
+        } else {
+          fetchedProduct = response;
+        }
+
+        if (fetchedProduct) {
+          setProduct(fetchedProduct);
+        } else {
+          setError('Product not found.');
+        }
+      } catch (fetchError) {
+        console.error('Failed to fetch product', fetchError);
+        setError(fetchError.response?.data?.message || 'Unable to load product.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProduct();
+  }, [productId, getProductById]);
+
+  if (loading || productsLoading) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <h2>Loading product...</h2>
+        <p>Please wait while we fetch the latest details.</p>
+      </div>
+    );
+  }
+
+  if (error || !product) {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
         <h2>Product Not Found</h2>
-        <p>The product you are looking for could not be found.</p>
+        <p>{error || 'The product you are looking for could not be found.'}</p>
         <button
           type="button"
           style={{
