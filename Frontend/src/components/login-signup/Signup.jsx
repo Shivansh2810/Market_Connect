@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../../api/axios";
 import { useAuth } from "../../contexts/AuthContext";
 import "./Signup.css";
 
-const API_BASE_URL = "http://localhost:8080/api";
+// Using shared `api` instance (baseURL configured in Frontend/api/axios.js)
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -89,7 +89,7 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/signup`, {
+      const response = await api.post(`/signup`, {
         name: `${form.firstName} ${form.lastName}`.trim(),
         email: form.email,
         password: form.password,

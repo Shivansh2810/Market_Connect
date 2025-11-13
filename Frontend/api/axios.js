@@ -2,7 +2,7 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL:"http://localhost:8080/api",
-  withCredentials: true,
+  // withCredentials removed - we use Authorization header for JWTs stored in localStorage
 });
 
 api.interceptors.request.use(

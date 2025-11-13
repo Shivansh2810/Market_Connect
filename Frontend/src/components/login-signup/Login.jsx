@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
-import axios from "axios";
+import api from "../../../api/axios";
 import { useAuth } from "../../contexts/AuthContext";
 import "./Login.css";
 
-const API_BASE_URL = "http://localhost:8080/api";
+  // Using shared `api` instance (baseURL configured in Frontend/api/axios.js)
 
 export default function Login() {
   const navigate = useNavigate();
@@ -52,7 +52,7 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/login`, {
+      const response = await api.post(`/login`, {
         email,
         password,
         role: accountType
@@ -77,8 +77,9 @@ export default function Login() {
   };
 
   const handleGoogleLogin = () => {
-    // Redirect to Google OAuth
-    window.location.href = `${API_BASE_URL}/auth/google`;
+    // Redirect to Google OAuth using shared api baseURL
+    const base = api.defaults.baseURL || 'http://localhost:8080/api';
+    window.location.href = `${base}/auth/google`;
   };
 
   const handleForgotPassword = async (e) => {
@@ -99,7 +100,7 @@ export default function Login() {
 
     setForgotLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/forgot-password`, {
+      const response = await api.post(`/forgot-password`, {
         email: forgotEmail.toLowerCase().trim()
       });
 

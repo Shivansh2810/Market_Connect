@@ -1,504 +1,383 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import './dashboard.css';
 import Profile from '../profile/Profile';
-import ProductDetail from './ProductDetail';
 import { useAuth } from '../../contexts/AuthContext';
+import { useProducts } from '../../contexts/ProductsContext';
+import { useCart } from '../../contexts/CartContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-    faSearch,
-    faShoppingCart,
-    faUser,
-    faFilter,
-    faStar,
-    faChevronDown,
-    faBars,
-    faTimes,
-    faHome,
-    faShoppingBag,
-    faBell,
-    faSignOutAlt
+  faSearch,
+  faShoppingCart,
+  faUser,
+  faStar,
+  faBars,
+  faTimes,
+  faHome,
+  faSignOutAlt
 } from '@fortawesome/free-solid-svg-icons';
-import { getAllProducts } from "../../../api/product";
-import {
-  getCart,
-  addToCart as addCartItem,
-  updateCartItem,
-  removeCartItem,
-} from "../../../api/cart";
 
 const BuyerDashboard = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { products, categories } = useProducts();
+  const {
+    items,
+    addToCart,
+    replaceCartWith,
+    updateQuantity,
+    removeFromCart,
+    itemCount,
+    totalAmount
+  } = useCart();
 
-// Added backend data, loading & error states
-const [products, setProducts] = useState([]); // backend products
-const [categories, setCategories] = useState([]); // will fetch later
-const [cart, setCart] = useState([]); // backend cart
-const [searchTerm, setSearchTerm] = useState('');
-const [selectedCategory, setSelectedCategory] = useState('All');
-const [sortBy, setSortBy] = useState('popularity');
-const [priceRange, setPriceRange] = useState([0, 3000]);
-const [currentView, setCurrentView] = useState('dashboard');
-const [selectedProduct, setSelectedProduct] = useState(null);
-const [isCartOpen, setIsCartOpen] = useState(false);
-const [showMobileMenu, setShowMobileMenu] = useState(false);
-const [loading, setLoading] = useState(true); // NEW
-const [error, setError] = useState(null); // NEW
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortBy, setSortBy] = useState('popularity');
+  const [priceRange, setPriceRange] = useState([0, 3000]);
+  const [currentView, setCurrentView] = useState('dashboard');
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-// NEW useEffect — replaces static sample data
-// Fetches real products and cart from backend
-useEffect(() => {
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const productRes = await getAllProducts(); // GET /api/products
-            setProducts(productRes.data || []); // update UI with backend data
+  const categoryOptions = useMemo(() => {
+    const uniqueNames = categories
+      .filter((category) => category && category.name && category.name !== 'All')
+      .map((category) => category.name);
+    const deduped = Array.from(new Set(uniqueNames));
+    return ['All', ...deduped];
+  }, [categories]);
 
-            const cartRes = await getCart(); // GET /api/cart
-            setCart(cartRes.data?.items || []);
-        } catch (err) {
-            console.error("Error fetching data:", err);
-            setError("Failed to load products or cart");
-        } finally {
-            setLoading(false);
-        }
-    };
+  const getPrimaryImage = (product) => {
+    if (product.images && product.images.length > 0) {
+      const primaryImage = product.images.find((img) => img.isPrimary);
+      return primaryImage ? primaryImage.url : product.images[0].url;
+    }
+    return 'https://via.placeholder.com/300?text=Market+Connect';
+  };
 
-    fetchData();
-}, []);
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      if (!product || product.isDeleted) return false;
 
-const handleLogout = () => {
+      const matchesSearch =
+        product.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesCategory =
+        selectedCategory === 'All' ||
+        product.category?.name === selectedCategory ||
+        product.categoryId === selectedCategory;
+
+      const price = product.price || 0;
+      const matchesPrice = price >= priceRange[0] && price <= priceRange[1];
+
+      return matchesSearch && matchesCategory && matchesPrice;
+    });
+  }, [products, searchTerm, selectedCategory, priceRange]);
+
+  const sortedProducts = useMemo(() => {
+    const productsToSort = [...filteredProducts];
+    return productsToSort.sort((a, b) => {
+      switch (sortBy) {
+        case 'price-low':
+          return (a.price || 0) - (b.price || 0);
+        case 'price-high':
+          return (b.price || 0) - (a.price || 0);
+        case 'rating':
+          return (b.ratingAvg || 0) - (a.ratingAvg || 0);
+        case 'popularity':
+        default:
+          return (b.ratingCount || 0) - (a.ratingCount || 0);
+      }
+    });
+  }, [filteredProducts, sortBy]);
+
+  const handleLogout = () => {
     logout();
-    navigate("/");
+    navigate('/');
   };
 
-    // Helper function to get primary image URL
-    const getPrimaryImage = (product) => {
-        if (product.images && product.images.length > 0) {
-            const primaryImage = product.images.find(img => img.isPrimary);
-            return primaryImage ? primaryImage.url : product.images[0].url;
-        }
-        return '';
-    };
-
-    const addToCart = async (product) => {
-    try {
-      const response = await addCartItem(product._id, 1);
-      setCart(response.data.items);
-      setIsCartOpen(true);
-    } catch (err) {
-      console.error("Add to cart error:", err);
-    }
+  const handleProductClick = (product) => {
+    navigate(`/dashboard/products/${product._id}`);
   };
 
-  const updateQuantity = async (itemId, newQuantity) => {
-    if (newQuantity <= 0) {
-      await removeFromCart(itemId);
-      return;
-    }
-    try {
-      const response = await updateCartItem(itemId, newQuantity);
-      setCart(response.data.items);
-    } catch (err) {
-      console.error("Update cart error:", err);
-    }
+  const handleAddProductToCart = (product) => {
+    addToCart(product, 1);
+    setIsCartOpen(true);
   };
 
-   const removeFromCart = async (itemId) => {
-    try {
-      const response = await removeCartItem(itemId);
-      setCart(response.data.items);
-    } catch (err) {
-      console.error("Remove from cart error:", err);
-    }
+  const handleBuyNow = (product) => {
+    replaceCartWith(product, 1);
+    navigate('/checkout');
   };
 
-  const cartTotal = cart.reduce(
-    (total, item) => total + (item.price || 0) * item.quantity,
-    0
-  );
+  const handleCheckout = () => {
+    setIsCartOpen(false);
+    navigate('/checkout');
+  };
 
-    // Helper function to convert specs Map to object for display
-    // Backend Product model uses Map type for specs, frontend converts to object
+  if (currentView === 'profile') {
+    return <Profile onBack={() => setCurrentView('dashboard')} />;
+  }
 
-    // Filter products based on search and category
-    // Backend returns products with populated category (category.name)
-    const filteredProducts = products.filter(product => {
-        const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesCategory = selectedCategory === 'All' ||
-            (product.category && product.category.name === selectedCategory) ||
-            (product.categoryId === selectedCategory);
-        const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-        const notDeleted = !product.isDeleted; // Backend filters out deleted products
-        return matchesSearch && matchesCategory && matchesPrice && notDeleted;
-    });
+  return (
+    <div className="dashboard">
+      <header className="dashboard-header">
+        <div className="header-content">
+          <div className="logo-section">
+            <h1>Market Connect</h1>
+            <button
+              className="mobile-menu-btn"
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+            >
+              <FontAwesomeIcon icon={showMobileMenu ? faTimes : faBars} />
+            </button>
+          </div>
 
-    // Sort products
-    const sortedProducts = [...filteredProducts].sort((a, b) => {
-        switch (sortBy) {
-            case 'price-low':
-                return a.price - b.price;
-            case 'price-high':
-                return b.price - a.price;
-            case 'rating':
-                return b.ratingAvg - a.ratingAvg;
-            case 'popularity':
-            default:
-                return b.ratingCount - a.ratingCount;
-        }
-    });
-
-    
-
-    // Buy now function - adds to cart and shows checkout
-    // Matches backend cartSchema structure
-    const buyNow = (product) => {
-        // Clear cart and add only this product
-        const newCartItem = {
-            _id: `cart_${Date.now()}`,
-            productId: product._id,
-            quantity: 1,
-            price: product.price,
-            addedAt: new Date().toISOString(),
-            productDetails: {
-                title: product.title,
-                price: product.price,
-                currency: product.currency,
-                image: getPrimaryImage(product)
-            }
-        };
-        setCart([newCartItem]);
-        // Open cart drawer
-        setIsCartOpen(true);
-    };
-
-    // Render profile page if currentView is 'profile'
-    if (currentView === 'profile') {
-        return <Profile onBack={() => setCurrentView('dashboard')} />;
-    }
-
-    // Render product detail page if currentView is 'productDetail'
-    if (currentView === 'productDetail' && selectedProduct) {
-        return (
-            <ProductDetail
-                product={selectedProduct}
-                onBack={() => {
-                    setCurrentView('dashboard');
-                    setSelectedProduct(null);
-                }}
-                onAddToCart={(product, quantity) => {
-                    const existingItem = cart.find(item => item.productId === product._id);
-                    if (existingItem) {
-                        setCart(cart.map(item =>
-                            item.productId === product._id
-                                ? {
-                                    ...item,
-                                    quantity: item.quantity + quantity,
-                                    price: product.price
-                                }
-                                : item
-                        ));
-                    } else {
-                        const newCartItem = {
-                            _id: `cart_${Date.now()}`,
-                            productId: product._id,
-                            quantity,
-                            price: product.price,
-                            addedAt: new Date().toISOString(),
-                            productDetails: {
-                                title: product.title,
-                                price: product.price,
-                                currency: product.currency,
-                                image: getPrimaryImage(product)
-                            }
-                        };
-                        setCart([...cart, newCartItem]);
-                    }
-                    setIsCartOpen(true);
-                    setCurrentView('dashboard');
-                    setSelectedProduct(null);
-                }}
-                onBuyNow={(product, quantity) => {
-                    const newCartItem = {
-                        _id: `cart_${Date.now()}`,
-                        productId: product._id,
-                        quantity,
-                        price: product.price,
-                        addedAt: new Date().toISOString(),
-                        productDetails: {
-                            title: product.title,
-                            price: product.price,
-                            currency: product.currency,
-                            image: getPrimaryImage(product)
-                        }
-                    };
-                    setCart([newCartItem]);
-                    setIsCartOpen(true);
-                    setCurrentView('dashboard');
-                    setSelectedProduct(null);
-                }}
-            />
-        );
-    }
-    // add loading and error placeholders before return
-    if (loading) return <div className="loading-screen">Loading products...</div>;
-    if (error) return <div className="error-screen">{error}</div>;
-
-    return (
-        <div className="dashboard">
-            {/* Header */}
-            <header className="dashboard-header">
-                <div className="header-content">
-                    <div className="logo-section">
-                        <h1>Market Connect</h1>
-                        <button
-                            className="mobile-menu-btn"
-                            onClick={() => setShowMobileMenu(!showMobileMenu)}
-                        >
-                            <FontAwesomeIcon icon={showMobileMenu ? faTimes : faBars} />
-                        </button>
-                    </div>
-
-                    <div className="search-section">
-                        <div className="search-bar">
-                            <FontAwesomeIcon icon={faSearch} className="search-icon" />
-                            <input
-                                type="text"
-                                placeholder="Search for products..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="header-actions">
-                        <button
-                            className="action-btn cart-toggle-btn"
-                            onClick={() => setIsCartOpen(!isCartOpen)}
-                            title="Cart"
-                        >
-                            <FontAwesomeIcon icon={faShoppingCart} />
-                            {cart.length > 0 && (
-                                <span className="cart-badge">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>
-                            )}
-                        </button>
-                        <button className="action-btn" onClick={() => setCurrentView('profile')}>
-                            <FontAwesomeIcon icon={faUser} />
-                        </button>
-                        <button className="action-btn logout-btn" onClick={handleLogout} title="Logout">
-                            <FontAwesomeIcon icon={faSignOutAlt} />
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            <div className="dashboard-content">
-                {/* Sidebar */}
-                <aside className={`sidebar ${showMobileMenu ? 'mobile-open' : ''}`}>
-                    <nav className="sidebar-nav">
-                        <div className="nav-item active">
-                            <FontAwesomeIcon icon={faHome} />
-                            <span>Dashboard</span>
-                        </div>
-                    </nav>
-
-                    {/* Filters */}
-                    <div className="filters-section">
-                        <div className="section-header-left">
-                            <h3>Featured Products</h3>
-                            <span className="product-count">{sortedProducts.length} products</span>
-                        </div>
-
-                        <div className="filter-group">
-                            <label>Category</label>
-                            <select
-                                value={selectedCategory}
-                                onChange={(e) => setSelectedCategory(e.target.value)}
-                            >
-                                {categories.map(category => (
-                                    <option key={category._id} value={category.name}>{category.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="filter-group">
-                            <label>Sort By</label>
-                            <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                            >
-                                <option value="popularity">Popularity</option>
-                                <option value="price-low">Price: Low to High</option>
-                                <option value="price-high">Price: High to Low</option>
-                                <option value="rating">Rating</option>
-                            </select>
-                        </div>
-
-                        <div className="filter-group">
-                            <label>Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}</label>
-                            <input
-                                type="range"
-                                min="0"
-                                max="3000"
-                                value={priceRange[1]}
-                                onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                            />
-                        </div>
-                    </div>
-                </aside>
-
-                {/* Main Content */}
-                <main className="main-content">
-                    <div className="content-header">
-                        <h2>Welcome to Market Connect</h2>
-                        <p>Discover amazing products at great prices</p>
-                    </div>
-
-                    {/* Featured Products */}
-                    <section className="products-section">
-
-                        <div className="products-grid">
-                            {sortedProducts.map(product => {
-                                const isInStock = product.stock > 0;
-                                const primaryImage = getPrimaryImage(product);
-                                return (
-                                    <div
-                                        key={product._id}
-                                        className="product-card"
-                                        style={{ cursor: 'pointer' }}
-                                        onClick={() => {
-                                            setSelectedProduct(product);
-                                            setCurrentView('productDetail');
-                                        }}
-                                    >
-                                        <div className="product-image">
-                                            <img src={primaryImage} alt={product.title} />
-                                        </div>
-
-                                        <div className="product-info">
-                                            <h4 className="product-name">{product.title}</h4>
-                                            {/* Category display - matches backend populated category */}
-                                            {product.category && (
-                                                <span className="product-category-badge" style={{ fontSize: '12px', color: '#666', marginBottom: '5px', display: 'block' }}>
-                                                    {product.category.name}
-                                                </span>
-                                            )}
-                                            <div className="product-rating">
-                                                <div className="stars">
-                                                    {[...Array(5)].map((_, i) => (
-                                                        <FontAwesomeIcon
-                                                            key={i}
-                                                            icon={faStar}
-                                                            className={i < Math.floor(product.ratingAvg || 0) ? 'filled' : ''}
-                                                        />
-                                                    ))}
-                                                </div>
-                                                <span className="rating-text">({product.ratingCount || 0})</span>
-                                            </div>
-
-                                            <div className="product-price">
-                                                <span className="current-price">
-                                                    {product.currency === 'USD' ? '$' : '₹'}{product.price}
-                                                </span>
-                                                {product.stock <= 5 && product.stock > 0 && (
-                                                    <span className="stock-warning" style={{ fontSize: '12px', color: '#ff9800', marginLeft: '10px' }}>
-                                                        Only {product.stock} left!
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="product-actions" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    className={`add-to-cart-btn ${!isInStock ? 'out-of-stock' : ''}`}
-                                                    onClick={() => isInStock && handleAddToCart(product)}
-                                                    disabled={!isInStock}
-                                                >
-                                                    {isInStock ? 'Add to Cart' : 'Out of Stock'}
-                                                </button>
-                                                <button
-                                                    className={`buy-now-btn ${!isInStock ? 'out-of-stock' : ''}`}
-                                                    onClick={() => isInStock && handleAddToCart(product)}
-                                                    disabled={!isInStock}
-                                                >
-                                                    {isInStock ? 'Buy Now' : 'Out of Stock'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </section>
-                </main>
+          <div className="search-section">
+            <div className="search-bar">
+              <FontAwesomeIcon icon={faSearch} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search for products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
+          </div>
 
-            {/* Cart Drawer - Right Side Panel (Amazon Style) */}
-            <div className={`cart-drawer-overlay ${isCartOpen ? 'open' : ''}`} onClick={() => setIsCartOpen(false)}></div>
-            <div className={`cart-drawer ${isCartOpen ? 'open' : ''}`}>
-                <div className="cart-drawer-header">
-                    <h3>Your Cart ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)</h3>
-                    <button className="cart-close-btn" onClick={() => setIsCartOpen(false)}>
-                        <FontAwesomeIcon icon={faTimes} />
-                    </button>
-                </div>
-                <div className="cart-drawer-content">
-                    {cart.length > 0 ? (
-                        <>
-                            <div className="cart-items-list">
-                                {cart.map(item => (
-                                    <div key={item.productId} className="cart-item-drawer">
-                                        <img src={item.productDetails?.image || ''} alt={item.productDetails?.title || 'Product'} />
-                                        <div className="cart-item-info">
-                                            <span className="cart-item-title">{item.productDetails?.title || 'Product'}</span>
-                                            <div className="cart-item-pricing">
-                                                <span className="cart-item-price">
-                                                    {item.productDetails?.currency === 'USD' ? '$' : '₹'}{item.productDetails?.price || 0}
-                                                </span>
-                                                <div className="quantity-controls-drawer">
-                                                    <button
-                                                        className="quantity-btn-drawer"
-                                                        onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)}
-                                                    >
-                                                        -
-                                                    </button>
-                                                    <span className="quantity-drawer">{item.quantity}</span>
-                                                    <button
-                                                        className="quantity-btn-drawer"
-                                                        onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)}
-                                                    >
-                                                        +
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="cart-drawer-footer">
-                                <div className="cart-total-drawer">
-                                    <div className="subtotal">
-                                        <span>Subtotal ({cart.reduce((sum, item) => sum + item.quantity, 0)} items):</span>
-                                        <strong>₹{cartTotal.toFixed(2)}</strong>
-                                    </div>
-                                </div>
-                                <button className="checkout-btn-drawer">Proceed to Checkout</button>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="empty-cart">
-                            <FontAwesomeIcon icon={faShoppingCart} style={{ fontSize: '48px', color: '#ccc', marginBottom: '20px' }} />
-                            <p>Your cart is empty</p>
-                            <button className="continue-shopping-btn" onClick={() => setIsCartOpen(false)}>
-                                Continue Shopping
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
+          <div className="header-actions">
+            <button
+              className="action-btn cart-toggle-btn"
+              onClick={() => setIsCartOpen(!isCartOpen)}
+              title="Cart"
+            >
+              <FontAwesomeIcon icon={faShoppingCart} />
+              {itemCount > 0 && <span className="cart-badge">{itemCount}</span>}
+            </button>
+            <button className="action-btn" onClick={() => setCurrentView('profile')}>
+              <FontAwesomeIcon icon={faUser} />
+            </button>
+            <button className="action-btn logout-btn" onClick={handleLogout} title="Logout">
+              <FontAwesomeIcon icon={faSignOutAlt} />
+            </button>
+          </div>
         </div>
-    );
+      </header>
+
+      <div className="dashboard-content">
+        <aside className={`sidebar ${showMobileMenu ? 'mobile-open' : ''}`}>
+          <nav className="sidebar-nav">
+            <div className="nav-item active">
+              <FontAwesomeIcon icon={faHome} />
+              <span>Dashboard</span>
+            </div>
+          </nav>
+
+          <div className="filters-section">
+            <div className="section-header-left">
+              <h3>Featured Products</h3>
+              <span className="product-count">{sortedProducts.length} products</span>
+            </div>
+
+            <div className="filter-group">
+              <label>Category</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+              >
+                {categoryOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label>Sort By</label>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="popularity">Popularity</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="rating">Rating</option>
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label>Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}</label>
+              <input
+                type="range"
+                min="0"
+                max="5000"
+                value={priceRange[1]}
+                onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value, 10)])}
+              />
+            </div>
+          </div>
+        </aside>
+
+        <main className="main-content">
+          <div className="content-header">
+            <h2>Welcome to Market Connect</h2>
+            <p>Discover amazing products at great prices</p>
+          </div>
+
+          <section className="products-section">
+            <div className="products-grid">
+              {sortedProducts.map((product) => {
+                const isInStock = (product.stock || 0) > 0;
+                const primaryImage = getPrimaryImage(product);
+
+                return (
+                  <div
+                    key={product._id}
+                    className="product-card"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => handleProductClick(product)}
+                  >
+                    <div className="product-image">
+                      <img src={primaryImage} alt={product.title} />
+                    </div>
+
+                    <div className="product-info">
+                      <h4 className="product-name">{product.title}</h4>
+                      {product.category && (
+                        <span className="product-category-badge">
+                          {product.category.name}
+                        </span>
+                      )}
+                      <div className="product-rating">
+                        <div className="stars">
+                          {[...Array(5)].map((_, i) => (
+                            <FontAwesomeIcon
+                              key={i}
+                              icon={faStar}
+                              className={i < Math.floor(product.ratingAvg || 0) ? 'filled' : ''}
+                            />
+                          ))}
+                        </div>
+                        <span className="rating-text">({product.ratingCount || 0})</span>
+                      </div>
+
+                      <div className="product-price">
+                        <span className="current-price">
+                          {product.currency === 'USD' ? '$' : '₹'}
+                          {product.price}
+                        </span>
+                        {isInStock && product.stock <= 5 && (
+                          <span className="stock-warning">Only {product.stock} left!</span>
+                        )}
+                      </div>
+
+                      <div className="product-actions" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className={`add-to-cart-btn ${!isInStock ? 'out-of-stock' : ''}`}
+                          onClick={() => isInStock && handleAddProductToCart(product)}
+                          disabled={!isInStock}
+                        >
+                          {isInStock ? 'Add to Cart' : 'Out of Stock'}
+                        </button>
+                        <button
+                          className={`buy-now-btn ${!isInStock ? 'out-of-stock' : ''}`}
+                          onClick={() => isInStock && handleBuyNow(product)}
+                          disabled={!isInStock}
+                        >
+                          {isInStock ? 'Buy Now' : 'Out of Stock'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <div
+        className={`cart-drawer-overlay ${isCartOpen ? 'open' : ''}`}
+        onClick={() => setIsCartOpen(false)}
+      ></div>
+      <div className={`cart-drawer ${isCartOpen ? 'open' : ''}`}>
+        <div className="cart-drawer-header">
+          <h3>Your Cart ({itemCount} items)</h3>
+          <button className="cart-close-btn" onClick={() => setIsCartOpen(false)}>
+            <FontAwesomeIcon icon={faTimes} />
+          </button>
+        </div>
+        <div className="cart-drawer-content">
+          {items.length > 0 ? (
+            <>
+              <div className="cart-items-list">
+                {items.map((item) => (
+                  <div key={item.productId} className="cart-item-drawer">
+                    <img
+                      src={item.productDetails?.image || ''}
+                      alt={item.productDetails?.title || 'Product'}
+                    />
+                    <div className="cart-item-info">
+                      <span className="cart-item-title">{item.productDetails?.title}</span>
+                      <div className="cart-item-pricing">
+                        <span className="cart-item-price">
+                          {item.productDetails?.currency === 'USD' ? '$' : '₹'}
+                          {item.productDetails?.price || 0}
+                        </span>
+                        <div className="quantity-controls-drawer">
+                          <button
+                            className="quantity-btn-drawer"
+                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                          >
+                            -
+                          </button>
+                          <span className="quantity-drawer">{item.quantity}</span>
+                          <button
+                            className="quantity-btn-drawer"
+                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="remove-item-btn"
+                        onClick={() => removeFromCart(item.productId)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="cart-drawer-footer">
+                <div className="cart-total-drawer">
+                  <div className="subtotal">
+                    <span>Subtotal ({itemCount} items):</span>
+                    <strong>₹{totalAmount.toFixed(2)}</strong>
+                  </div>
+                </div>
+                <button className="checkout-btn-drawer" onClick={handleCheckout}>
+                  Proceed to Checkout
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="empty-cart">
+              <FontAwesomeIcon
+                icon={faShoppingCart}
+                style={{ fontSize: '48px', color: '#ccc', marginBottom: '20px' }}
+              />
+              <p>Your cart is empty</p>
+              <button className="continue-shopping-btn" onClick={() => setIsCartOpen(false)}>
+                Continue Shopping
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default BuyerDashboard;

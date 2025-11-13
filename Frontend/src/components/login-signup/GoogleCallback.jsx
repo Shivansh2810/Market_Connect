@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import axios from "axios";
+import api from "../../../api/axios";
 import "./GoogleCallback.css";
 
-const API_BASE_URL = "http://localhost:8080/api";
+// using shared api instance
 
 export default function GoogleCallback() {
   const navigate = useNavigate();
@@ -29,9 +29,7 @@ export default function GoogleCallback() {
           // Store token and get user data
           localStorage.setItem('token', token);
           
-          const response = await axios.get(`${API_BASE_URL}/me`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const response = await api.get(`/me`);
           
           if (response.data.success) {
             const user = response.data.data;
@@ -50,9 +48,7 @@ export default function GoogleCallback() {
           // If no token in URL, try to get from localStorage or redirect
           const storedToken = localStorage.getItem('token');
           if (storedToken) {
-            const response = await axios.get(`${API_BASE_URL}/me`, {
-              headers: { Authorization: `Bearer ${storedToken}` }
-            });
+            const response = await api.get(`/me`);
             
             if (response.data.success) {
               const user = response.data.data;
@@ -90,15 +86,7 @@ export default function GoogleCallback() {
     setPhoneLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(
-        `${API_BASE_URL}/me/profile`,
-        { mobNo: phoneNumber },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      const response = await api.put(`/me/profile`, { mobNo: phoneNumber });
 
       if (response.data.success) {
         // Update user data with new phone number
