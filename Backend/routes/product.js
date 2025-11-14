@@ -12,6 +12,7 @@ const { protect, isSeller, isOwner } = require("../middlewares/auth");
 //public routes
 router.get("/products", productController.getAllProducts);
 router.get("/products/compare", productController.compareProducts);
+router.get('/products/suggestions', productController.getProductSuggestions);
 router.get("/products/:id", productController.getProductById);
 
 //protected(Seller as a user)
