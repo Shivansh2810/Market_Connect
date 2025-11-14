@@ -7,7 +7,7 @@ export const getCurrentUserProfile = async () => {
 
 export const updateCurrentUserProfile = async (payload) => {
   try {
-    const response = await api.put('/api/me/profile', payload);
+    const response = await api.put('/me/profile', payload);
     return response.data;
   } catch (error) {
     if (error.response?.status === 404) {
@@ -16,11 +16,11 @@ export const updateCurrentUserProfile = async (payload) => {
     }
     throw error;
   }
-};
+}; 
 
 export const getCurrentUserOrders = async () => {
   try {
-    const response = await api.get('/api/me/orders');
+    const response = await api.get('/me/orders');
     return response.data;
   } catch (error) {
     if (error.response?.status === 404) {
