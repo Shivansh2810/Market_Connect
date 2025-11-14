@@ -16,6 +16,8 @@ const sellerRoutes = require("./routes/seller");
 const orderRoutes = require("./routes/order");
 const productRoutes = require("./routes/product");
 const categoryRoutes = require("./routes/category");
+const paymentRoutes = require("./routes/payment");
+const analyticsRoutes = require('./routes/sellerAnalyticsRoutes.js');
 
 mongoose
   .connect(process.env.ATLASDB_URL)
@@ -34,6 +36,9 @@ app.use("/api/seller", sellerRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use('/api/analytics', analyticsRoutes);
+
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
