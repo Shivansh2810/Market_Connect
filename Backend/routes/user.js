@@ -67,7 +67,7 @@ router.get("/me", protect, userController.getMe);
 router.put(
   "/me/profile",
   protect,
-  validate(updateProfileSchema, "body"),
+  validate(updateProfileSchema),
   userController.updateProfile
 );
 
@@ -75,13 +75,13 @@ router.get("/me/addresses", protect, userController.getAddresses);
 router.post(
   "/me/addresses",
   protect,
-  validate(addressSchema, "body"),
+  validate(addressSchema),
   userController.addAddress
 );
 router.put(
   "/me/addresses/:addressId",
   protect,
-  validate(addressSchema, "body"),
+  validate(addressSchema),
   userController.updateAddress
 );
 router.delete(
