@@ -14,12 +14,13 @@ import {
   faBars,
   faTimes,
   faHome,
-  faSignOutAlt
+  faSignOutAlt,
+  faStore
 } from '@fortawesome/free-solid-svg-icons';
 
 const BuyerDashboard = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { products, categories, loading: productsLoading, error: productsError, refresh } = useProducts();
   const {
     items,
@@ -206,6 +207,16 @@ const BuyerDashboard = () => {
               <FontAwesomeIcon icon={faHome} />
               <span>Dashboard</span>
             </div>
+            {user && user.role !== 'seller' && user.role !== 'both' && (
+              <div 
+                className="nav-item become-seller-item" 
+                onClick={() => navigate('/become-seller')}
+                style={{ cursor: 'pointer', marginTop: '16px' }}
+              >
+                <FontAwesomeIcon icon={faStore} />
+                <span>Become a Seller</span>
+              </div>
+            )}
           </nav>
 
           <div className="filters-section">

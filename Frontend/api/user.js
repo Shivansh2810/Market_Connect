@@ -30,3 +30,11 @@ export const getCurrentUserOrders = async () => {
     throw error;
   }
 };
+
+export const upgradeToSeller = async (shopName, shopAddress) => {
+  const response = await api.put('/upgradetoseller', {
+    shopName,
+    shopAddress
+  });
+  return response.data;
+};
