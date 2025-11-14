@@ -72,6 +72,29 @@ exports.getAllProducts = async (req, res) => {
   }
 };
 
+// Search AutoComplete 
+exports.getProductSuggestions = async (req, res) => {
+    try {
+        const { q } = req.query; 
+
+        if (!q) {
+            return res.json({ success: true, suggestions: [] });
+        }
+        const queryRegex = new RegExp(`^${q}`, 'i');
+
+        const products = await Product.find({ 
+                title: { $regex: queryRegex },
+                isDeleted: false 
+            })
+            .limit(10) 
+            .select('title slug'); 
+
+        res.status(200).json({ success: true, suggestions: products });
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error: error.message });
+    }
+};
+
 //find 1 product
 exports.getProductById = async (req, res) => {
   try {
