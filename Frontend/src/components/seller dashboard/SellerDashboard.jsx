@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import './sellerDashboard.css';
 import Profile from '../profile/Profile';
 import AddProduct from './AddProduct';
 import ReviewManagement from './ReviewManagement';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-    faHome,
     faShoppingBag,
     faBox,
     faShoppingCart,
@@ -19,106 +18,11 @@ import {
     faEdit,
     faTrash,
     faPlus,
-    faBell,
-    faExclamationTriangle,
-    faSearch
+    faSearch,
+    faSync
 } from '@fortawesome/free-solid-svg-icons';
-
-// Sample data - In real app, this would come from API
-const sampleProducts = [
-    {
-        id: 1,
-        title: "Wireless Bluetooth Headphones",
-        price: 1299,
-        stock: 45,
-        category: "Electronics",
-        rating: 4.5,
-        reviews: 128,
-        views: 1520,
-        sales: 89,
-        image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
-        status: "active"
-    },
-    {
-        id: 2,
-        title: "Smart Fitness Watch",
-        price: 2499,
-        stock: 12,
-        category: "Electronics",
-        rating: 4.8,
-        reviews: 89,
-        views: 980,
-        sales: 67,
-        image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
-        status: "active"
-    },
-    {
-        id: 3,
-        title: "Organic Cotton T-Shirt",
-        price: 399,
-        stock: 3,
-        category: "Clothing",
-        rating: 4.2,
-        reviews: 45,
-        views: 450,
-        sales: 34,
-        image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
-        status: "active"
-    },
-];
-
-const sampleOrders = [
-    {
-        id: 'ORD-001',
-        customer: 'John Doe',
-        items: 2,
-        total: 3798,
-        status: 'Processing',
-        date: '2024-01-15',
-        products: ['Wireless Headphones', 'Smart Watch']
-    },
-    {
-        id: 'ORD-002',
-        customer: 'Jane Smith	st',
-        items: 1,
-        total: 1299,
-        status: 'Shipped',
-        date: '2024-01-14',
-        products: ['Wireless Headphones']
-    },
-    {
-        id: 'ORD-003',
-        customer: 'Mike Johnson',
-        items: 3,
-        total: 6797,
-        status: 'Delivered',
-        date: '2024-01-13',
-        products: ['Wireless Headphones', 'Smart Watch', 'T-Shirt']
-    },
-];
-
-const sampleReturns = [
-    {
-        id: 'RET-001',
-        orderId: 'ORD-002',
-        customer: 'Jane Smith',
-        reason: 'Wrong Item Sent',
-        status: 'Requested',
-        amount: 1299,
-        items: ['Wireless Headphones'],
-        date: '2024-01-16'
-    },
-    {
-        id: 'RET-002',
-        orderId: 'ORD-003',
-        customer: 'Mike Johnson',
-        reason: 'Damaged Item',
-        status: 'Approved',
-        amount: 399,
-        items: ['T-Shirt'],
-        date: '2024-01-15'
-    },
-];
+import api from '../../../api/axios';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Categories for product form
 const categories = [
@@ -129,80 +33,203 @@ const categories = [
 ];
 
 const SellerDashboard = () => {
+    const { logout } = useAuth();
     const [currentView, setCurrentView] = useState('dashboard');
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [products, setProducts] = useState(sampleProducts);
-    const [orders, setOrders] = useState(sampleOrders);
-    const [returns, setReturns] = useState(sampleReturns);
+    const [products, setProducts] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const [returns, setReturns] = useState([]);
     const [orderStatusFilter, setOrderStatusFilter] = useState('All');
     const [returnStatusFilter, setReturnStatusFilter] = useState('All');
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [dashboardStats, setDashboardStats] = useState(null);
+    const [ordersMeta, setOrdersMeta] = useState({ currentPage: 1, totalPages: 1 });
+    const [isDashboardLoading, setIsDashboardLoading] = useState(true);
+    const [isOrdersLoading, setIsOrdersLoading] = useState(true);
+    const [isReturnsLoading, setIsReturnsLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [salesReport, setSalesReport] = useState([]);
+    const [isSalesReportLoading, setIsSalesReportLoading] = useState(true);
+    const [salesReportError, setSalesReportError] = useState(null);
 
-    // Calculate dashboard metrics
-    const totalRevenue = orders
-        .filter(o => o.status === 'Delivered')
-        .reduce((sum, o) => sum + o.total, 0);
-    const totalOrders = orders.length;
-    const pendingOrders = orders.filter(o => o.status === 'Processing').length;
-    const lowStockProducts = products.filter(p => p.stock < 10);
-    const totalProducts = products.length;
-    const totalSales = products.reduce((sum, p) => sum + p.sales, 0);
-
-    // Handle logout
-    const handleLogout = () => {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('accountType');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('rememberMe');
-        window.location.href = '/';
+    const fetchDashboard = async () => {
+        setIsDashboardLoading(true);
+        setError(null);
+        try {
+            const { data } = await api.get('/seller/dashboard');
+            if (data.success) {
+                setDashboardStats(data.data);
+                if (data.data.topProducts) {
+                    const mappedProducts = data.data.topProducts.map((product, idx) => ({
+                        id: product.productId || idx + 1,
+                        title: product.product?.title || 'Unnamed product',
+                        price: product.product?.price || 0,
+                        stock: product.qtySold || 0,
+                        category: 'Top performer',
+                        rating: 4,
+                        reviews: product.qtySold || 0,
+                        sales: product.qtySold || 0,
+                        image: product.product?.images?.[0]?.url || 'https://via.placeholder.com/300?text=Product',
+                        status: 'active'
+                    }));
+                    setProducts(mappedProducts);
+                }
+            }
+        } catch (err) {
+            setError('Failed to load dashboard stats');
+            console.error(err);
+        } finally {
+            setIsDashboardLoading(false);
+        }
     };
 
-    // Filter products
-    const filteredProducts = products.filter(product => 
+    const fetchOrders = async (page = 1) => {
+        setIsOrdersLoading(true);
+        setError(null);
+        try {
+            const { data } = await api.get(`/seller/my-sales?page=${page}&limit=10`);
+            if (data.success) {
+                setOrders(data.data.orders || []);
+                setOrdersMeta({ currentPage: data.data.currentPage, totalPages: data.data.totalPages });
+            }
+        } catch (err) {
+            setError('Failed to load orders');
+            console.error(err);
+        } finally {
+            setIsOrdersLoading(false);
+        }
+    };
+
+    const fetchReturns = async () => {
+        setIsReturnsLoading(true);
+        setError(null);
+        try {
+            const { data } = await api.get('/seller/my-returns');
+            if (data.success) {
+                setReturns(data.data || []);
+            }
+        } catch (err) {
+            setError('Failed to load returns');
+            console.error(err);
+        } finally {
+            setIsReturnsLoading(false);
+        }
+    };
+
+    const fetchSalesReport = async () => {
+        setIsSalesReportLoading(true);
+        setSalesReportError(null);
+        try {
+            const { data } = await api.get('/seller/salesreport');
+            if (data.success) {
+                setSalesReport(data.data || []);
+            } else {
+                setSalesReport([]);
+            }
+        } catch (err) {
+            console.error(err);
+            setSalesReportError('Failed to load sales report');
+        } finally {
+            setIsSalesReportLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchDashboard();
+        fetchOrders();
+        fetchReturns();
+        fetchSalesReport();
+    }, []);
+
+    const totalRevenue = dashboardStats?.totalRevenue || 0;
+    const totalOrders = dashboardStats?.totalOrders || 0;
+    const totalProducts = dashboardStats?.totalProducts || products.length;
+    const pendingReturns = dashboardStats?.pendingReturns || 0;
+    const avgRating = dashboardStats?.avgRating?.toFixed(1) || '0.0';
+    const ratingCount = dashboardStats?.ratingCount || 0;
+
+    const pendingOrders = useMemo(
+        () =>
+            orders.filter(order =>
+                ['Payment Pending', 'Order Placed'].includes(order.orderStatus)
+            ).length,
+        [orders]
+    );
+    const totalSales = useMemo(
+        () => orders.reduce((sum, order) => sum + (order.totalPrice || 0), 0),
+        [orders]
+    );
+
+    const filteredProducts = products.filter(product =>
         product.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Filter orders
-    const filteredOrders = orders.filter(order => 
-        orderStatusFilter === 'All' || order.status === orderStatusFilter
+    const filteredOrders = orders.filter(order =>
+        orderStatusFilter === 'All' || order.orderStatus === orderStatusFilter
     );
 
-    // Filter returns
-    const filteredReturns = returns.filter(returnItem => 
+    const filteredReturns = returns.filter(returnItem =>
         returnStatusFilter === 'All' || returnItem.status === returnStatusFilter
     );
 
-    // Handle order status update
-    const updateOrderStatus = (orderId, newStatus) => {
-        setOrders(orders.map(order => 
-            order.id === orderId ? { ...order, status: newStatus } : order
-        ));
+    const salesTrend = useMemo(() => {
+        if (!salesReport.length) {
+            return [{ label: 'No data', total: 0 }];
+        }
+        return salesReport.map(point => {
+            const date = new Date(point._id);
+            const label = isNaN(date)
+                ? point._id
+                : date.toLocaleString('default', { month: 'short', day: 'numeric' });
+            return {
+                label,
+                total: point.totalSales || 0
+            };
+        });
+    }, [salesReport]);
+
+    const updateOrderStatus = async (orderId, newStatus) => {
+        try {
+            await api.put(`/orders/${orderId}/status`, { status: newStatus });
+            setOrders(prev =>
+                prev.map(order =>
+                    order._id === orderId ? { ...order, orderStatus: newStatus } : order
+                )
+            );
+        } catch (err) {
+            console.error(err);
+            alert('Failed to update order status');
+        }
     };
 
-    // Handle return resolution
-    const handleReturnResolution = (returnId, resolution) => {
-        setReturns(returns.map(ret => 
-            ret.id === returnId 
-                ? { ...ret, status: 'Completed', resolution } 
-                : ret
-        ));
+    const handleReturnResolution = async (returnId, payload) => {
+        try {
+            await api.put(`/seller/my-returns/${returnId}/status`, payload);
+            setReturns(prev =>
+                prev.map(ret =>
+                    ret._id === returnId
+                        ? { ...ret, status: payload.status || ret.status, resolution: payload.resolution || ret.resolution }
+                        : ret
+                )
+            );
+        } catch (err) {
+            console.error(err);
+            alert('Failed to update return');
+        }
     };
 
-    // Handle product actions
+    // Handle product actions (local-only for now)
     const handleDeleteProduct = (productId) => {
         if (window.confirm('Are you sure you want to delete this product?')) {
             setProducts(products.filter(p => p.id !== productId));
         }
     };
 
-    // Handle save product (both add and edit)
     const handleSaveProduct = (productData) => {
-        // In real app, this would make an API call to save/update the product
         if (productData.id) {
-            // Editing existing product
-            const updatedProducts = products.map(p => 
-                p.id === productData.id 
+            const updatedProducts = products.map(p =>
+                p.id === productData.id
                     ? {
                         ...p,
                         title: productData.title,
@@ -222,9 +249,8 @@ const SellerDashboard = () => {
             );
             setProducts(updatedProducts);
             setCurrentView('products');
-            alert('Product updated successfully!');
+            alert('Product updated locally!');
         } else {
-            // Adding new product
             const newProduct = {
                 id: products.length + 1,
                 title: productData.title,
@@ -247,16 +273,21 @@ const SellerDashboard = () => {
             };
             setProducts([...products, newProduct]);
             setCurrentView('products');
-            alert('Product added successfully!');
+            alert('Product added locally!');
         }
         setSelectedProduct(null);
     };
 
-    // Handle edit product
     const handleEditProduct = (product) => {
         setSelectedProduct(product);
         setCurrentView('addProduct');
     };
+
+    const handleLogout = () => {
+        logout();
+    };
+
+    const lowStockProducts = products.filter(p => p.stock < 5);
 
     // Render profile page
     if (currentView === 'profile') {
@@ -372,9 +403,22 @@ const SellerDashboard = () => {
                     {currentView === 'dashboard' && (
                         <>
                             <div className="content-header">
-                                <h2>Seller Dashboard</h2>
-                                <p>Overview of your sales and business performance</p>
+                                <div>
+                                    <h2>Seller Dashboard</h2>
+                                    <p>Overview of your sales and business performance</p>
+                                </div>
+                                <button className="btn-secondary refresh-btn" onClick={() => {
+                                    fetchDashboard();
+                                    fetchOrders(ordersMeta.currentPage);
+                                    fetchReturns();
+                                    fetchSalesReport();
+                                }}>
+                                    <FontAwesomeIcon icon={faSync} />
+                                    Refresh
+                                </button>
                             </div>
+
+                            {error && <div className="error-banner">{error}</div>}
 
                             {/* Key Metrics Cards */}
                             <div className="metrics-grid">
@@ -385,7 +429,7 @@ const SellerDashboard = () => {
                                     <div className="metric-info">
                                         <h3>Total Revenue</h3>
                                         <p className="metric-value">₹{totalRevenue.toLocaleString()}</p>
-                                        <span className="metric-change">+12% from last month</span>
+                                        <span className="metric-change">Last 12 months</span>
                                     </div>
                                 </div>
 
@@ -407,7 +451,7 @@ const SellerDashboard = () => {
                                     <div className="metric-info">
                                         <h3>Products</h3>
                                         <p className="metric-value">{totalProducts}</p>
-                                        <span className="metric-change danger">{lowStockProducts.length} low stock</span>
+                                        <span className="metric-change danger">{pendingReturns} pending returns</span>
                                     </div>
                                 </div>
 
@@ -417,64 +461,106 @@ const SellerDashboard = () => {
                                     </div>
                                     <div className="metric-info">
                                         <h3>Total Sales</h3>
-                                        <p className="metric-value">{totalSales}</p>
-                                        <span className="metric-change">Across all products</span>
+                                        <p className="metric-value">₹{totalSales.toLocaleString()}</p>
+                                        <span className="metric-change">{orders.length} recent orders</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Low Stock Alerts */}
-                            {lowStockProducts.length > 0 && (
-                                <div className="alert-section">
-                                    <div className="alert-header">
-                                        <FontAwesomeIcon icon={faExclamationTriangle} />
-                                        <h3>Low Stock Alerts</h3>
+                            <div className="insight-grid">
+                                <div className="trend-card">
+                                    <div className="section-header">
+                                        <h3>Sales trend</h3>
+                                        <span className="product-count">Last {salesTrend.length} entries</span>
                                     </div>
-                                    <div className="alert-list">
-                                        {lowStockProducts.map(product => (
-                                            <div key={product.id} className="alert-item">
-                                                <span className="product-name">{product.title}</span>
-                                                <span className="stock-count danger">Only {product.stock} left</span>
+                                    {isSalesReportLoading ? (
+                                        <div className="loading-state small">Loading sales trend...</div>
+                                    ) : (
+                                        <>
+                                            {salesReportError && <div className="error-banner">{salesReportError}</div>}
+                                            <div className="trend-chart">
+                                                {salesTrend.map(point => {
+                                                    const max = Math.max(...salesTrend.map(item => item.total || 1)) || 1;
+                                                    const percent = Math.round((point.total / max) * 100);
+                                                    return (
+                                                        <div className="trend-row" key={`${point.label}-${point.total}`}>
+                                                            <span className="trend-label">{point.label}</span>
+                                                            <div className="trend-bar-wrapper">
+                                                                <div className="trend-bar" style={{ width: `${percent}%` }} />
+                                                                <span className="trend-value">₹{Math.round(point.total).toLocaleString()}</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
-                                        ))}
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className="rating-card">
+                                    <div className="section-header">
+                                        <h3>Customer sentiment</h3>
+                                        <span className="product-count">{ratingCount} reviews</span>
+                                    </div>
+                                    <div className="rating-score">
+                                        <div className="score-circle">
+                                            <span>{avgRating}</span>
+                                            <small>/5</small>
+                                        </div>
+                                        <div>
+                                            <p>Your buyers rate you highly. Keep delighting them!</p>
+                                            <div className="rating-stars">
+                                                {[...Array(5)].map((_, index) => (
+                                                    <FontAwesomeIcon
+                                                        key={index}
+                                                        icon={faStar}
+                                                        className={index < Math.round(avgRating) ? 'filled' : ''}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            )}
+                            </div>
 
                             {/* Top Selling Products */}
                             <div className="section-header">
-                                <h3>Top Selling Products</h3>
+                                <h3>Top Performing Products</h3>
                             </div>
                             <div className="products-table">
                                 <table>
                                     <thead>
                                         <tr>
                                             <th>Product</th>
-                                            <th>Sales</th>
-                                            <th>Stock</th>
+                                            <th>Units Sold</th>
+                                            <th>Inventory proxy</th>
                                             <th>Rating</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {[...products]
-                                            .sort((a, b) => b.sales - a.sales)
-                                            .slice(0, 5)
-                                            .map(product => (
-                                                <tr key={product.id}>
-                                                    <td>
-                                                        <div className="product-info-table">
-                                                            <img src={product.image} alt={product.title} />
-                                                            <span>{product.title}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td>{product.sales}</td>
-                                                    <td className={product.stock < 10 ? 'stock-low' : 'stock-ok'}>{product.stock}</td>
-                                                    <td>
-                                                        <FontAwesomeIcon icon={faStar} />
-                                                        {product.rating.toFixed(1)} ({product.reviews})
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                        {products.length === 0 && (
+                                            <tr>
+                                                <td colSpan="4" className="empty-state">No products to display yet</td>
+                                            </tr>
+                                        )}
+                                        {products.slice(0, 5).map(product => (
+                                            <tr key={product.id}>
+                                                <td>
+                                                    <div className="product-info-table">
+                                                        <img src={product.image} alt={product.title} />
+                                                        <span>{product.title}</span>
+                                                    </div>
+                                                </td>
+                                                <td>{product.sales}</td>
+                                                <td className={product.stock < 10 ? 'stock-low' : 'stock-ok'}>
+                                                    {product.stock} units
+                                                </td>
+                                                <td>
+                                                    <FontAwesomeIcon icon={faStar} />
+                                                    {product.rating.toFixed(1)}
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -578,50 +664,78 @@ const SellerDashboard = () => {
                             </div>
 
                             <div className="orders-table">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Order ID</th>
-                                            <th>Customer</th>
-                                            <th>Items</th>
-                                            <th>Total</th>
-                                            <th>Status</th>
-                                            <th>Date</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredOrders.map(order => (
-                                            <tr key={order.id}>
-                                                <td>{order.id}</td>
-                                                <td>{order.customer}</td>
-                                                <td>{order.items} items</td>
-                                                <td>₹{order.total}</td>
-                                                <td>
-                                                    <select 
-                                                        value={order.status}
-                                                        onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                                                        className={`status-select status-${order.status.toLowerCase()}`}
-                                                    >
-                                                        <option value="Processing">Processing</option>
-                                                        <option value="Shipped">Shipped</option>
-                                                        <option value="Delivered">Delivered</option>
-                                                        <option value="Cancelled">Cancelled</option>
-                                                    </select>
-                                                </td>
-                                                <td>{order.date}</td>
-                                                <td>
-                                                    <button 
-                                                        className="btn-view"
-                                                        onClick={() => alert(`View Order ${order.id} Details`)}
-                                                    >
-                                                        View
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                {isOrdersLoading ? (
+                                    <div className="loading-state small">Loading orders...</div>
+                                ) : (
+                                    <>
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Order ID</th>
+                                                    <th>Customer</th>
+                                                    <th>Items</th>
+                                                    <th>Total</th>
+                                                    <th>Status</th>
+                                                    <th>Placed on</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filteredOrders.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan="7" className="empty-state">No orders found</td>
+                                                    </tr>
+                                                )}
+                                                {filteredOrders.map(order => (
+                                                    <tr key={order._id}>
+                                                        <td>{order._id}</td>
+                                                        <td>{order.buyer?.name || order.buyer?.email || 'N/A'}</td>
+                                                        <td>{order.orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0} items</td>
+                                                        <td>₹{order.totalPrice?.toLocaleString() || 0}</td>
+                                                        <td>
+                                                            <select
+                                                                value={order.orderStatus}
+                                                                onChange={(e) => updateOrderStatus(order._id, e.target.value)}
+                                                                className={`status-select status-${order.orderStatus.toLowerCase().replace(/\s/g, '-')}`}
+                                                            >
+                                                                <option value="Payment Pending">Payment Pending</option>
+                                                                <option value="Order Placed">Order Placed</option>
+                                                                <option value="Shipped">Shipped</option>
+                                                                <option value="Delivered">Delivered</option>
+                                                                <option value="Cancelled">Cancelled</option>
+                                                                <option value="Returned">Returned</option>
+                                                            </select>
+                                                        </td>
+                                                        <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+                                                        <td>
+                                                            <button 
+                                                                className="btn-view"
+                                                                onClick={() => window.open(`/orders/${order._id}`, '_blank')}
+                                                            >
+                                                                View
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        <div className="pagination">
+                                            <button
+                                                disabled={ordersMeta.currentPage === 1}
+                                                onClick={() => fetchOrders(ordersMeta.currentPage - 1)}
+                                            >
+                                                Previous
+                                            </button>
+                                            <span>Page {ordersMeta.currentPage} of {ordersMeta.totalPages}</span>
+                                            <button
+                                                disabled={ordersMeta.currentPage === ordersMeta.totalPages}
+                                                onClick={() => fetchOrders(ordersMeta.currentPage + 1)}
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </>
                     )}
@@ -648,65 +762,73 @@ const SellerDashboard = () => {
                             </div>
 
                             <div className="returns-table">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Return ID</th>
-                                            <th>Order ID</th>
-                                            <th>Customer</th>
-                                            <th>Reason</th>
-                                            <th>Amount</th>
-                                            <th>Status</th>
-                                            <th>Resolution</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredReturns.map(returnItem => (
-                                            <tr key={returnItem.id}>
-                                                <td>{returnItem.id}</td>
-                                                <td>{returnItem.orderId}</td>
-                                                <td>{returnItem.customer}</td>
-                                                <td>{returnItem.reason}</td>
-                                                <td>₹{returnItem.amount}</td>
-                                                <td>
-                                                    <span className={`badge status-${returnItem.status.toLowerCase()}`}>
-                                                        {returnItem.status}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    {returnItem.status === 'Approved' && !returnItem.resolution && (
-                                                        <div className="resolution-buttons">
-                                                            <button 
-                                                                className="btn-resolve refund"
-                                                                onClick={() => handleReturnResolution(returnItem.id, 'Refund')}
-                                                            >
-                                                                Full Refund
-                                                            </button>
-                                                            <button 
-                                                                className="btn-resolve credit"
-                                                                onClick={() => handleReturnResolution(returnItem.id, 'Store Credit')}
-                                                            >
-                                                                Store Credit
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                    {returnItem.resolution && (
-                                                        <span className="badge resolved">{returnItem.resolution}</span>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    <button 
-                                                        className="btn-view"
-                                                        onClick={() => alert(`View Return ${returnItem.id} Details`)}
-                                                    >
-                                                        View
-                                                    </button>
-                                                </td>
+                                {isReturnsLoading ? (
+                                    <div className="loading-state small">Loading returns...</div>
+                                ) : (
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Return ID</th>
+                                                <th>Order ID</th>
+                                                <th>Customer</th>
+                                                <th>Reason</th>
+                                                <th>Amount</th>
+                                                <th>Status</th>
+                                                <th>Resolution</th>
+                                                <th>Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {filteredReturns.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="8" className="empty-state">No return requests</td>
+                                                </tr>
+                                            )}
+                                            {filteredReturns.map(returnItem => (
+                                                <tr key={returnItem._id}>
+                                                    <td>{returnItem._id}</td>
+                                                    <td>{returnItem.order}</td>
+                                                    <td>{returnItem.buyer?.name || returnItem.buyer?.email || 'N/A'}</td>
+                                                    <td>{returnItem.reason}</td>
+                                                    <td>₹{returnItem.order?.totalPrice || returnItem.amount || 0}</td>
+                                                    <td>
+                                                        <span className={`badge status-${returnItem.status.toLowerCase().replace(/\s/g, '-')}`}>
+                                                            {returnItem.status}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        {returnItem.resolution ? (
+                                                            <span className="badge resolved">{returnItem.resolution}</span>
+                                                        ) : (
+                                                            <div className="resolution-buttons">
+                                                                <button
+                                                                    className="btn-resolve refund"
+                                                                    onClick={() => handleReturnResolution(returnItem._id, { status: 'Approved', resolution: 'Refund' })}
+                                                                >
+                                                                    Approve refund
+                                                                </button>
+                                                                <button
+                                                                    className="btn-resolve credit"
+                                                                    onClick={() => handleReturnResolution(returnItem._id, { status: 'Approved', resolution: 'Store Credit' })}
+                                                                >
+                                                                    Offer credit
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        <button 
+                                                            className="btn-view"
+                                                            onClick={() => alert('Detailed return view coming soon')}
+                                                        >
+                                                            View
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
                             </div>
                         </>
                     )}
@@ -754,4 +876,3 @@ const SellerDashboard = () => {
 };
 
 export default SellerDashboard;
-
