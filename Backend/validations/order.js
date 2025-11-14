@@ -13,7 +13,15 @@ const createOrderSchema = Joi.object({
 });
 
 const updateOrderStatusSchema = Joi.object({
-    status: Joi.string().valid("Order Placed", "Shipped", "Delivered", "Cancelled", "Returned", "Payment Failed").required()
+    status: Joi.string().valid(
+        "Payment Failed",
+        "Order Placed",
+        "Shipped",
+        "Delivered",
+        "Cancelled",
+        "Returned",
+        "Partially Refunded",
+        "Refunded",).required()
 });
 
 

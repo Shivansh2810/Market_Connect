@@ -38,7 +38,7 @@ const orderSchema = new Schema(
     orderItems: [orderItemSchema],
     payment: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Payment"
+        ref: "Payment" // Reference to the Payment document
     },
     itemsPrice: {
         type: Number,
@@ -63,8 +63,22 @@ const orderSchema = new Schema(
     orderStatus: {
         type: String,
         required: true,
-        enum: ["Payment Pending", "Order Placed", "Shipped", "Delivered", "Cancelled", "Returned", "Payment Failed"],
+        enum: [
+        "Payment Pending", // initial default status while creating order
+        "Payment Failed",
+        "Order Placed",
+        "Shipped",
+        "Delivered",
+        "Cancelled",
+        "Returned", // return has been requested by buyer
+        "Partially Refunded",
+        "Refunded",],
         default: "Payment Pending",
+    },
+
+    orderPlacedAt: {
+      // confirmed payment timestamp received from payment gateway  
+      type: Date,
     },
 
     //this is irrelevant for time-being, hence commented
@@ -73,7 +87,7 @@ const orderSchema = new Schema(
     // },
   },
   {
-    timestamps: true, //in order to save timestamps for both instances - creation and updation
+    timestamps: true, // in order to save timestamps for both instances - creation and updation
   }
 );
 
