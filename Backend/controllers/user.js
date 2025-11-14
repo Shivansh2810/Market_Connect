@@ -3,8 +3,6 @@ const Order = require("../models/order");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
-const { updateProfileSchema } = require("../validations/user");
-const addressJoiSchema = require("../validations/sharedSchema");
 
 // Create Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -503,18 +501,14 @@ exports.getMe = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { error, value } = updateProfileSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ message: error.details[0].message });
-    }
 
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (value.name) user.name = value.name;
-    if (value.mobNo) user.mobNo = value.mobNo;
-    if (value.sellerInfo)
-      user.sellerInfo = { ...user.sellerInfo, ...value.sellerInfo };
+    if (req.body.name) user.name = req.body.name;
+    if (req.body.mobNo) user.mobNo = req.body.mobNo;
+    if (req.body.sellerInfo)
+      user.sellerInfo = { ...user.sellerInfo, ...req.body.sellerInfo };
 
     await user.save();
     const updated = await User.findById(user._id).select("-password");
@@ -539,9 +533,6 @@ exports.getAddresses = async (req, res) => {
 
 exports.addAddress = async (req, res) => {
   try {
-    const { error, value } = addressJoiSchema.validate(req.body);
-    if (error)
-      return res.status(400).json({ message: error.details[0].message });
 
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -550,7 +541,7 @@ exports.addAddress = async (req, res) => {
     if (!user.buyerInfo.shippingAddresses)
       user.buyerInfo.shippingAddresses = [];
 
-    user.buyerInfo.shippingAddresses.push(value);
+    user.buyerInfo.shippingAddresses.push(req.body);
     await user.save();
 
     const last =
@@ -568,9 +559,6 @@ exports.addAddress = async (req, res) => {
 exports.updateAddress = async (req, res) => {
   try {
     const { addressId } = req.params;
-    const { error, value } = addressJoiSchema.validate(req.body);
-    if (error)
-      return res.status(400).json({ message: error.details[0].message });
 
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -582,11 +570,11 @@ exports.updateAddress = async (req, res) => {
 
     if (!address) return res.status(404).json({ message: "Address not found" });
 
-    address.street = value.street;
-    address.city = value.city;
-    address.state = value.state;
-    address.pincode = value.pincode;
-    address.country = value.country;
+    address.street = req.body.street;
+    address.city = req.body.city;
+    address.state = req.body.state;
+    address.pincode = req.body.pincode;
+    address.country = req.body.country;
 
     await user.save();
     res.json({ success: true, message: "Address updated", data: address });
