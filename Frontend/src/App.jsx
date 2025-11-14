@@ -11,6 +11,7 @@ import GoogleCallback from './components/login-signup/GoogleCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProductDetailPage from './pages/ProductDetailPage';
 import CheckoutPage from './pages/CheckoutPage';
+import BecomeSellerPage from './pages/BecomeSellerPage';
 import './App.css';
 
 function App() {
@@ -47,6 +48,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <CheckoutPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/become-seller"
+                  element={
+                    <ProtectedRoute>
+                      <BecomeSellerPage />
                     </ProtectedRoute>
                   }
                 />
