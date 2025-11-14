@@ -1,13 +1,18 @@
 const Order = require("../models/order");
 const Product = require("../models/product");
 const User = require("../models/user");
-const { createOrderSchema, updateOrderStatusSchema } = require("../validations/order");
+const {
+  createOrderSchema,
+  updateOrderStatusSchema,
+} = require("../validations/order");
 
 // -- Create Order (for single product or entire cart)
 exports.createOrder = async (req, res) => {
   try {
     // input data validation
-    const { error } = createOrderSchema.validate(req.body, { abortEarly: false });
+    const { error } = createOrderSchema.validate(req.body, {
+      abortEarly: false,
+    });
     if (error) {
       return res.status(400).json({
         success: false,
@@ -19,9 +24,13 @@ exports.createOrder = async (req, res) => {
     const { orderItems, shippingInfo, payment } = req.body;
 
     // verifying user existence
-    const user = await User.findById(req.user._id).populate("buyerInfo.cart.productId");
+    const user = await User.findById(req.user._id).populate(
+      "buyerInfo.cart.productId"
+    );
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     let finalOrderItems = [];
@@ -30,7 +39,9 @@ exports.createOrder = async (req, res) => {
     // Case 1: Order placed from cart
     if (orderItems.length === 1 && orderItems[0].productId === "cart") {
       if (!user.buyerInfo.cart.length) {
-        return res.status(400).json({ success: false, message: "Cart is empty" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Cart is empty" });
       }
 
       finalOrderItems = user.buyerInfo.cart.map((item) => ({
@@ -74,7 +85,9 @@ exports.createOrder = async (req, res) => {
     // Seller assignment logic: Directly storing the seller id of the product in a single order, while that of the first product in a cart order
     const firstProduct = await Product.findById(finalOrderItems[0].product);
     if (!firstProduct) {
-      return res.status(400).json({ success: false, message: "Invalid product reference" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid product reference" });
     }
     const assignedSeller = firstProduct.sellerId;
 
@@ -145,11 +158,21 @@ exports.getOrderById = async (req, res) => {
       .populate("orderItems.product", "title images price");
 
     if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
     }
 
-    // Verifying only buyer can view their order
-    if (order.buyer._id.toString() !== req.user._id.toString()) {
+    // Allow access to the buyer, the seller of the order, or an admin
+    const isBuyer =
+      order.buyer && order.buyer._id
+        ? order.buyer._id.toString() === req.user._id.toString()
+        : order.buyer.toString() === req.user._id.toString();
+    const isSeller =
+      order.seller && order.seller.toString() === req.user._id.toString();
+    const isAdmin = req.user && req.user.role === "admin";
+
+    if (!isBuyer && !isSeller && !isAdmin) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
@@ -182,7 +205,9 @@ exports.updateOrderStatus = async (req, res) => {
 
     const order = await Order.findById(req.params.orderId);
     if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
     }
 
     // Authorization check -> seller or admin
@@ -222,11 +247,15 @@ exports.cancelOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.orderId);
     if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
     }
 
     if (order.buyer.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: "Unauthorized action" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Unauthorized action" });
     }
 
     if (["Shipped", "Delivered"].includes(order.orderStatus)) {
