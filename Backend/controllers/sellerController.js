@@ -32,26 +32,11 @@ const getMySales = async (req, res) => {
   }
 };
 
-// GET /api/seller/my-sales/:id
-const getMySaleById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ message: "Invalid order id" });
-
-    const order = await Order.findById(id)
-      .populate("buyer", "name email")
-      .populate("orderItems.product", "title images price");
-
-    if (!order) return res.status(404).json({ message: "Order not found" });
-    if (order.seller.toString() !== req.user._id.toString())
-      return res.status(403).json({ message: "Access denied" });
-
-    res.json({ success: true, data: order });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+// NOTE: Order detail access for seller is handled by the centralized
+// `orderController.getOrderById` at `GET /api/orders/:orderId`.
+// That endpoint allows buyer, seller, or admin to view an order and
+// prevents duplication of access-logic here. The previous
+// `getMySaleById` implementation was removed in favor of that.
 
 // GET /api/seller/my-returns
 const getMyReturns = async (req, res) => {
@@ -203,7 +188,7 @@ const getDashboardStats = async (req, res) => {
 
 module.exports = {
   getMySales,
-  getMySaleById,
+  // getMySaleById removed; use `GET /api/orders/:orderId` (orderController.getOrderById)
   getMyReturns,
   updateReturnStatus,
   getDashboardStats,
