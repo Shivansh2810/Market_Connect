@@ -287,12 +287,203 @@ exports.getPaymentByOrderId = async (req, res) => {
 };
 
 // -- INITIATE REFUND (For use with returns)
-// yet to be added
+// can be called from API or from other controllers
 
+exports.initiateRefund = async (req, res) => {
+  try {
+    // Validate input
+    const { error } = initiateRefundSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        error: error.details[0].message,
+      });
+    }
 
+    const { orderId, refundAmount, reason } = req.body;
 
+    // Process refund using helper function
+    const result = await processRefund(orderId, req.user._id, refundAmount, reason);
+
+    if (!result.success) {
+      return res.status(result.statusCode || 400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Refund initiated successfully",
+      data: result.data,
+    });
+  } catch (error) {
+    console.error("Refund initiation error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to initiate refund",
+      error: error.message,
+    });
+  }
+};
+
+// HELPER: Process Refund (Internal function)
+// Used by both paymentController and returnController
+async function processRefund(orderId, userId, refundAmount = null, reason = "Refund requested") {
+  try {
+    // Fetch order with payment
+    const order = await Order.findById(orderId).populate("payment");
+    if (!order) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: "Order not found",
+      };
+    }
+
+    // Authorization check
+    if (order.buyer.toString() !== userId.toString()) {
+      return {
+        success: false,
+        statusCode: 403,
+        message: "Unauthorized access",
+      };
+    }
+
+    // Fetch payment
+    const payment = order.payment;
+    if (!payment || !payment.razorpayPaymentId) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: "Payment not found for this order",
+      };
+    }
+
+    if (payment.status !== "captured") {
+      return {
+        success: false,
+        statusCode: 400,
+        message: "Payment is not in captured status",
+      };
+    }
+
+    // Calculate refund amount
+    const amountToRefund = refundAmount || payment.amount;
+
+    // Check if refund amount is valid
+    const alreadyRefunded = payment.refundAmount || 0;
+    const availableForRefund = payment.amount - alreadyRefunded;
+
+    if (amountToRefund > availableForRefund) {
+      return {
+        success: false,
+        statusCode: 400,
+        message: `Cannot refund ₹${amountToRefund}. Only ₹${availableForRefund} available for refund.`,
+      };
+    }
+
+    // Create refund via Razorpay
+    const refund = await razorpayInstance.payments.refund(
+      payment.razorpayPaymentId,
+      {
+        amount: Math.round(amountToRefund * 100),
+        notes: {
+          orderId: orderId.toString(),
+          reason: reason,
+        },
+      }
+    );
+
+    // Update payment record
+    payment.refundId = refund.id;
+    payment.refundAmount = (payment.refundAmount || 0) + amountToRefund;
+    payment.refundStatus = "processed";
+
+    // Check if fully refunded
+    if (payment.refundAmount >= payment.amount) {
+      payment.status = "refunded";
+    }
+
+    await payment.save();
+
+    // Restore product stock
+    for (const item of order.orderItems) {
+      await Product.findByIdAndUpdate(item.product, {
+        $inc: { stock: item.quantity },
+      });
+    }
+
+    return {
+      success: true,
+      data: {
+        refundId: refund.id,
+        amount: amountToRefund,
+        status: refund.status,
+        totalRefunded: payment.refundAmount,
+      },
+    };
+  } catch (error) {
+    console.error("Process refund error:", error);
+    return {
+      success: false,
+      statusCode: 500,
+      message: "Failed to process refund",
+      error: error.message,
+    };
+  }
+}
+
+// -- GET REFUND STATUS
+exports.getRefundStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const payment = await Payment.findOne({ order: orderId });
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment not found",
+      });
+    }
+
+    if (!payment.refundId) {
+      return res.status(400).json({
+        success: false,
+        message: "No refund initiated for this order",
+      });
+    }
+
+    // Fetch refund details from Razorpay
+    const refund = await razorpayInstance.refunds.fetch(payment.refundId);
+
+    res.status(200).json({
+      success: true,
+      message: "Refund status retrieved successfully",
+      data: {
+        refundId: refund.id,
+        amount: refund.amount / 100,
+        status: refund.status,
+        createdAt: refund.created_at,
+      },
+    });
+  } catch (error) {
+    console.error("Get refund status error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve refund status",
+      error: error.message,
+    });
+  }
+};
+
+// We Export the helper function for use in other controllers
 module.exports = {
   createRazorpayOrder,
   verifyPayment,
   getPaymentByOrderId,
+  initiateRefund,
+  getRefundStatus,
+  processRefund, // EXPORTING THIS for returnController
 };
