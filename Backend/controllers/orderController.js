@@ -168,8 +168,14 @@ exports.getOrderById = async (req, res) => {
       order.buyer && order.buyer._id
         ? order.buyer._id.toString() === req.user._id.toString()
         : order.buyer.toString() === req.user._id.toString();
-    const isSeller =
-      order.seller && order.seller.toString() === req.user._id.toString();
+
+    // Check if any item in the order belongs to this seller (for cart orders)
+    const orderItemProducts = await Product.find({
+      _id: { $in: order.orderItems.map((item) => item.product) },
+      sellerId: req.user._id,
+    });
+    const isSeller = orderItemProducts.length > 0;
+
     const isAdmin = req.user && req.user.role === "admin";
 
     if (!isBuyer && !isSeller && !isAdmin) {
@@ -212,7 +218,13 @@ exports.updateOrderStatus = async (req, res) => {
 
     // Authorization check -> seller or admin
     const isAdmin = req.user.email === "admin@marketplace.com";
-    const isSeller = order.seller.toString() === req.user._id.toString();
+
+    // Check if any item in the order belongs to this seller (for cart orders)
+    const orderItemProducts = await Product.find({
+      _id: { $in: order.orderItems.map((item) => item.product) },
+      sellerId: req.user._id,
+    });
+    const isSeller = orderItemProducts.length > 0;
 
     if (!isAdmin && !isSeller) {
       return res.status(403).json({

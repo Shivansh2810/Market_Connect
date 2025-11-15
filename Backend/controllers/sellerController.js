@@ -5,23 +5,87 @@ const Product = require("../models/product");
 const Review = require("../models/review");
 
 // GET /api/seller/my-sales
+// Uses per-item Product.sellerId to include cart orders containing this seller's items.
 const getMySales = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const query = { seller: req.user._id };
+    const sellerId = new mongoose.Types.ObjectId(req.user._id);
 
-    const [orders, total] = await Promise.all([
-      Order.find(query)
-        .populate("buyer", "name email")
-        .populate("orderItems.product", "title price images")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      Order.countDocuments(query),
+    const [result] = await Order.aggregate([
+      { $unwind: "$orderItems" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "orderItems.product",
+          foreignField: "_id",
+          as: "prod",
+        },
+      },
+      { $unwind: "$prod" },
+      { $match: { "prod.sellerId": sellerId } },
+      {
+        $group: {
+          _id: "$_id",
+          buyer: { $first: "$buyer" },
+          shippingInfo: { $first: "$shippingInfo" },
+          orderStatus: { $first: "$orderStatus" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+          orderItems: {
+            $push: {
+              name: "$orderItems.name",
+              quantity: "$orderItems.quantity",
+              image: "$orderItems.image",
+              price: "$orderItems.price",
+              product: {
+                _id: "$orderItems.product",
+                title: "$prod.title",
+                price: "$prod.price",
+                images: "$prod.images",
+              },
+            },
+          },
+        },
+      },
+      // hydrate buyer basic info
+      {
+        $lookup: {
+          from: "users",
+          localField: "buyer",
+          foreignField: "_id",
+          as: "buyerDoc",
+        },
+      },
+      { $unwind: { path: "$buyerDoc", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          buyer: {
+            _id: "$buyerDoc._id",
+            name: "$buyerDoc.name",
+            email: "$buyerDoc.email",
+          },
+          shippingInfo: 1,
+          orderStatus: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          orderItems: 1,
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: "count" }],
+        },
+      },
     ]);
+
+    const orders = result?.data || [];
+    const total = result?.totalCount?.[0]?.count || 0;
 
     res.json({
       success: true,
@@ -31,12 +95,6 @@ const getMySales = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// NOTE: Order detail access for seller is handled by the centralized
-// `orderController.getOrderById` at `GET /api/orders/:orderId`.
-// That endpoint allows buyer, seller, or admin to view an order and
-// prevents duplication of access-logic here. The previous
-// `getMySaleById` implementation was removed in favor of that.
 
 // GET /api/seller/my-returns
 const getMyReturns = async (req, res) => {
@@ -82,49 +140,62 @@ const updateReturnStatus = async (req, res) => {
 };
 
 // GET /api/seller/dashboard
+// Computes stats per seller-owned items rather than order-level seller.
 const getDashboardStats = async (req, res) => {
   try {
-    const sellerId = req.user._id;
+    const sellerObjId = new mongoose.Types.ObjectId(req.user._id);
 
-    // total orders and revenue (exclude cancelled/payment failed)
-    const ordersMatch = {
-      seller: sellerId,
-      orderStatus: { $nin: ["Cancelled", "Payment Failed"] },
-    };
-    const [orderAgg] = await Order.aggregate([
-      { $match: ordersMatch },
+    // totalOrders (distinct orders with any seller-owned item)
+    // totalRevenue (sum of price*qty for seller-owned items) excluding cancelled/payment failed
+    const [agg] = await Order.aggregate([
+      { $match: { orderStatus: { $nin: ["Cancelled", "Payment Failed"] } } },
+      { $unwind: "$orderItems" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "orderItems.product",
+          foreignField: "_id",
+          as: "prod",
+        },
+      },
+      { $unwind: "$prod" },
+      { $match: { "prod.sellerId": sellerObjId } },
       {
         $group: {
           _id: null,
-          totalOrders: { $sum: 1 },
-          totalRevenue: { $sum: "$totalPrice" },
+          orderIds: { $addToSet: "$_id" },
+          totalRevenue: {
+            $sum: { $multiply: ["$orderItems.price", "$orderItems.quantity"] },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          totalOrders: { $size: "$orderIds" },
+          totalRevenue: 1,
         },
       },
     ]);
 
-    const totalOrders = orderAgg ? orderAgg.totalOrders : 0;
-    const totalRevenue = orderAgg ? orderAgg.totalRevenue : 0;
+    const totalOrders = agg?.totalOrders || 0;
+    const totalRevenue = agg?.totalRevenue || 0;
 
-    // total products
+    // total products (owned by seller)
     const totalProducts = await Product.countDocuments({
-      sellerId: sellerId,
+      sellerId: sellerObjId,
       isDeleted: false,
     });
 
-    // pending returns
+    // pending returns (kept by seller field in returns model)
     const pendingReturns = await Return.countDocuments({
-      seller: sellerId,
+      seller: sellerObjId,
       status: "Requested",
     });
 
     // average rating for seller
     const [ratingAgg] = await Review.aggregate([
-      {
-        $match: {
-          sellerId: mongoose.Types.ObjectId(sellerId),
-          status: "visible",
-        },
-      },
+      { $match: { sellerId: sellerObjId, status: "visible" } },
       {
         $group: {
           _id: null,
@@ -137,10 +208,19 @@ const getDashboardStats = async (req, res) => {
     const avgRating = ratingAgg ? ratingAgg.avgRating : 0;
     const ratingCount = ratingAgg ? ratingAgg.ratingCount : 0;
 
-    // top products by quantity sold (from orders)
+    // top products by quantity sold for this seller
     const topProducts = await Order.aggregate([
-      { $match: { seller: sellerId } },
       { $unwind: "$orderItems" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "orderItems.product",
+          foreignField: "_id",
+          as: "prod",
+        },
+      },
+      { $unwind: "$prod" },
+      { $match: { "prod.sellerId": sellerObjId } },
       {
         $group: {
           _id: "$orderItems.product",
