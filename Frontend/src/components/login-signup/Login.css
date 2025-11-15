@@ -9,7 +9,158 @@
   --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   --shadow-hover: 0 5px 15px rgba(0, 0, 0, 0.15);
 }
+/* Add these styles to your Login.css file */
+.error-message {
+  animation: slideIn 0.3s ease-in-out;
+}
 
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+.btn-login:disabled,
+.btn-google:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Add these styles to your Login.css file */
+.error-message {
+  animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+.btn-login:disabled,
+.btn-google:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 10px;
+  padding: 0;
+  max-width: 400px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px;
+}
+.link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .login-page {
   min-height: 100vh;
   background-color: var(--background-color);
@@ -121,9 +272,15 @@
   transition: 0.3s;
 }
 
-.btn-login:hover {
+.btn-login:hover:not(:disabled) {
   background: var(--primary-dark);
   box-shadow: var(--shadow-hover);
+}
+
+.btn-login:disabled {
+  background: #b39ddb;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .btn-google {
@@ -141,8 +298,13 @@
   transition: 0.3s;
 }
 
-.btn-google:hover {
+.btn-google:hover:not(:disabled) {
   background: #f0f0f0;
+}
+
+.btn-google:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .flex-footer {
@@ -259,6 +421,27 @@
   padding: 25px;
 }
 
+/* ✅ Add animation for error messages */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ✅ Input states for better UX */
+.login-right input:invalid {
+  border-color: #ef5350;
+}
+
+.login-right input:invalid:focus {
+  box-shadow: 0 0 6px #ffcdd2;
+}
+
 @media (max-width: 768px) {
   .login-container {
     flex-direction: column;
@@ -274,3 +457,4 @@
     margin-bottom: 20px;
   }
 }
+

@@ -11,7 +11,7 @@ const categorySchema = new Schema(
     },
     slug: {
       type: String,
-      required: true,
+      required: [true, "Slug is required"],
       unique: true,
       lowercase: true,
       trim: true,
@@ -26,16 +26,5 @@ const categorySchema = new Schema(
     timestamps: true,
   }
 );
-
-
-categorySchema.pre("save", function (next) {
-  if (!this.isModified("name")) return next();
-
-  this.slug = this.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-  next();
-});
 
 module.exports = mongoose.model("Category", categorySchema);

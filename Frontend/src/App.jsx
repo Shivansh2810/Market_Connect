@@ -7,6 +7,8 @@ import Login from './components/login-signup/Login';
 import Signup from './components/login-signup/Signup';
 import ResetPassword from './components/login-signup/ResetPassword';
 import BuyerDashboard from './components/buyer dashboard/BuyerDashboard';
+import SellerDashboard from './components/seller dashboard/SellerDashboard';
+import AdminDashboard from './components/admin dashboard/adminDashboard';
 import GoogleCallback from './components/login-signup/GoogleCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProductDetailPage from './pages/ProductDetailPage';
@@ -30,7 +32,7 @@ function App() {
                 <Route
                   path="/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['buyer', 'both']}>
                       <BuyerDashboard />
                     </ProtectedRoute>
                   }
@@ -38,7 +40,7 @@ function App() {
                 <Route
                   path="/dashboard/products/:productId"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['buyer', 'both']}>
                       <ProductDetailPage />
                     </ProtectedRoute>
                   }
@@ -46,15 +48,31 @@ function App() {
                 <Route
                   path="/checkout"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['buyer', 'both']}>
                       <CheckoutPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/seller-dashboard"
+                  element={
+                    <ProtectedRoute allowedRoles={['seller', 'both']}>
+                      <SellerDashboard />
                     </ProtectedRoute>
                   }
                 />
                 <Route
                   path="/become-seller"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['buyer', 'both']}>
                       <BecomeSellerPage />
                     </ProtectedRoute>
                   }
