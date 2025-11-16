@@ -17,7 +17,7 @@ const createCouponSchema = Joi.object({
     'string.min': 'Coupon code must be at least 3 characters',
     'string.max': 'Coupon code cannot exceed 20 characters'
   }),
-  description: Joi.string().trim().max(500).optional(),
+  description: Joi.string().trim().max(500).allow('').optional(),
   discountAmount: Joi.number().min(1).required().messages({
     'number.min': 'Discount amount must be at least 1',
     'any.required': 'Discount amount is required'
@@ -27,7 +27,11 @@ const createCouponSchema = Joi.object({
   validUntil: Joi.date().greater('now').required().messages({
     'date.greater': 'Valid until date must be in the future'
   }),
-  usageLimit: Joi.number().min(1).optional(),
+  usageLimit: Joi.alternatives().try(
+    Joi.number().min(1),
+    Joi.string().allow('').optional(),
+    Joi.valid(null)
+  ).optional().default(null),
   isActive: Joi.boolean().default(true),
   applicableCategories: Joi.array().items(
     Joi.string().hex().length(24)
@@ -35,11 +39,16 @@ const createCouponSchema = Joi.object({
 });
 
 const updateCouponSchema = Joi.object({
-  description: Joi.string().trim().max(500).optional(),
+  code: Joi.string().trim().uppercase().min(3).max(20).optional(),
+  description: Joi.string().trim().max(500).allow('').optional(),
   discountAmount: Joi.number().min(1).optional(),
   minOrderValue: Joi.number().min(0).optional(),
   validUntil: Joi.date().greater('now').optional(),
-  usageLimit: Joi.number().min(1).optional(),
+  usageLimit: Joi.alternatives().try(
+    Joi.number().min(1),
+    Joi.string().allow('').optional(),
+    Joi.valid(null)
+  ).optional(),
   isActive: Joi.boolean().optional(),
   applicableCategories: Joi.array().items(
     Joi.string().hex().length(24)

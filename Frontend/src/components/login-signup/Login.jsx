@@ -1,30 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import api from "../../../api/axios";
 import { useAuth } from "../../contexts/AuthContext";
 import "./Login.css";
 
-  // Using shared `api` instance (baseURL configured in Frontend/api/axios.js)
-
 export default function Login() {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
-  
-  // Redirect to dashboard if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/dashboard");
-    }
-  }, [isAuthenticated, navigate]);
+  const { login } = useAuth();
 
-  const [accountType, setAccountType] = useState("");
+  const [accountType, setAccountType] = useState("buyer");
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  // Forgot Password State
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -32,54 +22,140 @@ export default function Login() {
   const [forgotSuccess, setForgotSuccess] = useState("");
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    // ✅ COMPLETE PREVENTION OF DEFAULT BEHAVIOR
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
+    if (e && e.stopImmediatePropagation) {
+      e.stopImmediatePropagation();
+    }
+    
+    // ✅ PREVENT ANY FORM SUBMISSION RELOAD
+    const form = e ? e.target : null;
+    if (form && form.reset) {
+      setTimeout(() => {
+        form.reset = () => {}; // Override reset to prevent clearing
+      }, 0);
+    }
+    
+    console.log('🔄 Form submission completely prevented');
+    
     setError("");
     
-    if (!accountType || !emailOrPhone || !password) {
-      setError("All fields are required!");
-      return;
+    // Basic validation
+    if (!emailOrPhone || !password) {
+      setError("Email and password are required!");
+      return false; // ✅ Prevent further execution
     }
 
     const emailRegex = /\S+@\S+\.\S+/;
     const phoneRegex = /^[0-9]{10}$/;
     if (!emailRegex.test(emailOrPhone) && !phoneRegex.test(emailOrPhone)) {
       setError("Enter valid Email or Mobile Number!");
-      return;
+      return false; // ✅ Prevent further execution
     }
 
-    // Extract email from emailOrPhone (assuming it's email for now)
-    const email = emailOrPhone;
+    const email = emailOrPhone.trim().toLowerCase();
 
     setLoading(true);
     try {
-      const response = await api.post(`/login`, {
-        email,
-        password,
-        role: accountType
-      });
+      console.log('🔑 Login attempt:', { email, role: accountType });
+      
+      const isAdminEmail = email === 'admin@marketplace.com' || email === 'admin@marketconnect.com';
+      
+      let response;
+      if (isAdminEmail) {
+        console.log('👑 Admin login detected');
+        response = await api.post('/users/admin/login', {
+          email,
+          password
+        });
+      } else {
+        response = await api.post('/users/login', {
+          email,
+          password,
+          role: accountType
+        });
+      }
+
+      console.log('✅ Login API response:', response.data);
 
       if (response.data.token && response.data.user) {
-        // Store auth data
+        console.log('🎯 Calling AuthContext.login()...');
+        
+        setError("");
         login(response.data.user, response.data.token);
-        // Navigate to dashboard
-        navigate("/dashboard");
+        
+        console.log('➡️ User role:', response.data.user.role);
+        
+        if (response.data.user.role === 'admin') {
+          navigate('/admin');
+        } else if (response.data.user.role === 'both') {
+          if (accountType === 'seller') {
+            navigate('/seller-dashboard');
+          } else {
+            navigate('/dashboard');
+          }
+        } else if (response.data.user.role === 'seller') {
+          navigate('/seller-dashboard');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setError("Login failed. Please try again.");
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || 
-        "Login failed. Please check your credentials and try again."
-      );
+      console.error('❌ Login error:', err);
+      console.error('📡 Full error object:', err);
+      console.error('📡 Error response data:', err.response?.data);
+      console.error('📡 Error response status:', err.response?.status);
+      
+      let errorMsg = "Invalid email or password. Please try again.";
+      
+      if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      } else if (err.code === 'NETWORK_ERROR' || err.message === 'Network Error') {
+        errorMsg = "Network error. Please check your internet connection.";
+      } else if (err.response?.status === 401) {
+        errorMsg = "Invalid email or password. Please try again.";
+      } else if (err.response?.status === 403) {
+        errorMsg = "Access denied for this role. Please select the correct account type.";
+      } else if (err.response?.status === 500) {
+        errorMsg = "Server error. Please try again later.";
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      
+      console.log('🔴 Setting error message:', errorMsg);
+      setError(errorMsg);
+      
+      // ✅ Force the error to stay by preventing any default behavior
+      setTimeout(() => {
+        console.log('📝 Current error state:', error);
+      }, 100);
     } finally {
       setLoading(false);
     }
+
+    // ✅ IMPORTANT: Return false to prevent any default form behavior
+    return false;
   };
 
   const handleGoogleLogin = () => {
-    // Redirect to Google OAuth using shared api baseURL
-    const base = api.defaults.baseURL || 'http://localhost:8080/api';
-    window.location.href = `${base}/auth/google`;
+    try {
+      setError("");
+      const base = api.defaults.baseURL || 'http://localhost:8080/api';
+      const googleAuthUrl = `${base}/users/auth/google`;
+      console.log('🔐 Redirecting to Google Auth:', googleAuthUrl);
+      
+      window.location.href = googleAuthUrl;
+    } catch (err) {
+      console.error('❌ Google login error:', err);
+      setError('Failed to start Google login. Please try again.');
+    }
   };
 
   const handleForgotPassword = async (e) => {
@@ -100,27 +176,71 @@ export default function Login() {
 
     setForgotLoading(true);
     try {
-      const response = await api.post(`/forgot-password`, {
+      const response = await api.post('/users/forgot-password', {
         email: forgotEmail.toLowerCase().trim()
       });
 
+      console.log('✅ Forgot password response:', response.data);
+
       if (response.data.message) {
         setForgotSuccess(response.data.message);
+        setForgotError("");
         setForgotEmail("");
-        // Close modal after 3 seconds
         setTimeout(() => {
           setShowForgotPassword(false);
           setForgotSuccess("");
-        }, 3000);
+        }, 5000);
       }
     } catch (err) {
-      setForgotError(
-        err.response?.data?.message || 
-        "Failed to send reset email. Please try again."
-      );
+      console.error('❌ Forgot password error:', err);
+      
+      let errorMessage = "Failed to send reset email. Please try again.";
+      
+      if (err.response?.status === 404) {
+        errorMessage = "User hasn't registered with this email. Please check your email or sign up.";
+      } else if (err.response?.status === 400) {
+        errorMessage = err.response.data.message || "This account uses Google login. Please use Google login instead.";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.code === 'NETWORK_ERROR' || err.message === 'Network Error') {
+        errorMessage = "Network error. Please check your internet connection.";
+      }
+      
+      setForgotError(errorMessage);
+      setForgotSuccess("");
     } finally {
       setForgotLoading(false);
     }
+  };
+
+  const handleEmailChange = (e) => {
+    setEmailOrPhone(e.target.value);
+    if (error) setError("");
+  };
+
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+    if (error) setError("");
+  };
+
+  const handleAccountTypeChange = (e) => {
+    setAccountType(e.target.value);
+    if (error) setError("");
+  };
+
+  // ✅ ADDED: Direct button click handler as alternative
+  const handleLoginButtonClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Create a synthetic event for the form handler
+    const syntheticEvent = {
+      preventDefault: () => {},
+      stopPropagation: () => {},
+      target: document.querySelector('form')
+    };
+    
+    handleSubmit(syntheticEvent);
   };
 
   return (
@@ -146,24 +266,31 @@ export default function Login() {
           <h2>Login to Your Account</h2>
 
           {error && (
-            <div style={{ 
-              color: 'red', 
+            <div className="error-message" style={{ 
+              color: '#d32f2f', 
               marginBottom: '15px', 
-              padding: '10px', 
-              backgroundColor: '#ffe6e6', 
-              borderRadius: '5px',
-              fontSize: '14px'
+              padding: '12px 15px', 
+              backgroundColor: '#ffebee', 
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: '500',
+              border: '1px solid #ef5350',
+              animation: 'slideIn 0.3s ease-in-out'
             }}>
+              <span style={{ marginRight: '8px' }}>⚠️</span>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          {/* ✅ OPTION 1: Regular form with enhanced prevention */}
+          <form onSubmit={handleSubmit} noValidate>
             <select
               value={accountType}
-              onChange={(e) => setAccountType(e.target.value)}
+              onChange={handleAccountTypeChange}
+              style={{
+                marginBottom: '15px'
+              }}
             >
-              <option value="">Select Account Type</option>
               <option value="buyer">Buyer</option>
               <option value="seller">Seller</option>
             </select>
@@ -172,18 +299,52 @@ export default function Login() {
               type="text"
               placeholder="Email / Mobile Number"
               value={emailOrPhone}
-              onChange={(e) => setEmailOrPhone(e.target.value)}
+              onChange={handleEmailChange}
+              style={{
+                marginBottom: '15px'
+              }}
+              required
             />
 
             <input
               type="password"
               placeholder="Password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
+              style={{
+                marginBottom: '20px'
+              }}
+              required
             />
 
-            <button type="submit" className="btn-login" disabled={loading}>
-              {loading ? "LOGGING IN..." : "LOGIN"}
+            {/* ✅ OPTION 2: Use button with onClick instead of form submit */}
+            <button 
+              type="button" // ✅ Changed from "submit" to "button"
+              onClick={handleLoginButtonClick}
+              className="btn-login" 
+              disabled={loading}
+              style={{
+                opacity: loading ? 0.7 : 1,
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner" style={{
+                    display: 'inline-block',
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid transparent',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    marginRight: '8px'
+                  }}></span>
+                  LOGGING IN...
+                </>
+              ) : (
+                "LOGIN"
+              )}
             </button>
           </form>
 
@@ -191,23 +352,38 @@ export default function Login() {
             <button
               onClick={handleGoogleLogin}
               className="btn-google"
+              disabled={loading}
+              style={{
+                opacity: loading ? 0.7 : 1,
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
             >
               <FcGoogle size={22} />
-              <span>Continue with Google</span>
+              <span>{loading ? 'Redirecting...' : 'Continue with Google'}</span>
             </button>
           </div>
 
           <div className="flex-footer">
             <p>
               New User?{" "}
-              <span onClick={() => navigate("/signup")} className="link">
+              <span 
+                onClick={() => !loading && navigate("/signup")} 
+                className="link"
+                style={{
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.6 : 1
+                }}
+              >
                 Signup
               </span>
             </p>
             <p 
               className="forgot link" 
-              onClick={() => setShowForgotPassword(true)}
-              style={{ cursor: 'pointer' }}
+              onClick={() => !loading && setShowForgotPassword(true)}
+              style={{ 
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1
+              }}
             >
               Forgot your password?
             </p>
@@ -215,7 +391,6 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Forgot Password Modal */}
       {showForgotPassword && (
         <div className="modal-overlay" onClick={() => {
           setShowForgotPassword(false);
@@ -246,26 +421,34 @@ export default function Login() {
 
               {forgotError && (
                 <div style={{ 
-                  color: 'red', 
+                  color: '#d32f2f', 
                   marginBottom: '15px', 
-                  padding: '10px', 
-                  backgroundColor: '#ffe6e6', 
-                  borderRadius: '5px',
-                  fontSize: '14px'
+                  padding: '12px 15px', 
+                  backgroundColor: '#ffebee', 
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  border: '1px solid #ef5350',
+                  animation: 'slideIn 0.3s ease-in-out'
                 }}>
+                  <span style={{ marginRight: '8px' }}>⚠️</span>
                   {forgotError}
                 </div>
               )}
 
               {forgotSuccess && (
                 <div style={{ 
-                  color: 'green', 
+                  color: '#2e7d32', 
                   marginBottom: '15px', 
-                  padding: '10px', 
-                  backgroundColor: '#e6ffe6', 
-                  borderRadius: '5px',
-                  fontSize: '14px'
+                  padding: '12px 15px', 
+                  backgroundColor: '#e8f5e9', 
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  border: '1px solid #66bb6a',
+                  animation: 'slideIn 0.3s ease-in-out'
                 }}>
+                  <span style={{ marginRight: '8px' }}>✅</span>
                   {forgotSuccess}
                 </div>
               )}
@@ -275,31 +458,82 @@ export default function Login() {
                   type="email"
                   placeholder="Enter your email address"
                   value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
+                  onChange={(e) => {
+                    setForgotEmail(e.target.value);
+                    setForgotError("");
+                  }}
                   required
                   style={{
                     width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ccc',
+                    padding: '12px',
+                    border: forgotError ? '1px solid #ef5350' : '1px solid #ccc',
                     borderRadius: '6px',
                     fontSize: '15px',
                     marginBottom: '15px',
-                    outline: 'none'
+                    outline: 'none',
+                    transition: 'border-color 0.3s'
                   }}
+                  onFocus={(e) => e.target.style.borderColor = '#3c009d'}
+                  onBlur={(e) => e.target.style.borderColor = forgotError ? '#ef5350' : '#ccc'}
                 />
                 <button 
                   type="submit" 
                   className="btn-login" 
                   disabled={forgotLoading}
-                  style={{ width: '100%' }}
+                  style={{ 
+                    width: '100%',
+                    opacity: forgotLoading ? 0.7 : 1,
+                    cursor: forgotLoading ? 'not-allowed' : 'pointer'
+                  }}
                 >
-                  {forgotLoading ? "SENDING..." : "SEND RESET LINK"}
+                  {forgotLoading ? (
+                    <>
+                      <span className="spinner" style={{
+                        display: 'inline-block',
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid transparent',
+                        borderTop: '2px solid white',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        marginRight: '8px'
+                      }}></span>
+                      SENDING...
+                    </>
+                  ) : (
+                    "SEND RESET LINK"
+                  )}
                 </button>
               </form>
+
+              <div style={{ 
+                marginTop: '15px', 
+                padding: '10px', 
+                backgroundColor: '#f8f9fa', 
+                borderRadius: '6px',
+                fontSize: '12px',
+                color: '#666',
+                textAlign: 'center'
+              }}>
+                <p style={{ margin: 0 }}>
+                  Can't find the email? Check your spam folder or try again.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

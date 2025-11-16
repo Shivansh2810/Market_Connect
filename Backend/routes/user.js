@@ -10,6 +10,7 @@ const { protect } = require("../middlewares/auth");
 const {
   signupSchema,
   loginSchema,
+  adminLoginSchema,
   upgradeToSellerSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -30,7 +31,7 @@ router.post(
   userController.resetPassword
 );
 
-router.post("/admin/login", validate(loginSchema), userController.adminLogin);
+router.post("/admin/login", validate(adminLoginSchema), userController.adminLogin);
 
 router.put(
   "/upgradetoseller",

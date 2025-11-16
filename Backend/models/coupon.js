@@ -56,15 +56,11 @@ const couponSchema = new Schema(
 
 couponSchema.methods.calculateDiscount = function (cartValue) {
   if (!this.isActive) return 0;
-  
   if (new Date() > this.validUntil) return 0;
-  
   if (cartValue < this.minOrderValue) return 0;
-  
   if (this.usageLimit && this.usedCount >= this.usageLimit) return 0;
 
   const discount = Math.min(this.discountAmount, cartValue);
-
   return discount;
 };
 
@@ -76,4 +72,4 @@ couponSchema.methods.isValid = function (cartValue) {
   return true;
 };
 
-module.exports = mongoose.model("Coupon", couponSchema);  
+module.exports = mongoose.model("Coupon", couponSchema);

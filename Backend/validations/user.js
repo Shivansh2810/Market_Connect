@@ -71,6 +71,16 @@ const loginSchema = Joi.object({
   })
 }).required();
 
+const adminLoginSchema = Joi.object({
+  email: Joi.string().trim().email().lowercase().required().messages({
+    'string.email': 'Please enter a valid email address',
+    'string.empty': 'Email is required'
+  }),
+  password: Joi.string().required().messages({
+    'string.empty': 'Password is required'
+  })
+}).required();
+
 const forgotPasswordSchema = Joi.object({
   email: Joi.string().trim().email().lowercase().required().messages({
     'string.email': 'Please enter a valid email address',
@@ -131,6 +141,7 @@ module.exports = {
   signupSchema,
   googleAuthSchema,
   loginSchema,
+  adminLoginSchema,
   updateProfileSchema,
   upgradeToSellerSchema,
   updateSellerInfoSchema,

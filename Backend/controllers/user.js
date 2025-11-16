@@ -192,9 +192,16 @@ exports.forgotPassword = async (req, res) => {
     }
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
+    
     if (!user) {
-      return res.json({ 
-        message: "If an account with that email exists, a password reset link has been sent" 
+      return res.status(404).json({ 
+        message: "User hasn't registered with this email" 
+      });
+    }
+
+    if (user.googleId && !user.password) {
+      return res.status(400).json({ 
+        message: "This account uses Google login. Please use Google login instead." 
       });
     }
 
@@ -333,8 +340,8 @@ exports.forgotPassword = async (req, res) => {
 
     console.log('Password reset email sent to:', user.email);
     
-    res.json({ 
-      message: "If an account with that email exists, a password reset link has been sent"
+    res.status(200).json({ 
+      message: "Password reset link has been sent to your email"
     });
 
   } catch (error) {
@@ -345,8 +352,8 @@ exports.forgotPassword = async (req, res) => {
       console.error('Nodemailer error message:', error.message);
     }
     
-    res.json({ 
-      message: "If an account with that email exists, a password reset link has been sent" 
+    res.status(500).json({ 
+      message: "Failed to send reset email. Please try again later." 
     });
   }
 };
@@ -417,7 +424,7 @@ exports.upgradeToSeller = async (req, res) => {
              return res.status(400).json({ message: "Shop name and address are required." });
         }
 
-        const userId = req.user.id; 
+        const userId = req.user._id;
 
         const user = await User.findById(userId);
 

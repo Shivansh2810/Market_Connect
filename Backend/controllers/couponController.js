@@ -71,7 +71,13 @@ const createCoupon = async (req, res) => {
       });
     }
 
-    const coupon = new Coupon(value);
+    // Handle empty usageLimit - convert to null
+    const couponData = {
+      ...value,
+      usageLimit: value.usageLimit === '' || value.usageLimit === null ? null : value.usageLimit
+    };
+
+    const coupon = new Coupon(couponData);
     await coupon.save();
 
     res.status(201).json({
@@ -82,6 +88,15 @@ const createCoupon = async (req, res) => {
 
   } catch (error) {
     console.error("Create coupon error:", error);
+    
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Coupon code already exists"
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: "Failed to create coupon",
@@ -92,7 +107,9 @@ const createCoupon = async (req, res) => {
 
 const getCoupons = async (req, res) => {
   try {
+    console.log('[GET /coupons] Fetching all coupons...');
     const coupons = await Coupon.find().sort({ createdAt: -1 });
+    console.log(`[GET /coupons] ✅ Found ${coupons.length} coupons`);
 
     res.json({
       success: true,
@@ -102,7 +119,8 @@ const getCoupons = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Get coupons error:", error);
+    console.error("[GET /coupons] ❌ Error:", error.message);
+    console.error("[GET /coupons] Full error stack:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get coupons",
@@ -124,9 +142,15 @@ const updateCoupon = async (req, res) => {
       });
     }
 
+    // Handle empty usageLimit - convert to null
+    const updateData = {
+      ...value,
+      usageLimit: value.usageLimit === '' || value.usageLimit === null ? null : value.usageLimit
+    };
+
     const coupon = await Coupon.findByIdAndUpdate(
       id,
-      value,
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -145,6 +169,15 @@ const updateCoupon = async (req, res) => {
 
   } catch (error) {
     console.error("Update coupon error:", error);
+    
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Coupon code already exists"
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: "Failed to update coupon",

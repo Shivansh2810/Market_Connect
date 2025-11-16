@@ -16,7 +16,7 @@ const sellerRoutes = require("./routes/seller");
 const orderRoutes = require("./routes/order");
 const productRoutes = require("./routes/product");
 const categoryRoutes = require("./routes/category");
-const paymentRoutes = require("./routes/payment");
+// const paymentRoutes = require("./routes/payment");
 const analyticsRoutes = require('./routes/sellerAnalyticsRoutes.js');
 
 mongoose
@@ -24,30 +24,41 @@ mongoose
   .then(() => console.log("MongoDB Atlas connected"))
   .catch((err) => console.error("DB connection error:", err));
 
-app.use(cors());
+// CORS middleware MUST come first
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
+// Health check
+app.get("/", (req, res) => {
+  res.json({ message: "Server is running" });
+});
+
+// Mount user routes
+app.use("/api/users", userRoutes);
+
+// Mount other routes
 app.use("/api", productRoutes);
-app.use("/api", categoryRoutes);
+app.use("/api/category", categoryRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/seller", sellerRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/orders", orderRoutes);
-app.use("/api/payments", paymentRoutes);
+// app.use("/api/payments", paymentRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
-}));
-app.get("/", (req, res) => {
-  res.json({ message: "Server is running" });
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Error:', err.message);
+  res.status(err.status || 500).json({
+    message: err.message || 'Internal server error'
+  });
 });
-
-app.use("/api", userRoutes);
 
 // Export the app for testing. When run directly, start the server.
 if (require.main === module) {
