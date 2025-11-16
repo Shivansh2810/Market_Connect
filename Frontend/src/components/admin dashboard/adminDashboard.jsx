@@ -416,15 +416,16 @@ const AdminDashboard = () => {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <div className="header-content">
+        <div className="header-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+          >
+            <FontAwesomeIcon icon={showMobileMenu ? faTimes : faBars} />
+          </button>
+
           <div className="logo-section">
             <h1>Market Connect - Admin</h1>
-            <button
-              className="mobile-menu-btn"
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-            >
-              <FontAwesomeIcon icon={showMobileMenu ? faTimes : faBars} />
-            </button>
           </div>
 
           <div className="header-actions">

@@ -1126,6 +1126,7 @@
         padding: 10px 15px;
         flex-wrap: wrap;
         gap: 10px;
+        position: relative; /* for positioning mobile menu */
     }
 
     .logo-section h1 {
@@ -1134,6 +1135,10 @@
 
     .mobile-menu-btn {
         display: block;
+        position: absolute;
+        left: 10px;
+        top: 8px;
+        transform: none;
     }
 
     .search-section {
