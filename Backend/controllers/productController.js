@@ -49,50 +49,42 @@ exports.getAllProducts = async (req, res) => {
     }
     if (condition) query.condition = condition;
 
-    // display in form of pages-lazy loading
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
     const products = await Product.find(query)
       .populate("categoryId", "name")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .sort({ createdAt: -1 });
     const totalProducts = await Product.countDocuments(query);
 
     res.status(200).json({
       success: true,
-      totalPages: Math.ceil(totalProducts / limit),
-      currentPage: page,
       products,
+      totalProducts: totalProducts,
     });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 
-// Search AutoComplete 
+// Search AutoComplete
 exports.getProductSuggestions = async (req, res) => {
-    try {
-        const { q } = req.query; 
+  try {
+    const { q } = req.query;
 
-        if (!q) {
-            return res.json({ success: true, suggestions: [] });
-        }
-        const queryRegex = new RegExp(`^${q}`, 'i');
-
-        const products = await Product.find({ 
-                title: { $regex: queryRegex },
-                isDeleted: false 
-            })
-            .limit(10) 
-            .select('title slug'); 
-
-        res.status(200).json({ success: true, suggestions: products });
-    } catch (error) {
-        res.status(500).json({ message: "Server Error", error: error.message });
+    if (!q) {
+      return res.json({ success: true, suggestions: [] });
     }
+    const queryRegex = new RegExp(`^${q}`, "i");
+
+    const products = await Product.find({
+      title: { $regex: queryRegex },
+      isDeleted: false,
+    })
+      .limit(10)
+      .select("title slug");
+
+    res.status(200).json({ success: true, suggestions: products });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
 };
 
 //find 1 product
@@ -171,11 +163,9 @@ exports.compareProducts = async (req, res) => {
   try {
     const idsParam = req.query.ids || req.query.id;
     if (!idsParam)
-      return res
-        .status(400)
-        .json({
-          message: "Please provide product ids to compare via ?ids=id1,id2",
-        });
+      return res.status(400).json({
+        message: "Please provide product ids to compare via ?ids=id1,id2",
+      });
 
     const ids = String(idsParam)
       .split(",")
