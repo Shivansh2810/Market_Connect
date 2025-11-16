@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const crypto = require("crypto");
 const { Schema } = mongoose;
 
 const productSchema = new Schema(
@@ -87,17 +88,49 @@ const productSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    isAuction: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    auctionDetails: {
+      startTime: { type: Date },
+      endTime: { type: Date },
+      startPrice: { type: Number, default: 1 },
+      currentBid: { type: Number },
+      highestBidder: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      bidHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: "Bid" }],
+      status: {
+        type: String,
+        enum: ["Pending", "Active", "Completed", "Cancelled"],
+        default: "Pending",
+      },
+    },
   },
   { timestamps: true }
 );
 
-productSchema.pre("save", function (next) {
+productSchema.pre("save", async function (next) {
   if (!this.isModified("title")) return next();
 
-  this.slug = this.title
+  let baseSlug = this.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
+
+  let existing = null;
+  try {
+    existing = await this.constructor.findOne({ slug: baseSlug });
+  } catch (err) {
+    return next(err);
+  }
+
+  if (existing && existing._id.toString() !== this._id.toString()) {
+    const randomSuffix = crypto.randomBytes(4).toString("hex");
+    this.slug = `${baseSlug}-${randomSuffix}`;
+  } else {
+    this.slug = baseSlug;
+  }
 
   next();
 });

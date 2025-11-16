@@ -100,6 +100,13 @@ const addToCart = async (req, res) => {
       });
     }
 
+    if (product.isAuction && product.auctionDetails.status === 'Active') {
+  return res.status(400).json({
+    success: false,
+    message: "This item is currently in an active auction and cannot be added to cart."
+  });
+}
+
     if (product.stock < quantity) {
       return res.status(400).json({
         success: false,

@@ -4,11 +4,18 @@ const express = require("express");
 const mongoose = require("mongoose");
 const passport = require("passport");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
+
+//Socket Server requirements
+const http = require('http');
+const { initSocket } = require('./socket');
 
 const userRoutes = require("./routes/user");
 require("./auth/googleAuth.js");
 
 const app = express();
+const server = http.createServer(app);
+
 const cartRoutes = require("./routes/cart");
 const couponRoutes = require("./routes/coupon");
 const reviewRoutes = require("./routes/review");
@@ -18,11 +25,14 @@ const productRoutes = require("./routes/product");
 const categoryRoutes = require("./routes/category");
 // const paymentRoutes = require("./routes/payment");
 const analyticsRoutes = require('./routes/sellerAnalyticsRoutes.js');
+const auctionRoutes = require('./routes/auctionRoutes');
 
 mongoose
   .connect(process.env.ATLASDB_URL)
   .then(() => console.log("MongoDB Atlas connected"))
   .catch((err) => console.error("DB connection error:", err));
+
+  initSocket(server);
 
 // CORS middleware MUST come first
 app.use(cors({
@@ -32,6 +42,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
+
 
 // Health check
 app.get("/", (req, res) => {
@@ -51,6 +62,7 @@ app.use("/api/coupons", couponRoutes);
 app.use("/api/orders", orderRoutes);
 // app.use("/api/payments", paymentRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/auctions', auctionRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -61,11 +73,11 @@ app.use((err, req, res, next) => {
 });
 
 // Export the app for testing. When run directly, start the server.
-if (require.main === module) {
+// if (require.main === module) {
   const PORT = process.env.PORT || 8080;
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
-}
+// }
 
 module.exports = app;
