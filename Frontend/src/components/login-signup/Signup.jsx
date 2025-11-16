@@ -46,8 +46,6 @@ export default function Signup() {
         newErrors[name] = "Only numbers are allowed!";
       } else if (value.length > 10) {
         newErrors[name] = "Mobile number cannot exceed 10 digits!";
-      } else if (value.length === 10 && !/^[6-9]/.test(value)) {
-        newErrors[name] = "Mobile number must start with 6, 7, 8, or 9!";
       } else {
         delete newErrors[name];
       }
@@ -91,7 +89,7 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      const response = await api.post(`/users/signup`, {
+      const response = await api.post(`/signup`, {
         name: `${form.firstName} ${form.lastName}`.trim(),
         email: form.email,
         password: form.password,
