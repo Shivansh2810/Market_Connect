@@ -34,6 +34,8 @@ exports.signup = async (req, res) => {
       mobNo,
     } = req.body;
 
+    console.log('Signup attempt with:', { name, email, mobNo });
+
     if (!name || !email || !password || !confirmPassword|| !mobNo) {
       return res
         .status(400)
@@ -76,6 +78,7 @@ exports.signup = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('Signup error:', error.message);
     res.status(500).json({ message: error.message });
   }
 };
