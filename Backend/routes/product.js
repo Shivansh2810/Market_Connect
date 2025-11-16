@@ -14,6 +14,7 @@ router.get("/products", productController.getAllProducts);
 router.get("/products/compare", productController.compareProducts);
 router.get('/products/suggestions', productController.getProductSuggestions);
 router.get("/products/:id", productController.getProductById);
+router.get("/products/:id/similar", productController.getSimilarProducts);
 
 //protected(Seller as a user)
 router.post(

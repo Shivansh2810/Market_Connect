@@ -22,8 +22,39 @@ exports.createProduct = async (req, res) => {
       images: images,
     };
 
+    // Normalize specs to a plain object so Mongoose Map can cast it correctly
+    if (productData.specs && typeof productData.specs === "object") {
+      productData.specs = { ...productData.specs };
+    }
+
     const product = await Product.create(productData);
     res.status(200).json({ success: true, product });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+// GET /api/products/:id/similar
+// Returns products from the same category as the given product, excluding the product itself
+exports.getSimilarProducts = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const baseProduct = await Product.findById(id).select("categoryId");
+    if (!baseProduct || baseProduct.isDeleted) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const similarProducts = await Product.find({
+      _id: { $ne: id },
+      categoryId: baseProduct.categoryId,
+      isDeleted: false,
+    })
+      .populate("categoryId", "name")
+      .sort({ createdAt: -1 })
+      .limit(8);
+
+    res.status(200).json({ success: true, products: similarProducts });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
@@ -116,6 +147,11 @@ exports.getProductById = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const product = req.product; //isOwner has params attached with product found by ID
+
+    // Normalize specs to a plain object before applying updates
+    if (req.body.specs && typeof req.body.specs === "object") {
+      req.body.specs = { ...req.body.specs };
+    }
 
     product.set(req.body);
 
