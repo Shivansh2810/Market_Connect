@@ -195,14 +195,45 @@
 .no-auctions {
   grid-column: 1 / -1;
   text-align: center;
-  padding: 4rem;
+  padding: 6rem 4rem;
   background: var(--card-background);
-  border-radius: 16px;
+  border-radius: 20px;
   color: var(--text-secondary);
+  box-shadow: var(--shadow);
+}
+
+.empty-state-icon {
+  font-size: 5rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.5;
+}
+
+.no-auctions h2 {
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
 }
 
 .no-auctions p {
   font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.btn-back {
+  background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-back:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
 }
 
 @media (max-width: 768px) {

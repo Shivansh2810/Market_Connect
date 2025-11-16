@@ -208,6 +208,21 @@
     box-shadow: 0 6px 20px rgba(60, 0, 157, 0.3);
 }
 
+.btn-primary.btn-white {
+    background: white;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 2px 8px rgba(60, 0, 157, 0.15);
+}
+
+.btn-primary.btn-white:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(60, 0, 157, 0.3);
+}
+
 /* Table Container */
 .table-container {
     overflow-x: auto;
@@ -548,4 +563,39 @@
     .data-table td {
         padding: 8px;
     }
+}
+
+
+/* Auction Status Badges */
+.badge.pending {
+  background: #ffa726;
+  color: white;
+}
+
+.badge.active {
+  background: #66bb6a;
+  color: white;
+}
+
+.badge.completed {
+  background: #78909c;
+  color: white;
+}
+
+.badge.cancelled {
+  background: #ef5350;
+  color: white;
+}
+
+/* Form Row for side-by-side inputs */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }

@@ -14,10 +14,13 @@ import {
   faEdit,
   faTrash,
   faSave,
-  faTimes as faClose
+  faTimes as faClose,
+  faGavel
 } from '@fortawesome/free-solid-svg-icons';
 import * as categoryAPI from '../../../api/category';
 import * as couponAPI from '../../../api/coupon';
+import * as auctionAPI from '../../../api/auction';
+import * as productAPI from '../../../api/product';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -46,6 +49,19 @@ const AdminDashboard = () => {
     usageLimit: '',
     isActive: true,
     applicableCategories: []
+  });
+
+  // Auctions state
+  const [auctions, setAuctions] = useState([]);
+  const [auctionsLoading, setAuctionsLoading] = useState(false);
+  const [showAuctionModal, setShowAuctionModal] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [auctionForm, setAuctionForm] = useState({
+    productId: '',
+    startTime: '',
+    endTime: '',
+    startPrice: ''
   });
 
   // Load categories
@@ -94,6 +110,51 @@ const AdminDashboard = () => {
     }
   };
 
+  // Load auctions
+  const loadAuctions = async () => {
+    setAuctionsLoading(true);
+    try {
+      const response = await auctionAPI.getActiveAuctions();
+      console.log('Auctions API response:', response);
+      if (response && response.success) {
+        const auctionsList = response.data || [];
+        console.log('Loaded auctions from database:', auctionsList);
+        setAuctions(auctionsList);
+      } else {
+        console.log('No auctions found or invalid response');
+        setAuctions([]);
+      }
+    } catch (error) {
+      console.error('Error loading auctions:', error);
+      setAuctions([]);
+    } finally {
+      setAuctionsLoading(false);
+    }
+  };
+
+  // Load products (for auction creation)
+  const loadProducts = async () => {
+    setProductsLoading(true);
+    try {
+      const response = await productAPI.getAllProducts();
+      console.log('Products API response:', response);
+      if (response && response.success) {
+        // Filter out products that are already auctions
+        const productsList = (response.products || []).filter(p => !p.isAuction);
+        console.log('Loaded products from database:', productsList);
+        setProducts(productsList);
+      } else {
+        console.log('No products found or invalid response');
+        setProducts([]);
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      setProducts([]);
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!user) {
       return;
@@ -104,6 +165,8 @@ const AdminDashboard = () => {
     }
     loadCategories();
     loadCoupons();
+    loadAuctions();
+    loadProducts();
   }, [user, navigate]);
 
   const handleLogout = () => {
@@ -261,25 +324,6 @@ const AdminDashboard = () => {
       alert(error.response?.data?.message || error.response?.data?.error || 'Failed to save coupon');
     }
   };
-useEffect(() => {
-  console.log('🔄 AdminDashboard useEffect running');
-  console.log('User:', user);
-  
-  if (!user) {
-    console.log('❌ No user, returning');
-    return;
-  }
-  
-  if (user.role !== 'admin') {
-    console.log('❌ Not admin, redirecting');
-    navigate('/dashboard');
-    return;
-  }
-  
-  console.log('✅ User is admin, loading data...');
-  loadCategories();
-  loadCoupons();
-}, [user, navigate]);
   const handleDeleteCoupon = async (id) => {
     if (!window.confirm('Are you sure you want to delete this coupon?')) {
       return;
@@ -292,6 +336,80 @@ useEffect(() => {
     } catch (error) {
       console.error('Error deleting coupon:', error);
       alert(error.response?.data?.message || 'Failed to delete coupon');
+    }
+  };
+
+  // Auction handlers
+  const handleCreateAuction = () => {
+    setAuctionForm({
+      productId: '',
+      startTime: '',
+      endTime: '',
+      startPrice: ''
+    });
+    setShowAuctionModal(true);
+  };
+
+  const handleSaveAuction = async () => {
+    if (!auctionForm.productId) {
+      alert('Please select a product');
+      return;
+    }
+    if (!auctionForm.startTime || !auctionForm.endTime) {
+      alert('Start time and end time are required');
+      return;
+    }
+    if (!auctionForm.startPrice || auctionForm.startPrice <= 0) {
+      alert('Start price must be greater than 0');
+      return;
+    }
+
+    const startTime = new Date(auctionForm.startTime);
+    const endTime = new Date(auctionForm.endTime);
+    
+    if (endTime <= startTime) {
+      alert('End time must be after start time');
+      return;
+    }
+
+    try {
+      const auctionData = {
+        productId: auctionForm.productId,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        startPrice: Number(auctionForm.startPrice)
+      };
+
+      await auctionAPI.createAuction(auctionData);
+      alert('Auction created successfully!');
+      setShowAuctionModal(false);
+      setAuctionForm({
+        productId: '',
+        startTime: '',
+        endTime: '',
+        startPrice: ''
+      });
+      loadAuctions();
+      loadProducts(); // Reload to remove the product from available list
+    } catch (error) {
+      console.error('Error creating auction:', error);
+      alert(error.response?.data?.message || 'Failed to create auction');
+    }
+  };
+
+  const handleCancelAuction = async (id) => {
+    if (!window.confirm('Are you sure you want to cancel this auction?')) {
+      return;
+    }
+
+    try {
+      await auctionAPI.cancelAuction(id);
+      alert('Auction cancelled successfully');
+      loadAuctions();
+      loadProducts(); // Reload to add the product back to available list
+    } catch (error) {
+      console.error('Error cancelling auction:', error);
+      alert(error.response?.data?.message || 'Failed to cancel auction');
     }
   };
 
@@ -336,6 +454,13 @@ useEffect(() => {
             >
               <FontAwesomeIcon icon={faTag} />
               <span>Coupons</span>
+            </div>
+            <div
+              className={`nav-item ${currentView === 'auctions' ? 'active' : ''}`}
+              onClick={() => setCurrentView('auctions')}
+            >
+              <FontAwesomeIcon icon={faGavel} />
+              <span>Auctions</span>
             </div>
           </nav>
         </aside>
@@ -408,12 +533,86 @@ useEffect(() => {
             </>
           )}
 
+          {/* Auctions View */}
+          {currentView === 'auctions' && (
+            <>
+              <div className="content-header">
+                <h2>Auction Management</h2>
+                <button className="btn-primary btn-white" onClick={handleCreateAuction}>
+                  <FontAwesomeIcon icon={faPlus} />
+                  Create Auction
+                </button>
+              </div>
+
+              {auctionsLoading ? (
+                <div className="loading-state">Loading auctions...</div>
+              ) : (
+                <div className="table-container">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th>Start Price</th>
+                        <th>Current Bid</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Status</th>
+                        <th>Bids</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auctions.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="empty-state">
+                            No auctions found. Create your first auction!
+                          </td>
+                        </tr>
+                      ) : (
+                        auctions.map((auction) => (
+                          <tr key={auction._id}>
+                            <td>
+                              <strong>{auction.title}</strong>
+                            </td>
+                            <td>₹{auction.auctionDetails?.startPrice || 0}</td>
+                            <td>₹{auction.auctionDetails?.currentBid || auction.auctionDetails?.startPrice || 0}</td>
+                            <td>{new Date(auction.auctionDetails?.startTime).toLocaleString()}</td>
+                            <td>{new Date(auction.auctionDetails?.endTime).toLocaleString()}</td>
+                            <td>
+                              <span className={`badge ${auction.auctionDetails?.status?.toLowerCase()}`}>
+                                {auction.auctionDetails?.status}
+                              </span>
+                            </td>
+                            <td>{auction.auctionDetails?.bidHistory?.length || 0}</td>
+                            <td>
+                              <div className="action-buttons">
+                                {auction.auctionDetails?.status === 'Active' && (
+                                  <button
+                                    className="btn-delete"
+                                    onClick={() => handleCancelAuction(auction._id)}
+                                    title="Cancel Auction"
+                                  >
+                                    <FontAwesomeIcon icon={faTrash} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
           {/* Coupons View */}
           {currentView === 'coupons' && (
             <>
               <div className="content-header">
                 <h2>Coupon Management</h2>
-                <button className="btn-primary" onClick={handleCreateCoupon}>
+                <button className="btn-primary btn-white" onClick={handleCreateCoupon}>
                   <FontAwesomeIcon icon={faPlus} />
                   Add Coupon
                 </button>
@@ -543,6 +742,100 @@ useEffect(() => {
               <button className="btn-primary" onClick={handleSaveCategory}>
                 <FontAwesomeIcon icon={faSave} />
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auction Modal */}
+      {showAuctionModal && (
+        <div className="modal-overlay" onClick={() => setShowAuctionModal(false)}>
+          <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Create Auction</h3>
+              <button className="modal-close" onClick={() => setShowAuctionModal(false)}>
+                <FontAwesomeIcon icon={faClose} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Select Product *</label>
+                {productsLoading ? (
+                  <p>Loading products...</p>
+                ) : products.length === 0 ? (
+                  <p style={{color: '#ff4757', fontSize: '14px'}}>
+                    No products available. All products are either already in auction or deleted.
+                  </p>
+                ) : (
+                  <select
+                    value={auctionForm.productId}
+                    onChange={(e) => setAuctionForm({ ...auctionForm, productId: e.target.value })}
+                  >
+                    <option value="">Choose a product...</option>
+                    {products.map((product) => (
+                      <option key={product._id} value={product._id}>
+                        {product.title} - ₹{product.price} (Stock: {product.stock})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div className="form-group">
+                <label>Start Price (₹) *</label>
+                <input
+                  type="number"
+                  value={auctionForm.startPrice}
+                  onChange={(e) => setAuctionForm({ ...auctionForm, startPrice: e.target.value })}
+                  placeholder="e.g., 1000"
+                  min="1"
+                />
+                <small style={{color: '#666', fontSize: '12px', marginTop: '5px', display: 'block'}}>
+                  Minimum bid amount to start the auction
+                </small>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Start Time *</label>
+                  <input
+                    type="datetime-local"
+                    value={auctionForm.startTime}
+                    onChange={(e) => setAuctionForm({ ...auctionForm, startTime: e.target.value })}
+                    min={new Date().toISOString().slice(0, 16)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>End Time *</label>
+                  <input
+                    type="datetime-local"
+                    value={auctionForm.endTime}
+                    onChange={(e) => setAuctionForm({ ...auctionForm, endTime: e.target.value })}
+                    min={auctionForm.startTime || new Date().toISOString().slice(0, 16)}
+                  />
+                </div>
+              </div>
+              <div style={{
+                background: '#e3f2fd',
+                padding: '12px',
+                borderRadius: '8px',
+                marginTop: '15px',
+                fontSize: '13px',
+                color: '#1976d2'
+              }}>
+                <strong>Note:</strong> Once created, the auction will automatically start at the specified time and end at the end time. Users can place bids during this period.
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setShowAuctionModal(false)}>
+                Cancel
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={handleSaveAuction}
+                disabled={products.length === 0}
+              >
+                <FontAwesomeIcon icon={faSave} />
+                Create Auction
               </button>
             </div>
           </div>
