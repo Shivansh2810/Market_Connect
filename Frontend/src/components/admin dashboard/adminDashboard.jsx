@@ -14,10 +14,12 @@ import {
   faEdit,
   faTrash,
   faSave,
-  faTimes as faClose
+  faTimes as faClose,
+  faGavel
 } from '@fortawesome/free-solid-svg-icons';
 import * as categoryAPI from '../../../api/category';
 import * as couponAPI from '../../../api/coupon';
+import AdminAuctionManagement from './AdminAuctionManagement';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -337,6 +339,13 @@ useEffect(() => {
               <FontAwesomeIcon icon={faTag} />
               <span>Coupons</span>
             </div>
+            <div
+              className={`nav-item ${currentView === 'auctions' ? 'active' : ''}`}
+              onClick={() => setCurrentView('auctions')}
+            >
+              <FontAwesomeIcon icon={faGavel} />
+              <span>Auctions</span>
+            </div>
           </nav>
         </aside>
 
@@ -645,6 +654,13 @@ useEffect(() => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Auction View */}
+      {currentView === 'auctions' && (
+        <main className="main-content">
+          <AdminAuctionManagement />
+        </main>
       )}
     </div>
   );

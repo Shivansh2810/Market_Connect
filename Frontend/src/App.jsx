@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import { ProductsProvider } from './contexts/ProductsContext';
 import { CartProvider } from './contexts/CartContext';
+import { AuctionProvider } from './contexts/AuctionContext';
 import Login from './components/login-signup/Login';
 import Signup from './components/login-signup/Signup';
 import ResetPassword from './components/login-signup/ResetPassword';
@@ -14,6 +15,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ProductDetailPage from './pages/ProductDetailPage';
 import CheckoutPage from './pages/CheckoutPage';
 import BecomeSellerPage from './pages/BecomeSellerPage';
+import AuctionDetail from './components/auction/AuctionDetail';
 import './App.css';
 
 function App() {
@@ -21,6 +23,7 @@ function App() {
     <AuthProvider>
       <ProductsProvider>
         <CartProvider>
+          <AuctionProvider>
           <Router>
             <div className="App">
               <Routes>
@@ -29,6 +32,7 @@ function App() {
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/reset-password/:token" element={<ResetPassword />} />
                 <Route path="/google-callback" element={<GoogleCallback />} />
+                <Route path="/auction/:id" element={<AuctionDetail />} />
                 <Route
                   path="/dashboard"
                   element={
@@ -81,6 +85,7 @@ function App() {
               </Routes>
             </div>
           </Router>
+          </AuctionProvider>
         </CartProvider>
       </ProductsProvider>
     </AuthProvider>
