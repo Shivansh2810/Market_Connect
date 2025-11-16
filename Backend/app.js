@@ -55,7 +55,7 @@ app.use("/api/users", userRoutes);
 // Mount other routes
 app.use("/api", productRoutes);
 app.use("/api/category", categoryRoutes);
-app.use("/api/reviews", reviewRoutes);
+app.use("/api/reviews", reviewRoutes); 
 app.use("/api/seller", sellerRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/coupons", couponRoutes);
