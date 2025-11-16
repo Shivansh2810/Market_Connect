@@ -8,7 +8,7 @@ import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 const AuctionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { auctions: allAuctions = [], getTimeRemaining, placeBid, getAuctionById } = useAuction();
+  const { auctions: allAuctions = [], getTimeRemaining, placeBid, getAuctionById, joinAuctionRoom, leaveAuctionRoom } = useAuction();
 
   // prefer real auction from context
   const realAuction = allAuctions.find(a => a?.id === id && a?.title);
@@ -35,6 +35,17 @@ const AuctionDetail = () => {
     };
     fetchAuction();
   }, [id, realAuction, getAuctionById]);
+
+  // Join the auction room for live bid updates
+  useEffect(() => {
+    if (!id) return;
+
+    joinAuctionRoom?.(id);
+
+    return () => {
+      leaveAuctionRoom?.(id);
+    };
+  }, [id, joinAuctionRoom, leaveAuctionRoom]);
 
   // keep local in sync if context updates
   useEffect(() => {
