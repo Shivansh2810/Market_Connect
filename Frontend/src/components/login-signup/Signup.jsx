@@ -89,7 +89,7 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      const response = await api.post(`/signup`, {
+      const response = await api.post(`/users/signup`, {
         name: `${form.firstName} ${form.lastName}`.trim(),
         email: form.email,
         password: form.password,

@@ -52,7 +52,7 @@ const BuyerDashboard = () => {
       .map((category) => category?.name || category?.title)
       .filter(Boolean);
     const derivedNames = products
-      .map((product) => product?.category?.name || product?.category)
+      .map((product) => product?.categoryId?.name)
       .filter(Boolean);
     const unique = Array.from(new Set(['All', ...categoryNames, ...derivedNames]));
     return unique;
@@ -76,9 +76,7 @@ const BuyerDashboard = () => {
 
       const matchesCategory =
         selectedCategory === 'All' ||
-        product.category?.name === selectedCategory ||
-        product.categoryId === selectedCategory ||
-        product.category === selectedCategory;
+        product.categoryId?.name === selectedCategory;
 
       const price = product.price || 0;
       const matchesPrice = price >= priceRange[0] && price <= priceRange[1];
@@ -276,7 +274,7 @@ const BuyerDashboard = () => {
               <input
                 type="range"
                 min="0"
-                max="5000"
+                max="10000000"
                 value={priceRange[1]}
                 onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value, 10)])}
               />
