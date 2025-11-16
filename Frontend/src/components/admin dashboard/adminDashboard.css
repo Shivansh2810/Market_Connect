@@ -565,6 +565,29 @@
     }
 }
 
+@media (max-width: 400px) {
+    .dashboard-content {
+        padding: 10px;
+    }
+
+    .main-content {
+        padding: 14px;
+    }
+
+    .content-header h2 {
+        font-size: 18px;
+    }
+
+    .btn-primary {
+        padding: 10px 18px;
+        font-size: 14px;
+    }
+
+    .data-table {
+        font-size: 10px;
+    }
+}
+
 
 /* Auction Status Badges */
 .badge.pending {
