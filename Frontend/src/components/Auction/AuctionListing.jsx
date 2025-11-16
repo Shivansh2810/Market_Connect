@@ -51,8 +51,8 @@ const AuctionListing = () => {
   // ----------------------
   const activeRealAuctions = allAuctions.filter(a => a?.status === 'active' && a?.title);
 
-  // If no valid real auctions → fallback to demo
-  const auctionsToShow = activeRealAuctions.length > 0 ? activeRealAuctions : demoAuctions;
+  // Show real auctions if available, otherwise show empty state (no demo fallback)
+  const auctionsToShow = activeRealAuctions;
 
   // ----------------------
   // TIMER
@@ -96,49 +96,60 @@ const AuctionListing = () => {
         <p>Browse and bid on exclusive products</p>
       </div>
 
-      <div className="auctions-grid">
-        {auctionsToShow.map(auction => {
-          const timeLeft = timeUpdates[auction.id];
-          const isUrgent = timeLeft?.total > 0 && timeLeft.total < 5 * 60 * 1000;
+      {auctionsToShow.length === 0 ? (
+        <div className="no-auctions">
+          <div className="empty-state-icon">🔨</div>
+          <h2>No Active Auctions</h2>
+          <p>There are currently no live auctions. Check back soon for exciting deals!</p>
+          <button className="btn-back" onClick={() => navigate('/dashboard')}>
+            Back to Dashboard
+          </button>
+        </div>
+      ) : (
+        <div className="auctions-grid">
+          {auctionsToShow.map(auction => {
+            const timeLeft = timeUpdates[auction.id];
+            const isUrgent = timeLeft?.total > 0 && timeLeft.total < 5 * 60 * 1000;
 
-          return (
-            <div 
-              key={auction.id}
-              className={`auction-card ${isUrgent ? 'urgent' : ''}`}
-              onClick={() => navigate(`/auctions/${auction.id}`)}
-            >
-              <div className="auction-image">
-                <img src={auction.image} alt={auction.title} />
-                {isUrgent && <div className="urgent-badge">Ending Soon!</div>}
-              </div>
-
-              <div className="auction-info">
-                <h3>{auction.title}</h3>
-                <p className="auction-description">{auction.description}</p>
-
-                <div className="auction-details">
-                  <div className="bid-info">
-                    <span className="label">Current Bid:</span>
-                    <span className="current-bid">${auction.currentBid}</span>
-                  </div>
-
-                  <div className="time-remaining">
-                    <span className="label">Time Left:</span>
-                    <span className={`time ${isUrgent ? 'urgent-time' : ''}`}>
-                      {formatTime(timeLeft)}
-                    </span>
-                  </div>
-
-                  <div className="bid-count">
-                    <span>{auction.bids.length} bids</span>
-                  </div>
+            return (
+              <div 
+                key={auction.id}
+                className={`auction-card ${isUrgent ? 'urgent' : ''}`}
+                onClick={() => navigate(`/auctions/${auction.id}`)}
+              >
+                <div className="auction-image">
+                  <img src={auction.image} alt={auction.title} />
+                  {isUrgent && <div className="urgent-badge">Ending Soon!</div>}
                 </div>
 
+                <div className="auction-info">
+                  <h3>{auction.title}</h3>
+                  <p className="auction-description">{auction.description}</p>
+
+                  <div className="auction-details">
+                    <div className="bid-info">
+                      <span className="label">Current Bid:</span>
+                      <span className="current-bid">₹{auction.currentBid}</span>
+                    </div>
+
+                    <div className="time-remaining">
+                      <span className="label">Time Left:</span>
+                      <span className={`time ${isUrgent ? 'urgent-time' : ''}`}>
+                        {formatTime(timeLeft)}
+                      </span>
+                    </div>
+
+                    <div className="bid-count">
+                      <span>{auction.bids?.length || 0} bids</span>
+                    </div>
+                  </div>
+
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

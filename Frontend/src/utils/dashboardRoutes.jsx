@@ -1,4 +1,4 @@
-const DEFAULT_ADMIN_EMAILS = ['admin@marketconnect.com'];
+const DEFAULT_ADMIN_EMAILS = ['admin@marketplace.com'];
 
 const envEmails = import.meta.env?.VITE_ADMIN_EMAILS;
 

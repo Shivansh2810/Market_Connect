@@ -109,16 +109,19 @@ export default function Login() {
       }
     } catch (err) {
       console.error('❌ Login error:', err);
-      console.error('📡 Full error object:', err);
-      console.error('📡 Error response data:', err.response?.data);
-      console.error('📡 Error response status:', err.response?.status);
+      console.error('📡 Error response:', err.response);
+      console.error('📡 Error data:', err.response?.data);
+      console.error('📡 Error status:', err.response?.status);
+      console.error('📡 Error message:', err.message);
+      console.error('📡 Request URL:', err.config?.url);
+      console.error('📡 Request data:', err.config?.data);
       
-      let errorMsg = "Invalid email or password. Please try again.";
+      let errorMsg = "Login failed. Please try again.";
       
       if (err.response?.data?.message) {
         errorMsg = err.response.data.message;
-      } else if (err.code === 'NETWORK_ERROR' || err.message === 'Network Error') {
-        errorMsg = "Network error. Please check your internet connection.";
+      } else if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        errorMsg = "⚠️ Network error. Please check:\n1. Backend is running on port 8080\n2. Your internet connection";
       } else if (err.response?.status === 401) {
         errorMsg = "Invalid email or password. Please try again.";
       } else if (err.response?.status === 403) {
@@ -375,6 +378,21 @@ export default function Login() {
                 }}
               >
                 Signup
+              </span>
+            </p>
+            <p>
+              Admin?{" "}
+              <span 
+                onClick={() => !loading && navigate("/admin-login")} 
+                className="link"
+                style={{
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.6 : 1,
+                  color: '#dc2626',
+                  fontWeight: '600'
+                }}
+              >
+                Admin Login
               </span>
             </p>
             <p 

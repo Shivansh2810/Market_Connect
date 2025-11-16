@@ -5,6 +5,7 @@ import Profile from '../profile/Profile';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProducts } from '../../contexts/ProductsContext';
 import { useCart } from '../../contexts/CartContext';
+import { useAuction } from '../../contexts/AuctionContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSearch,
@@ -15,13 +16,15 @@ import {
   faTimes,
   faHome,
   faSignOutAlt,
-  faStore
+  faStore,
+  faGavel
 } from '@fortawesome/free-solid-svg-icons';
 
 const BuyerDashboard = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const { products, categories, loading: productsLoading, error: productsError, refresh } = useProducts();
+  const { auctions } = useAuction();
   const {
     items,
     addToCart,
@@ -207,11 +210,22 @@ const BuyerDashboard = () => {
               <FontAwesomeIcon icon={faHome} />
               <span>Dashboard</span>
             </div>
+            <div 
+              className="nav-item" 
+              onClick={() => navigate('/auctions')}
+              style={{ cursor: 'pointer' }}
+            >
+              <FontAwesomeIcon icon={faGavel} />
+              <span>Live Auctions</span>
+              {auctions && auctions.length > 0 && (
+                <span className="auction-badge">{auctions.length}</span>
+              )}
+            </div>
             {user && user.role !== 'seller' && user.role !== 'both' && (
               <div 
                 className="nav-item become-seller-item" 
                 onClick={() => navigate('/become-seller')}
-                style={{ cursor: 'pointer', marginTop: '16px' }}
+                style={{ cursor: 'pointer' }}
               >
                 <FontAwesomeIcon icon={faStore} />
                 <span>Become a Seller</span>
