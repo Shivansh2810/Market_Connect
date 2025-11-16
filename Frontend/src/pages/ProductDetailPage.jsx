@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ProductDetail from '../components/buyer dashboard/ProductDetail';
 import { useProducts } from '../contexts/ProductsContext';
 import { useCart } from '../contexts/CartContext';
-import { getProductById as fetchProductById } from '../../api/product';
+import { getProductById as fetchProductById, getSimilarProducts as fetchSimilarProducts } from '../../api/product';
+
 // import DebugProductData from '../components/DebugProductData'; // Uncomment for debugging
 
 const ProductDetailPage = () => {
@@ -14,6 +15,8 @@ const ProductDetailPage = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [similarProducts, setSimilarProducts] = useState([]);
+  const [similarError, setSimilarError] = useState('');
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -71,6 +74,29 @@ const ProductDetailPage = () => {
     }
   }, [productId, getProductById]);
 
+  // Load similar products when productId changes
+  useEffect(() => {
+    const loadSimilar = async () => {
+      if (!productId) return;
+      try {
+        setSimilarError('');
+        const response = await fetchSimilarProducts(productId);
+        if (response?.success && Array.isArray(response.products)) {
+          setSimilarProducts(response.products);
+        } else if (Array.isArray(response?.data)) {
+          setSimilarProducts(response.data);
+        } else {
+          setSimilarProducts([]);
+        }
+      } catch (err) {
+        console.error('Failed to load similar products:', err);
+        setSimilarError('Unable to load similar products right now.');
+      }
+    };
+
+    loadSimilar();
+  }, [productId]);
+
   if (loading || productsLoading) {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
@@ -117,6 +143,11 @@ const ProductDetailPage = () => {
     navigate('/checkout');
   };
 
+  const handleSelectSimilar = (similarProduct) => {
+    if (!similarProduct || !similarProduct._id) return;
+    navigate(`/dashboard/products/${similarProduct._id}`);
+  };
+
   return (
     <>
       <ProductDetail
@@ -124,9 +155,10 @@ const ProductDetailPage = () => {
         onBack={handleBack}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
+        similarProducts={similarProducts}
+        similarError={similarError}
+        onSelectSimilar={handleSelectSimilar}
       />
-      {/* Uncomment below to see product data in bottom-right corner */}
-      {/* <DebugProductData product={product} /> */}
     </>
   );
 };
