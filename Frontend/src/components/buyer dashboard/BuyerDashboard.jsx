@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import './dashboard.css';
 import Profile from '../profile/Profile';
+import CustomerService from '../customerService/CustomerService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProducts } from '../../contexts/ProductsContext';
 import { useCart } from '../../contexts/CartContext';
@@ -17,7 +18,9 @@ import {
   faHome,
   faSignOutAlt,
   faStore,
-  faGavel
+  faGavel,
+  faComments,
+  faRobot
 } from '@fortawesome/free-solid-svg-icons';
 
 const BuyerDashboard = () => {
@@ -40,6 +43,7 @@ const BuyerDashboard = () => {
   const [sortBy, setSortBy] = useState('popularity');
   const [priceRange, setPriceRange] = useState([0, 3000]);
   const [currentView, setCurrentView] = useState('dashboard');
+  const [showChatbot, setShowChatbot] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
@@ -156,6 +160,10 @@ const BuyerDashboard = () => {
 
   if (currentView === 'profile') {
     return <Profile onBack={() => setCurrentView('dashboard')} />;
+  }
+
+  if (showChatbot) {
+    return <CustomerService onBack={() => setShowChatbot(false)} />;
   }
 
   return (
@@ -435,6 +443,18 @@ const BuyerDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Floating Chatbot Button */}
+      <button 
+        className="floating-chatbot-btn"
+        onClick={() => setShowChatbot(true)}
+        title="Need help? Chat with us!"
+      >
+        <FontAwesomeIcon icon={faComments} className="chatbot-icon" />
+        <span className="chatbot-badge">
+          <FontAwesomeIcon icon={faRobot} />
+        </span>
+      </button>
     </div>
   );
 };
