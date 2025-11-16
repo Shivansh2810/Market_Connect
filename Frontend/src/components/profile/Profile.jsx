@@ -15,6 +15,9 @@ import {
     faSignOutAlt,
     faArrowLeft
 } from '@fortawesome/free-solid-svg-icons';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import api from '../../../api/axios';
 import { getCurrentUserProfile, getCurrentUserOrders, updateCurrentUserProfile } from '../../../api/user';
 
 const Profile = ({ onBack }) => {
@@ -25,6 +28,10 @@ const Profile = ({ onBack }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+
+    const navigate = useNavigate();
+    const { logout } = useAuth();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -100,6 +107,40 @@ const Profile = ({ onBack }) => {
         // Reset to original data if needed
     };
 
+    const handleDeleteAccount = async () => {
+        if (deleting) return;
+
+        const confirmed = window.confirm(
+            'Are you sure you want to permanently delete your account? This action cannot be undone.'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setDeleting(true);
+            setError('');
+
+            const response = await api.delete('/users/me');
+
+            if (!response?.data?.success) {
+                throw new Error(response?.data?.message || 'Failed to delete account');
+            }
+
+            // Clear auth state and redirect to home/login
+            logout();
+            navigate('/', { replace: true });
+        } catch (deleteError) {
+            console.error('Failed to delete account', deleteError);
+            const message =
+                deleteError.response?.data?.message ||
+                deleteError.message ||
+                'Failed to delete account. Please try again.';
+            setError(message);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     const renderPersonalInfo = () => {
         if (!profileData) {
             return (
@@ -112,126 +153,126 @@ const Profile = ({ onBack }) => {
         const addresses = profileData.buyerInfo?.shippingAddresses || [];
 
         return (
-        <div className="profile-section">
-            <div className="profile-header">
-                <div className="profile-info">
-                    <h2>{profileData.name}</h2>
+            <div className="profile-section">
+                <div className="profile-header">
+                    <div className="profile-info">
+                        <h2>{profileData.name}</h2>
+                    </div>
+                </div>
+
+                <div className="profile-details">
+                    <h3>Personal Information</h3>
+                    <div className="form-group">
+                        <label>
+                            <FontAwesomeIcon icon={faUser} />
+                            Full Name
+                        </label>
+                        {isEditing ? (
+                            <input
+                                type="text"
+                                value={profileData.name}
+                                onChange={(e) => handleInputChange('name', e.target.value)}
+                                className="form-input"
+                            />
+                        ) : (
+                            <span className="form-value">{profileData.name}</span>
+                        )}
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            <FontAwesomeIcon icon={faEnvelope} />
+                            Email Address
+                        </label>
+                        {isEditing ? (
+                            <input
+                                type="email"
+                                value={profileData.email}
+                                onChange={(e) => handleInputChange('email', e.target.value)}
+                                className="form-input"
+                            />
+                        ) : (
+                            <span className="form-value">{profileData.email}</span>
+                        )}
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            <FontAwesomeIcon icon={faPhone} />
+                            Mobile Number
+                        </label>
+                        {isEditing ? (
+                            <input
+                                type="tel"
+                                value={profileData.mobNo || ''}
+                                onChange={(e) => handleInputChange('mobNo', e.target.value)}
+                                className="form-input"
+                                placeholder="10-digit mobile number"
+                                pattern="[6-9][0-9]{9}"
+                                maxLength="10"
+                            />
+                        ) : (
+                            <span className="form-value">+91 {profileData.mobNo || 'Not provided'}</span>
+                        )}
+                    </div>
+
+                    {/* Role display - matches backend User model role enum */}
+                    <div className="form-group">
+                        <label>
+                            <FontAwesomeIcon icon={faUser} />
+                            Account Role
+                        </label>
+                        <span className="form-value">
+                            {profileData.role === 'both' ? 'Buyer & Seller' : 
+                             profileData.role === 'seller' ? 'Seller' : 'Buyer'}
+                        </span>
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            <FontAwesomeIcon icon={faMapMarkerAlt} />
+                            Shipping Addresses
+                        </label>
+                        {addresses.length > 0 ? (
+                            <div className="addresses-list">
+                                {addresses.map((address) => (
+                                    <div key={address._id || address.street} className="address-card">
+                                        <span className="form-value">
+                                            {address.street}, {address.city}, {address.state}{' '}
+                                            {address.pincode}, {address.country || 'India'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <span className="form-value">No shipping addresses added</span>
+                        )}
+                        <p className="address-hint">
+                            Manage your addresses from the checkout.
+                        </p>
+                    </div>
+
+                    <div className="form-actions">
+                        {isEditing ? (
+                            <>
+                                <button className="btn btn-save" onClick={handleSave} disabled={saving}>
+                                    <FontAwesomeIcon icon={faSave} />
+                                    {saving ? 'Saving...' : 'Save Changes'}
+                                </button>
+                                <button className="btn btn-cancel" onClick={handleCancel} disabled={saving}>
+                                    <FontAwesomeIcon icon={faTimes} />
+                                    Cancel
+                                </button>
+                            </>
+                        ) : (
+                            <button className="btn btn-primary" onClick={() => setIsEditing(true)}>
+                                <FontAwesomeIcon icon={faEdit} />
+                                Edit Profile
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
-
-            <div className="profile-details">
-                <h3>Personal Information</h3>
-                <div className="form-group">
-                    <label>
-                        <FontAwesomeIcon icon={faUser} />
-                        Full Name
-                    </label>
-                    {isEditing ? (
-                        <input
-                            type="text"
-                            value={profileData.name}
-                            onChange={(e) => handleInputChange('name', e.target.value)}
-                            className="form-input"
-                        />
-                    ) : (
-                        <span className="form-value">{profileData.name}</span>
-                    )}
-                </div>
-
-                <div className="form-group">
-                    <label>
-                        <FontAwesomeIcon icon={faEnvelope} />
-                        Email Address
-                    </label>
-                    {isEditing ? (
-                        <input
-                            type="email"
-                            value={profileData.email}
-                            onChange={(e) => handleInputChange('email', e.target.value)}
-                            className="form-input"
-                        />
-                    ) : (
-                                        <span className="form-value">{profileData.email}</span>
-                    )}
-                </div>
-
-                <div className="form-group">
-                    <label>
-                        <FontAwesomeIcon icon={faPhone} />
-                        Mobile Number
-                    </label>
-                    {isEditing ? (
-                        <input
-                            type="tel"
-                            value={profileData.mobNo || ''}
-                            onChange={(e) => handleInputChange('mobNo', e.target.value)}
-                            className="form-input"
-                            placeholder="10-digit mobile number"
-                            pattern="[6-9][0-9]{9}"
-                            maxLength="10"
-                        />
-                    ) : (
-                        <span className="form-value">+91 {profileData.mobNo || 'Not provided'}</span>
-                    )}
-                </div>
-
-                {/* Role display - matches backend User model role enum */}
-                <div className="form-group">
-                    <label>
-                        <FontAwesomeIcon icon={faUser} />
-                        Account Role
-                    </label>
-                    <span className="form-value">
-                        {profileData.role === 'both' ? 'Buyer & Seller' : 
-                         profileData.role === 'seller' ? 'Seller' : 'Buyer'}
-                    </span>
-                </div>
-
-                <div className="form-group">
-                    <label>
-                        <FontAwesomeIcon icon={faMapMarkerAlt} />
-                        Shipping Addresses
-                    </label>
-                    {addresses.length > 0 ? (
-                        <div className="addresses-list">
-                            {addresses.map((address) => (
-                                <div key={address._id || address.street} className="address-card">
-                                    <span className="form-value">
-                                        {address.street}, {address.city}, {address.state}{' '}
-                                        {address.pincode}, {address.country || 'India'}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <span className="form-value">No shipping addresses added</span>
-                    )}
-                    <p className="address-hint">
-                        Manage your addresses from the checkout.
-                    </p>
-                </div>
-
-                <div className="form-actions">
-                    {isEditing ? (
-                        <>
-                            <button className="btn btn-save" onClick={handleSave} disabled={saving}>
-                                <FontAwesomeIcon icon={faSave} />
-                                {saving ? 'Saving...' : 'Save Changes'}
-                            </button>
-                            <button className="btn btn-cancel" onClick={handleCancel} disabled={saving}>
-                                <FontAwesomeIcon icon={faTimes} />
-                                Cancel
-                            </button>
-                        </>
-                    ) : (
-                        <button className="btn btn-primary" onClick={() => setIsEditing(true)}>
-                            <FontAwesomeIcon icon={faEdit} />
-                            Edit Profile
-                        </button>
-                    )}
-                </div>
-            </div>
-        </div>
         );
     };
 
@@ -331,7 +372,13 @@ const Profile = ({ onBack }) => {
                             <p>Permanently delete your account</p>
                         </div>
                     </div>
-                    <button className="btn btn-danger">Delete</button>
+                    <button
+                        className="btn btn-danger"
+                        onClick={handleDeleteAccount}
+                        disabled={deleting}
+                    >
+                        {deleting ? 'Deleting...' : 'Delete'}
+                    </button>
                 </div>
             </div>
         </div>
