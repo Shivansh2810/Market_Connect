@@ -72,6 +72,8 @@ router.put(
   userController.updateProfile
 );
 
+router.delete("/me", protect, userController.deleteMe);
+
 router.get("/me/addresses", protect, userController.getAddresses);
 router.post(
   "/me/addresses",

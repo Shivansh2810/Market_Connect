@@ -613,6 +613,29 @@ exports.deleteAddress = async (req, res) => {
   }
 };
 
+// Delete currently authenticated user
+exports.deleteMe = async (req, res) => {
+  try {
+    const userId = req.user && req.user._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await User.deleteOne({ _id: userId });
+
+    return res.json({ success: true, message: "Account deleted successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 exports.getMyOrders = async (req, res) => {
   try {
     if (req.user.role === "seller") {
