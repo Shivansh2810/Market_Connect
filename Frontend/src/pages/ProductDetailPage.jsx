@@ -3,99 +3,74 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ProductDetail from '../components/buyer dashboard/ProductDetail';
 import { useProducts } from '../contexts/ProductsContext';
 import { useCart } from '../contexts/CartContext';
-import { getProductById as fetchProductById, getSimilarProducts as fetchSimilarProducts } from '../../api/product';
-
-// import DebugProductData from '../components/DebugProductData'; // Uncomment for debugging
+import { getProductById as fetchProductById } from '../../api/product';
+import api from '../../api/axios'; // Import the base api instance
 
 const ProductDetailPage = () => {
   const navigate = useNavigate();
   const { productId } = useParams();
-  const { getProductById, loading: productsLoading } = useProducts();
+  const { loading: productsLoading } = useProducts(); // Keep this for the initial load feel
   const { addToCart, replaceCartWith } = useCart();
   const [product, setProduct] = useState(null);
+  const [reviews, setReviews] = useState([]); // <-- 1. ADD REVIEWS STATE
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [similarProducts, setSimilarProducts] = useState([]);
-  const [similarError, setSimilarError] = useState('');
 
   useEffect(() => {
-    const loadProduct = async () => {
+    // 2. MODIFIED THIS ENTIRE FUNCTION
+    const loadProductAndReviews = async () => {
+      if (!productId) {
+        setError('No product ID provided.');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError('');
         
-        // First try to get from context
-        const existingProduct = getProductById(productId);
-        if (existingProduct) {
-          console.log('✅ Product found in context:', existingProduct);
-          setProduct(existingProduct);
-          setLoading(false);
-          return;
-        }
+        // Fetch both product and reviews in parallel
+        const [productResponse, reviewsResponse] = await Promise.all([
+          fetchProductById(productId), // This is api.get(`/products/${productId}`)
+          api.get(`/reviews/product/${productId}`) // Fetch reviews
+        ]);
 
-        // If not in context, fetch from API
-        console.log('🔄 Fetching product from API:', productId);
-        const response = await fetchProductById(productId);
-        console.log('📦 API Response:', response);
-
+        // --- Process Product ---
         let fetchedProduct = null;
-        if (response?.success && response.product) {
-          fetchedProduct = response.product;
-        } else if (response?.data) {
-          fetchedProduct = response.data;
-        } else if (response?.product) {
-          fetchedProduct = response.product;
-        } else {
-          fetchedProduct = response;
+        if (productResponse?.success && productResponse.product) {
+          fetchedProduct = productResponse.product;
+        } else if (productResponse?.data?.product) { 
+          fetchedProduct = productResponse.data.product;
+        } else if (productResponse?.product) {
+          fetchedProduct = productResponse.product;
+        } else if (productResponse?._id) { // Handle case where raw product is returned
+          fetchedProduct = productResponse;
         }
-
-        console.log('✅ Fetched product:', fetchedProduct);
 
         if (fetchedProduct && fetchedProduct._id) {
           setProduct(fetchedProduct);
         } else {
-          console.error('❌ Invalid product data:', fetchedProduct);
-          setError('Product not found.');
+          throw new Error('Product not found.');
         }
+
+        // --- Process Reviews ---
+        if (reviewsResponse?.data?.success && Array.isArray(reviewsResponse.data.data)) {
+          setReviews(reviewsResponse.data.data);
+        } else {
+          console.warn('Could not fetch reviews.');
+          setReviews([]);
+        }
+
       } catch (fetchError) {
-        console.error('❌ Failed to fetch product:', fetchError);
-        console.error('Error details:', fetchError.response?.data);
+        console.error('❌ Failed to fetch product data:', fetchError);
         setError(fetchError.response?.data?.message || 'Unable to load product. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
-    if (productId) {
-      loadProduct();
-    } else {
-      setError('No product ID provided.');
-      setLoading(false);
-    }
-  }, [productId, getProductById]);
-
-  // Load similar products when productId changes
-  useEffect(() => {
-    const loadSimilar = async () => {
-      if (!productId) return;
-      try {
-        setSimilarError('');
-        const response = await fetchSimilarProducts(productId);
-        if (response?.success && Array.isArray(response.products)) {
-          setSimilarProducts(response.products);
-        } else if (Array.isArray(response?.data)) {
-          setSimilarProducts(response.data);
-        } else {
-          setSimilarProducts([]);
-        }
-      } catch (err) {
-        console.error('Failed to load similar products:', err);
-        setSimilarError('Unable to load similar products right now.');
-      }
-    };
-
-    loadSimilar();
-  }, [productId]);
+    loadProductAndReviews();
+  }, [productId]); // No longer need getProductById from context
 
   if (loading || productsLoading) {
     return (
@@ -143,21 +118,14 @@ const ProductDetailPage = () => {
     navigate('/checkout');
   };
 
-  const handleSelectSimilar = (similarProduct) => {
-    if (!similarProduct || !similarProduct._id) return;
-    navigate(`/dashboard/products/${similarProduct._id}`);
-  };
-
   return (
     <>
       <ProductDetail
         product={product}
+        reviews={reviews} // <-- 3. PASS REVIEWS AS A PROP
         onBack={handleBack}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
-        similarProducts={similarProducts}
-        similarError={similarError}
-        onSelectSimilar={handleSelectSimilar}
       />
     </>
   );

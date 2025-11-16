@@ -207,7 +207,7 @@ const Profile = ({ onBack }) => {
                         <span className="form-value">No shipping addresses added</span>
                     )}
                     <p className="address-hint">
-                        Manage your addresses from the checkout flow. Address editing from profile is coming soon.
+                        Manage your addresses from the checkout.
                     </p>
                 </div>
 

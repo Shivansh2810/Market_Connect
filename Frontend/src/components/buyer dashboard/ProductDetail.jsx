@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import './ProductDetail.css';
-
+import React, { useState } from 'react';
+import './ProductDetail.css'; // <-- Make sure this file exists
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faArrowLeft,
@@ -11,21 +10,37 @@ import {
     faTag,
     faBox,
     faTruck,
-    faShieldAlt
+    faShieldAlt,
+    faUser
 } from '@fortawesome/free-solid-svg-icons';
 
-const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts = [], similarError = '', onSelectSimilar }) => {
-
+// 1. ACCEPT 'reviews' PROP
+const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow }) => {
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [isInCart, setIsInCart] = useState(false);
 
-    // Safety check
+    // 2. ADDED HELPER FUNCTIONS FOR REVIEWS
+    const renderStars = (rating) => {
+        return [...Array(5)].map((_, i) => (
+            <FontAwesomeIcon 
+                key={i} 
+                icon={faStar} 
+                className={i < Math.floor(rating || 0) ? 'filled' : ''}
+            />
+        ));
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+    };
+
     if (!product) {
         return (
             <div className="product-detail-page">
                 <div className="product-detail-container">
-
                     <div style={{ padding: '40px', textAlign: 'center' }}>
                         <h2>Product data is missing</h2>
                         <button className="back-button" onClick={onBack}>
@@ -38,7 +53,6 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
         );
     }
 
-    // Get primary image or first image - matching backend images structure
     const getPrimaryImage = () => {
         if (product.images && product.images.length > 0) {
             const primaryImage = product.images.find(img => img.isPrimary);
@@ -69,6 +83,11 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
     };
 
     const conditionInfo = getConditionBadge(product.condition || 'new');
+    
+    // 3. SELLER NAME LOGIC (this will now work correctly)
+    const sellerName = (product.sellerId && typeof product.sellerId === 'object')
+        ? product.sellerId.sellerInfo?.shopName || product.sellerId.name || 'Seller'
+        : 'Market Connect'; // Fallback if sellerId is somehow missing
 
     return (
         <div className="product-detail-page">
@@ -105,7 +124,6 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
                     {/* Right Side - Product Info */}
                     <div className="product-info">
                         <div className="product-header">
-                            {/* Category display - matches backend populated category */}
                             {product.category && (
                                 <span className="product-category">
                                     {typeof product.category === 'string' 
@@ -121,7 +139,6 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
                                 </span>
                             )}
                             <h1 className="product-title">{product.title}</h1>
-                            {/* Slug display - matches backend Product model */}
                             {product.slug && (
                                 <span className="product-slug" style={{fontSize: '12px', color: '#666', display: 'block', marginBottom: '10px'}}>
                                     {product.slug}
@@ -129,13 +146,8 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
                             )}
                             <div className="product-rating">
                                 <div className="stars">
-                                    {[...Array(5)].map((_, i) => (
-                                        <FontAwesomeIcon 
-                                            key={i} 
-                                            icon={faStar} 
-                                            className={i < Math.floor(product.ratingAvg || 0) ? 'filled' : ''}
-                                        />
-                                    ))}
+                                    {/* Use the new renderStars function */}
+                                    {renderStars(product.ratingAvg)}
                                 </div>
                                 <span className="rating-text">{product.ratingAvg?.toFixed(1) || '0.0'} ({product.ratingCount || 0} reviews)</span>
                             </div>
@@ -152,10 +164,7 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
                             )}
                         </div>
 
-                        {/* Product Specifications */}
-                        {/* Backend Product model uses Map type for specs, frontend converts to object */}
                         {product.specs && (() => {
-                            // Convert Map to object if needed
                             let specsObj = {};
                             if (product.specs instanceof Map) {
                                 product.specs.forEach((value, key) => {
@@ -180,7 +189,6 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
                             ) : null;
                         })()}
 
-                        {/* Tags */}
                         {product.tags && product.tags.length > 0 && (
                             <div className="product-tags">
                                 {product.tags.map((tag, index) => (
@@ -189,27 +197,20 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
                             </div>
                         )}
 
-                        {/* Product Condition - matches backend Product model condition enum */}
-                        {/* Backend condition enum: ["new", "used", "refurbished"] */}
                         <div className="product-condition">
                             <FontAwesomeIcon icon={conditionInfo.icon} style={{ color: conditionInfo.color }} />
                             <span>Condition: <strong>{conditionInfo.text}</strong></span>
                         </div>
 
-                        {/* Seller Info - matches backend Product model sellerId reference */}
-                        {product.sellerId && (
-                            <div className="seller-info" style={{marginTop: '15px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px'}}>
-                                <span style={{fontSize: '14px', color: '#666'}}>
-                                    Sold by: {
-                                        typeof product.sellerId === 'string'
-                                            ? `Seller ${product.sellerId}`
-                                            : product.sellerId.sellerInfo?.shopName || product.sellerId.name || 'Seller'
-                                    }
-                                </span>
-                            </div>
-                        )}
+                        {/* --- 4. SELLER NAME FIX --- */}
+                        <div className="seller-info" style={{marginTop: '15px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px'}}>
+                            <span style={{fontSize: '14px', color: '#666'}}>
+                                Sold by: {sellerName}
+                            </span>
+                        </div>
+                        {/* --- END OF FIX --- */}
 
-                        {/* Stock Status */}
+
                         <div className="stock-status">
                             {product.stock > 0 ? (
                                 <div className="in-stock">
@@ -227,7 +228,6 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
                             )}
                         </div>
 
-                        {/* Description */}
                         {product.description && (
                             <div className="product-description">
                                 <h3>Description</h3>
@@ -235,7 +235,6 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
                             </div>
                         )}
 
-                        {/* Quantity Selector */}
                         <div className="quantity-selector">
                             <label>Quantity:</label>
                             <div className="quantity-controls">
@@ -257,7 +256,6 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
                         <div className="product-actions">
                             <button 
                                 className="btn-add-cart"
@@ -276,7 +274,6 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
                             </button>
                         </div>
 
-                        {/* Additional Info */}
                         <div className="product-features">
                             <div className="feature">
                                 <FontAwesomeIcon icon={faTruck} />
@@ -294,42 +291,33 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts
                     </div>
                 </div>
 
-                {/* Similar products section */}
-                <div className="similar-products-section">
-                    <h2>Similar products you might like</h2>
-                    {similarProducts && similarProducts.length > 0 ? (
-                        <div className="similar-products-grid">
-                            {similarProducts.map((item) => {
-                                const img =
-                                    (item.images && item.images[0]?.url) ||
-                                    'https://via.placeholder.com/300x300?text=Product';
-                                const pricePrefix = item.currency === 'USD' ? '$' : '₹';
-                                return (
-                                    <div
-                                        key={item._id}
-                                        className="similar-product-card"
-                                        onClick={() => onSelectSimilar && onSelectSimilar(item)}
-                                    >
-                                        <div className="similar-product-image">
-                                            <img src={img} alt={item.title} />
+                {/* --- 5. ADDED NEW REVIEW SECTION --- */}
+                <div className="product-reviews">
+                    <h3>Customer Reviews ({reviews.length})</h3>
+                    {reviews.length > 0 ? (
+                        <div className="review-list">
+                            {reviews.map(review => (
+                                <div key={review._id} className="review-item">
+                                    <div className="review-header">
+                                        <div className="review-buyer">
+                                            <FontAwesomeIcon icon={faUser} />
+                                            <span>{review.buyerId?.name || 'Anonymous User'}</span>
                                         </div>
-                                        <div className="similar-product-info">
-                                            <h3 title={item.title}>{item.title}</h3>
-                                            <p className="similar-product-price">
-                                                {pricePrefix}{item.price}
-                                            </p>
+                                        <div className="review-rating">
+                                            {renderStars(review.rating)}
                                         </div>
                                     </div>
-                                );
-                            })}
+                                    <p className="review-comment">{review.comment}</p>
+                                    <span className="review-date">{formatDate(review.createdAt)}</span>
+                                </div>
+                            ))}
                         </div>
                     ) : (
-                        <p className="similar-products-empty">No similar products yet.</p>
-                    )}
-                    {similarError && (
-                        <p className="similar-products-error">{similarError}</p>
+                        <p>No reviews yet for this product.</p>
                     )}
                 </div>
+                {/* --- END OF NEW SECTION --- */}
+
             </div>
         </div>
     );

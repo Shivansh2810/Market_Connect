@@ -23,17 +23,13 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import api from '../../../api/axios';
 import { useAuth } from '../../contexts/AuthContext';
+import { useProducts } from '../../contexts/ProductsContext'; // <-- 1. IMPORTED
 
-// Categories for product form
-const categories = [
-    { _id: '507f191e810c19729de860ea', name: 'Electronics', slug: 'electronics' },
-    { _id: '507f191e810c19729de860eb', name: 'Clothing', slug: 'clothing' },
-    { _id: '507f191e810c19729de860ec', name: 'Food & Beverages', slug: 'food-beverages' },
-    { _id: '507f191e810c19729de860ed', name: 'Accessories', slug: 'accessories' }
-];
+// 3. DELETED the hardcoded 'categories' array
 
 const SellerDashboard = () => {
     const { logout } = useAuth();
+    const { categories: productCategories } = useProducts(); // <-- 2. ADDED HOOK
     const [currentView, setCurrentView] = useState('dashboard');
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -237,7 +233,8 @@ const SellerDashboard = () => {
                         originalPrice: productData.originalPrice,
                         discount: productData.discount,
                         stock: productData.stock,
-                        category: categories.find(c => c._id === productData.categoryId)?.name || p.category,
+                        // --- 4. UPDATED THIS LINE ---
+                        category: productCategories.find(c => c._id === productData.categoryId)?.name || p.category,
                         categoryId: productData.categoryId,
                         description: productData.description,
                         condition: productData.condition,
@@ -258,7 +255,8 @@ const SellerDashboard = () => {
                 originalPrice: productData.originalPrice,
                 discount: productData.discount,
                 stock: productData.stock,
-                category: categories.find(c => c._id === productData.categoryId)?.name || 'Unknown',
+                // --- 4. UPDATED THIS LINE ---
+                category: productCategories.find(c => c._id === productData.categoryId)?.name || 'Unknown',
                 categoryId: productData.categoryId,
                 description: productData.description,
                 condition: productData.condition,
