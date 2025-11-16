@@ -143,18 +143,24 @@ const AuctionDetail = () => {
           <div className="bid-section">
             {!isEnded ? (
               <form onSubmit={submitBid} className="bid-form">
-                <div className="bid-input-group">
-                  <label>Your Bid (Min: ${minBid})</label>
+                <form onSubmit={submitBid} className="bid-form">
+  <div className="bid-input-group">
+    <label>Your Bid (Min: ${minBid})</label>
 
-                  <input
-                    type="number"
-                    step={localAuction.minIncrement || 1}
-                    min={minBid}
-                    value={bidInput}
-                    onChange={(e) => setBidInput(e.target.value)}
-                    placeholder={minBid}
-                  />
-                </div>
+    <input
+      type="number"
+      step={localAuction.minIncrement || 1}
+      min={minBid}
+      value={bidInput}
+      onChange={(e) => setBidInput(e.target.value)}
+      placeholder={minBid}
+    />
+  </div>
+
+  <button type="submit" className="bid-button">
+    Place Bid
+  </button>
+</form>
 
                 <button type="submit" className="bid-button">Place Bid</button>
                 {msg && <div className={msg.type === "error" ? "error-message" : "success-message"}>{msg.text}</div>}

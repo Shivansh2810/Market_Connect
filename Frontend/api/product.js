@@ -23,4 +23,4 @@ export const getProductById = async (id) => {
   }
 };
 export const getCategories = async () =>
-  (await api.get("/category")).data;
+  (await api.get("/categories")).data;

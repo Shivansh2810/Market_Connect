@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuction } from '../../contexts/AuctionContext';
 import './AuctionListing.css';
 
-const AuctionListing = ({ auctions: passedAuctions = [], onNavigate }) => {
+const AuctionListing = () => {
+  const { auctions: allAuctions = [], getTimeRemaining } = useAuction();
   const navigate = useNavigate();
-  const [timeUpdates, setTimeUpdates] = useState({});
 
+  // ----------------------
+  // DEMO FALLBACK AUCTIONS
+  //-----------------------
   const demoAuctions = [
     {
       id: 'demo1',
@@ -17,92 +21,124 @@ const AuctionListing = ({ auctions: passedAuctions = [], onNavigate }) => {
       bids: [{ id: 1, bidder: 'Alice', amount: 1450 }],
       endTime: new Date(Date.now() + 1000 * 60 * 20).toISOString(),
       status: 'active',
+    },
+    {
+      id: 'demo2',
+      title: 'Sony WH-1000XM5',
+      description: 'Noise cancelling headphones.',
+      image: 'https://images.unsplash.com/photo-1580894894513-64c9e52f4b25?auto=format&fit=crop&w=800&q=80',
+      startingPrice: 250,
+      currentBid: 310,
+      bids: [{ id: 2, bidder: 'John', amount: 310 }],
+      endTime: new Date(Date.now() + 1000 * 60 * 10).toISOString(),
+      status: 'active',
+    },
+    {
+      id: 'demo3',
+      title: 'Vintage Rolex Submariner',
+      description: 'Collector’s edition.',
+      image: 'https://images.unsplash.com/photo-1600185365483-26d7c7b5d43a?auto=format&fit=crop&w=800&q=80',
+      startingPrice: 8200,
+      currentBid: 9450,
+      bids: [{ id: 3, bidder: 'Michael', amount: 9450 }],
+      endTime: new Date(Date.now() + 1000 * 60 * 40).toISOString(),
+      status: 'active',
     }
   ];
 
-  const auctionsList = Array.isArray(passedAuctions) ? passedAuctions : [];
+  // ----------------------
+  // DETERMINE WHICH AUCTIONS TO SHOW
+  // ----------------------
+  const activeRealAuctions = allAuctions.filter(a => a?.status === 'active' && a?.title);
 
-  const normalizedAuctions = auctionsList
-    .map(a => {
-      if (a && a.auctionDetails) {
-        return {
-          id: a._id,
-          title: a.title,
-          description: a.description,
-          image: a.images?.[0]?.url || a.images?.[0] || '',
-          startingPrice: a.auctionDetails.startPrice,
-          currentBid: a.auctionDetails.currentBid,
-          bids: a.auctionDetails.bidHistory || [],
-          endTime: a.auctionDetails.endTime,
-          status: a.auctionDetails.status,
-        };
-      }
-      return a;
-    })
-    .filter(a => a && new Date(a.endTime) > new Date());
+  // If no valid real auctions → fallback to demo
+  const auctionsToShow = activeRealAuctions.length > 0 ? activeRealAuctions : demoAuctions;
+
+  // ----------------------
+  // TIMER
+  // ----------------------
+  const [timeUpdates, setTimeUpdates] = useState({});
 
   useEffect(() => {
     const interval = setInterval(() => {
       const updates = {};
-      const auctionsToShow = normalizedAuctions.length > 0 ? normalizedAuctions : demoAuctions;
       auctionsToShow.forEach(a => {
-        const diff = new Date(a.endTime) - new Date();
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-        updates[a.id] = {
-          total: diff,
-          seconds,
-          minutes,
-          hours,
-          days,
+        updates[a.id] = getTimeRemaining?.(a.endTime) || {
+          total: Date.parse(a.endTime) - Date.now(),
+          seconds: 0,
+          minutes: 0,
+          hours: 0,
+          days: 0,
         };
       });
       setTimeUpdates(updates);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [passedAuctions]);
+  }, [auctionsToShow]);
 
   const formatTime = (time) => {
     if (!time || time.total <= 0) return 'Ended';
 
     if (time.days > 0) return `${time.days}d ${time.hours}h`;
     if (time.hours > 0) return `${time.hours}h ${time.minutes}m`;
-    if (time.minutes > 0) return `${time.minutes}m ${time.seconds}s`;
-    return `${time.seconds}s`;
+    return `${time.minutes}m ${time.seconds}s`;
   };
-
-  const auctionsToShow = normalizedAuctions.length > 0 ? normalizedAuctions : demoAuctions;
-
-  if (!auctionsToShow || auctionsToShow.length === 0) {
-    return (
-      <div className="auction-listing empty">
-        <p>No active auctions right now.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="auction-listing">
-      {auctionsToShow.map(a => (
-        <div key={a.id} className="auction-item" onClick={() => (onNavigate ? onNavigate(a.id) : navigate(`/auction/${a.id}`))}>
-          <div className="auction-thumb">
-            <img src={a.image || 'https://via.placeholder.com/300?text=No+Image'} alt={a.title} />
-          </div>
-          <div className="auction-meta">
-            <h4>{a.title}</h4>
-            <p className="auction-desc">{a.description}</p>
-            <div className="auction-footer">
-              <div className="price">Start: ₹{a.startingPrice}</div>
-              <div className="current">Now: ₹{a.currentBid}</div>
-              <div className="time">{formatTime(timeUpdates[a.id])}</div>
+      <button className="back-button" onClick={() => navigate('/dashboard')}>
+        ← Back to Dashboard
+      </button>
+
+      <div className="auction-header">
+        <h1>Bidding Page</h1>
+        <p>Browse and bid on exclusive products</p>
+      </div>
+
+      <div className="auctions-grid">
+        {auctionsToShow.map(auction => {
+          const timeLeft = timeUpdates[auction.id];
+          const isUrgent = timeLeft?.total > 0 && timeLeft.total < 5 * 60 * 1000;
+
+          return (
+            <div 
+              key={auction.id}
+              className={`auction-card ${isUrgent ? 'urgent' : ''}`}
+              onClick={() => navigate(`/auctions/${auction.id}`)}
+            >
+              <div className="auction-image">
+                <img src={auction.image} alt={auction.title} />
+                {isUrgent && <div className="urgent-badge">Ending Soon!</div>}
+              </div>
+
+              <div className="auction-info">
+                <h3>{auction.title}</h3>
+                <p className="auction-description">{auction.description}</p>
+
+                <div className="auction-details">
+                  <div className="bid-info">
+                    <span className="label">Current Bid:</span>
+                    <span className="current-bid">${auction.currentBid}</span>
+                  </div>
+
+                  <div className="time-remaining">
+                    <span className="label">Time Left:</span>
+                    <span className={`time ${isUrgent ? 'urgent-time' : ''}`}>
+                      {formatTime(timeLeft)}
+                    </span>
+                  </div>
+
+                  <div className="bid-count">
+                    <span>{auction.bids.length} bids</span>
+                  </div>
+                </div>
+
+              </div>
             </div>
-          </div>
-        </div>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 };

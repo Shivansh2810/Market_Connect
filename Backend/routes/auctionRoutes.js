@@ -9,12 +9,11 @@ const {
   updateAuctionSchema,
 } = require("../validations/auction");
 
+//Public
 router.get("/", auctionController.getActiveAuctions);
+router.get("/:id", auctionController.getAuctionById);
 
-router.get("/admin/all", protect, isAdmin, auctionController.getAllAuctionsAdmin);
-
-router.get("/detail/:id", auctionController.getAuctionById);
-
+//Admin
 router.post(
   "/",
   protect,

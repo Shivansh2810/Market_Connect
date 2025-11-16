@@ -1,6 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { getAllProducts } from '../../api/product';
-import { getAllCategories } from '../../api/category';
+import { getAllProducts, getCategories } from '../../api/product';
 
 const ProductsContext = createContext(null);
 
@@ -21,7 +20,7 @@ export const ProductsProvider = ({ children }) => {
   const fetchCategories = useCallback(
     async (fallbackProducts = []) => {
       try {
-        const response = await getAllCategories();
+        const response = await getCategories();
         if (response?.success && Array.isArray(response.categories)) {
           setCategories(response.categories);
         } else if (Array.isArray(response)) {
