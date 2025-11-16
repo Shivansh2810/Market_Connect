@@ -105,6 +105,7 @@ const createReview = async (req, res) => {
       _id: orderId,
       buyer: req.user._id,
       "orderItems.product": productId,
+      orderStatus: "Delivered",
     });
     if (!order)
       return res

@@ -14,14 +14,14 @@ const reviewSchema = new Schema(
       required: true,
     },
     buyerId: {
-      type: mongoose.Schema.Types.ObjectId, 
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
     orderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
-      default: null, 
+      default: null,
     },
     rating: {
       type: Number,
@@ -49,9 +49,7 @@ const reviewSchema = new Schema(
   { timestamps: true }
 );
 
-
-reviewSchema.index({ productId: 1, buyerId: 1 }, { unique: true });
-
+reviewSchema.index({ productId: 1, buyerId: 1, orderId: 1 }, { unique: true });
 
 reviewSchema.statics.updateProductRating = async function (productId) {
   const stats = await this.aggregate([
@@ -77,7 +75,6 @@ reviewSchema.statics.updateProductRating = async function (productId) {
     });
   }
 };
-
 
 reviewSchema.post("save", function () {
   this.constructor.updateProductRating(this.productId);
