@@ -164,6 +164,22 @@ export const AuctionProvider = ({ children }) => {
     socketRef.current.emit('placeBid', { productId, bidAmount: amount, userId });
   };
 
+  const joinAuctionRoom = (productId) => {
+    if (!socketRef.current || !socketRef.current.connected || !productId) {
+      return;
+    }
+    console.log('Joining auction room:', productId);
+    socketRef.current.emit('joinAuctionRoom', productId);
+  };
+
+  const leaveAuctionRoom = (productId) => {
+    if (!socketRef.current || !socketRef.current.connected || !productId) {
+      return;
+    }
+    console.log('Leaving auction room:', productId);
+    socketRef.current.emit('leaveAuctionRoom', productId);
+  };
+
   const value = useMemo(() => ({
     auctions,
     loading,
@@ -171,6 +187,8 @@ export const AuctionProvider = ({ children }) => {
     refresh: loadAuctions,
     getTimeRemaining,
     placeBid,
+    joinAuctionRoom,
+    leaveAuctionRoom,
     getAuctionById: async (id) => {
       try {
         const p = await getAuctionById(id);
