@@ -14,6 +14,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ProductDetailPage from './pages/ProductDetailPage';
 import CheckoutPage from './pages/CheckoutPage';
 import BecomeSellerPage from './pages/BecomeSellerPage';
+import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
 function App() {
@@ -40,9 +41,11 @@ function App() {
                 <Route
                   path="/dashboard/products/:productId"
                   element={
-                    <ProtectedRoute allowedRoles={['buyer', 'both']}>
-                      <ProductDetailPage />
-                    </ProtectedRoute>
+                    <ErrorBoundary>
+                      <ProtectedRoute allowedRoles={['buyer', 'both']}>
+                        <ProductDetailPage />
+                      </ProtectedRoute>
+                    </ErrorBoundary>
                   }
                 />
                 <Route

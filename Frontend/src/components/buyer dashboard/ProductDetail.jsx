@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './ProductDetail.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -18,13 +18,30 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow }) => {
     const [quantity, setQuantity] = useState(1);
     const [isInCart, setIsInCart] = useState(false);
 
+    // Safety check
+    if (!product) {
+        return (
+            <div className="product-detail-page">
+                <div className="product-detail-container">
+                    <div style={{ padding: '40px', textAlign: 'center' }}>
+                        <h2>Product data is missing</h2>
+                        <button className="back-button" onClick={onBack}>
+                            <FontAwesomeIcon icon={faArrowLeft} />
+                            Back to Products
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // Get primary image or first image - matching backend images structure
     const getPrimaryImage = () => {
         if (product.images && product.images.length > 0) {
             const primaryImage = product.images.find(img => img.isPrimary);
             return primaryImage ? primaryImage.url : product.images[0].url;
         }
-        return '';
+        return 'https://via.placeholder.com/600x600?text=No+Image';
     };
     
     const primaryImage = getPrimaryImage();
@@ -87,10 +104,18 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow }) => {
                         <div className="product-header">
                             {/* Category display - matches backend populated category */}
                             {product.category && (
-                                <span className="product-category">{product.category.name || 'Category'}</span>
+                                <span className="product-category">
+                                    {typeof product.category === 'string' 
+                                        ? product.category 
+                                        : product.category.name || 'Category'}
+                                </span>
                             )}
                             {!product.category && product.categoryId && (
-                                <span className="product-category">Category ID: {product.categoryId}</span>
+                                <span className="product-category">
+                                    {typeof product.categoryId === 'string'
+                                        ? `Category: ${product.categoryId}`
+                                        : product.categoryId.name || 'Category'}
+                                </span>
                             )}
                             <h1 className="product-title">{product.title}</h1>
                             {/* Slug display - matches backend Product model */}
@@ -171,8 +196,13 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow }) => {
                         {/* Seller Info - matches backend Product model sellerId reference */}
                         {product.sellerId && (
                             <div className="seller-info" style={{marginTop: '15px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px'}}>
-                                <span style={{fontSize: '14px', color: '#666'}}>Sold by: Seller ID {product.sellerId}</span>
-                                {/* When populated: product.sellerId.sellerInfo.shopName */}
+                                <span style={{fontSize: '14px', color: '#666'}}>
+                                    Sold by: {
+                                        typeof product.sellerId === 'string'
+                                            ? `Seller ${product.sellerId}`
+                                            : product.sellerId.sellerInfo?.shopName || product.sellerId.name || 'Seller'
+                                    }
+                                </span>
                             </div>
                         )}
 
