@@ -47,7 +47,26 @@ const paymentSchema = new Schema(
       type: String, // 'card', 'upi', 'netbanking', 'wallet'
     },
 
-    // Refund fields yet to be added
+    // Refund fields
+
+    refundId: {
+      type: String,
+      trim: true,
+      // stores the Razorpay refund ID (like, "rfnd_xyz123...")
+      // Can and will be null if no refund has been initiated
+    },
+    refundAmount: {
+      type: Number,
+      default: 0,
+      // Cumulative refunded amount
+      // partial refunds -> this can be less than 'amount', full refunds-> this equals 'amount'
+    },
+    refundStatus: {
+      type: String,
+      enum: ["none", "pending", "processed", "failed"],
+      default: "none",
+      // Tracks the status of refund processing
+    },
     
   },
   {
