@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './sellerDashboard.css';
-import Profile from '../profile/Profile';
 import AddProduct from './AddProduct';
 import ReviewManagement from './ReviewManagement';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -10,7 +9,6 @@ import {
     faShoppingCart,
     faUndo,
     faStar,
-    faUser,
     faSignOutAlt,
     faBars,
     faTimes,
@@ -28,7 +26,7 @@ import { useProducts } from '../../contexts/ProductsContext'; // <-- 1. IMPORTED
 // 3. DELETED the hardcoded 'categories' array
 
 const SellerDashboard = () => {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     const { categories: productCategories } = useProducts(); // <-- 2. ADDED HOOK
     const [currentView, setCurrentView] = useState('dashboard');
     const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -44,6 +42,7 @@ const SellerDashboard = () => {
     const [isDashboardLoading, setIsDashboardLoading] = useState(true);
     const [isOrdersLoading, setIsOrdersLoading] = useState(true);
     const [isReturnsLoading, setIsReturnsLoading] = useState(true);
+    const [isProductsLoading, setIsProductsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [salesReport, setSalesReport] = useState([]);
     const [isSalesReportLoading, setIsSalesReportLoading] = useState(true);
@@ -113,6 +112,60 @@ const SellerDashboard = () => {
         }
     };
 
+    // Fetch all products for the current seller
+    const fetchProducts = async () => {
+        setIsProductsLoading(true);
+        setError(null);
+        try {
+            const { data } = await api.get('/products');
+            if (data.success && data.products && user?.id) {
+                // Filter products by current seller's ID
+                // sellerId can be: string ID, object with _id, or populated object
+                const sellerId = user.id || user._id;
+                const sellerProducts = data.products
+                    .filter(p => {
+                        if (!p.sellerId) return false;
+                        if (p.isDeleted) return false; // Exclude deleted products
+                        
+                        // Handle different sellerId formats
+                        const productSellerId = p.sellerId._id || p.sellerId;
+                        return productSellerId.toString() === sellerId.toString();
+                    })
+                    .map(p => ({
+                        id: p._id,
+                        _id: p._id,
+                        title: p.title,
+                        price: p.price,
+                        originalPrice: p.originalPrice,
+                        discount: p.discount,
+                        stock: p.stock,
+                        category: p.categoryId?.name || 'Unknown',
+                        categoryId: p.categoryId?._id || p.categoryId,
+                        description: p.description,
+                        condition: p.condition,
+                        tags: p.tags || [],
+                        images: p.images || [],
+                        specs: p.specs || {},
+                        rating: p.ratingAvg || 0,
+                        reviews: p.ratingCount || 0,
+                        sales: 0, // Will be calculated from orders if needed
+                        image: p.images?.[0]?.url || 'https://via.placeholder.com/300?text=Product',
+                        status: p.isDeleted ? 'deleted' : 'active'
+                    }));
+                setProducts(sellerProducts);
+            } else if (data.success && data.products) {
+                // No user or no products
+                setProducts([]);
+            }
+        } catch (err) {
+            setError('Failed to load products');
+            console.error(err);
+            setProducts([]);
+        } finally {
+            setIsProductsLoading(false);
+        }
+    };
+
     const fetchSalesReport = async () => {
         setIsSalesReportLoading(true);
         setSalesReportError(null);
@@ -137,6 +190,14 @@ const SellerDashboard = () => {
         fetchReturns();
         fetchSalesReport();
     }, []);
+
+    // Fetch products when products view is selected
+    useEffect(() => {
+        if (currentView === 'products' && user) {
+            fetchProducts();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentView, user?.id]);
 
     const totalRevenue = dashboardStats?.totalRevenue || 0;
     const totalOrders = dashboardStats?.totalOrders || 0;
@@ -215,69 +276,70 @@ const SellerDashboard = () => {
         }
     };
 
-    // Handle product actions (local-only for now)
-    const handleDeleteProduct = (productId) => {
-        if (window.confirm('Are you sure you want to delete this product?')) {
-            setProducts(products.filter(p => p.id !== productId));
+    // Handle product deletion
+    const handleDeleteProduct = async (productIdOrProduct) => {
+        if (!window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            // Handle both product object and product ID
+            let idToDelete;
+            if (typeof productIdOrProduct === 'object' && productIdOrProduct !== null) {
+                idToDelete = productIdOrProduct._id || productIdOrProduct.id;
+            } else {
+                idToDelete = productIdOrProduct;
+            }
+
+            if (!idToDelete) {
+                alert('Product ID not found');
+                return;
+            }
+
+            await api.delete(`/products/${idToDelete}`);
+            
+            // Refresh products list
+            await fetchProducts();
+            
+            alert('Product deleted successfully!');
+        } catch (err) {
+            console.error('Failed to delete product:', err);
+            alert(err.response?.data?.message || 'Failed to delete product. Please try again.');
         }
     };
 
-    const handleSaveProduct = (productData) => {
-        if (productData.id) {
-            const updatedProducts = products.map(p =>
-                p.id === productData.id
-                    ? {
-                        ...p,
-                        title: productData.title,
-                        price: productData.price,
-                        originalPrice: productData.originalPrice,
-                        discount: productData.discount,
-                        stock: productData.stock,
-                        // --- 4. UPDATED THIS LINE ---
-                        category: productCategories.find(c => c._id === productData.categoryId)?.name || p.category,
-                        categoryId: productData.categoryId,
-                        description: productData.description,
-                        condition: productData.condition,
-                        tags: productData.tags,
-                        images: productData.images,
-                        specs: productData.specs
-                    }
-                    : p
-            );
-            setProducts(updatedProducts);
+    // Handle product save/update - refresh products after API call
+    const handleSaveProduct = async (productData) => {
+        // The AddProduct component already calls the API
+        // We just need to refresh the products list here
+        try {
+            // Refresh products from backend
+            await fetchProducts();
             setCurrentView('products');
-            alert('Product updated locally!');
-        } else {
-            const newProduct = {
-                id: products.length + 1,
-                title: productData.title,
-                price: productData.price,
-                originalPrice: productData.originalPrice,
-                discount: productData.discount,
-                stock: productData.stock,
-                // --- 4. UPDATED THIS LINE ---
-                category: productCategories.find(c => c._id === productData.categoryId)?.name || 'Unknown',
-                categoryId: productData.categoryId,
-                description: productData.description,
-                condition: productData.condition,
-                tags: productData.tags,
-                images: productData.images,
-                specs: productData.specs,
-                rating: 0,
-                reviews: 0,
-                sales: 0,
-                image: productData.images[0]?.url || '',
-                status: 'active'
-            };
-            setProducts([...products, newProduct]);
+            setSelectedProduct(null);
+            
+            // Show success message
+            if (productData.id || productData._id) {
+                alert('Product updated successfully!');
+            } else {
+                alert('Product added successfully!');
+            }
+        } catch (err) {
+            console.error('Failed to refresh products:', err);
+            // Still switch to products view even if refresh fails
             setCurrentView('products');
-            alert('Product added locally!');
+            setSelectedProduct(null);
         }
-        setSelectedProduct(null);
     };
 
     const handleEditProduct = (product) => {
-        setSelectedProduct(product);
+        // Ensure we pass the product with both id and _id for compatibility
+        const productToEdit = {
+            ...product,
+            id: product._id || product.id,
+            _id: product._id || product.id
+        };
+        setSelectedProduct(productToEdit);
         setCurrentView('addProduct');
     };
 
@@ -286,11 +348,6 @@ const SellerDashboard = () => {
     };
 
     const lowStockProducts = products.filter(p => p.stock < 5);
-
-    // Render profile page
-    if (currentView === 'profile') {
-        return <Profile onBack={() => setCurrentView('dashboard')} />;
-    }
 
     // Render add/edit product page
     if (currentView === 'addProduct') {
@@ -335,13 +392,6 @@ const SellerDashboard = () => {
                     </div>
 
                     <div className="header-actions">
-                        <button 
-                            className="action-btn" 
-                            onClick={() => setCurrentView('profile')}
-                            title="Profile"
-                        >
-                            <FontAwesomeIcon icon={faUser} />
-                        </button>
                         <button 
                             className="action-btn logout-btn" 
                             onClick={handleLogout} 
@@ -570,10 +620,23 @@ const SellerDashboard = () => {
                         <>
                             <div className="content-header">
                                 <h2>Product Management</h2>
-                                <button className="btn-primary" onClick={() => setCurrentView('addProduct')}>
-                                    <FontAwesomeIcon icon={faPlus} />
-                                    Add New Product
-                                </button>
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                    <button 
+                                        className="btn-secondary refresh-btn" 
+                                        onClick={fetchProducts}
+                                        disabled={isProductsLoading}
+                                    >
+                                        <FontAwesomeIcon icon={faSync} />
+                                        Refresh
+                                    </button>
+                                    <button className="btn-primary" onClick={() => {
+                                        setSelectedProduct(null);
+                                        setCurrentView('addProduct');
+                                    }}>
+                                        <FontAwesomeIcon icon={faPlus} />
+                                        Add New Product
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="product-search-section">
@@ -588,8 +651,15 @@ const SellerDashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="products-grid">
-                                {filteredProducts.map(product => (
+                            {isProductsLoading ? (
+                                <div className="loading-state">Loading products...</div>
+                            ) : filteredProducts.length === 0 ? (
+                                <div className="empty-state" style={{ padding: '40px', textAlign: 'center' }}>
+                                    {searchTerm ? 'No products found matching your search.' : 'No products yet. Add your first product!'}
+                                </div>
+                            ) : (
+                                <div className="products-grid">
+                                    {filteredProducts.map(product => (
                                     <div key={product.id} className="product-card">
                                         <div className="product-image">
                                             <img src={product.image} alt={product.title} />
@@ -603,7 +673,7 @@ const SellerDashboard = () => {
                                                 </button>
                                                 <button 
                                                     className="action-icon delete"
-                                                    onClick={() => handleDeleteProduct(product.id)}
+                                                    onClick={() => handleDeleteProduct(product._id || product.id)}
                                                     title="Delete"
                                                 >
                                                     <FontAwesomeIcon icon={faTrash} />
@@ -636,7 +706,8 @@ const SellerDashboard = () => {
                                         </div>
                                     </div>
                                 ))}
-                            </div>
+                                </div>
+                            )}
                         </>
                     )}
 

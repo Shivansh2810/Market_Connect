@@ -296,9 +296,10 @@ const AddProduct = ({ onBack, onSave, product = null }) => {
       specs: formData.specs,
     };
 
-    // Add product ID if editing (backend _id is passed via product.id in dashboard)
-    if (isEditing && product && product.id) {
-      productData.id = product.id;
+    // Add product ID if editing (backend _id is passed via product.id or product._id)
+    if (isEditing && product) {
+      productData.id = product._id || product.id;
+      productData._id = product._id || product.id;
     }
 
     try {
@@ -345,8 +346,9 @@ const AddProduct = ({ onBack, onSave, product = null }) => {
       }
 
       let response;
-      if (isEditing && product && product.id) {
-        response = await api.put(`/products/${product.id}`, formDataPayload, {
+      const productId = product?._id || product?.id;
+      if (isEditing && productId) {
+        response = await api.put(`/products/${productId}`, formDataPayload, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       } else {
@@ -356,8 +358,9 @@ const AddProduct = ({ onBack, onSave, product = null }) => {
       }
 
       const savedProduct = response?.data?.product;
-      if (savedProduct && !productData.id) {
+      if (savedProduct) {
         productData.id = savedProduct._id;
+        productData._id = savedProduct._id;
       }
 
       if (onSave) {
