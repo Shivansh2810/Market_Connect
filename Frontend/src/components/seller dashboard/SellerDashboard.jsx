@@ -121,7 +121,7 @@ const SellerDashboard = () => {
         setIsSalesReportLoading(true);
         setSalesReportError(null);
         try {
-            const { data } = await api.get('/seller/salesreport');
+            const { data } = await api.get('/analytics/seller/salesreport');
             if (data.success) {
                 setSalesReport(data.data || []);
             } else {

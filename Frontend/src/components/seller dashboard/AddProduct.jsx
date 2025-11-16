@@ -10,6 +10,7 @@ import {
     faImage,
     faUpload
 } from '@fortawesome/free-solid-svg-icons';
+import api from '../../../api/axios';
 
 const AddProduct = ({ onBack, onSave, product = null }) => {
     // Check if editing existing product
@@ -35,6 +36,8 @@ const AddProduct = ({ onBack, onSave, product = null }) => {
     const [specKey, setSpecKey] = useState('');
     const [specValue, setSpecValue] = useState('');
     const [errors, setErrors] = useState({});
+    const [imageFiles, setImageFiles] = useState([]);
+    const [imagesToDelete, setImagesToDelete] = useState([]);
 
     // Sample categories - In real app, this would come from API
     const categories = [
@@ -166,40 +169,66 @@ const AddProduct = ({ onBack, onSave, product = null }) => {
 
     // Handle image upload (mock - in real app, this would upload to cloud storage)
     const handleImageUpload = (e) => {
-        const files = Array.from(e.target.files);
-        const imagePromises = files.map(file => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+
+        const imagePromises = files.map((file, index) => {
             return new Promise((resolve) => {
                 const reader = new FileReader();
-                reader.onload = (e) => {
+                reader.onload = (event) => {
                     resolve({
-                        url: e.target.result,
+                        url: event.target.result,
                         publicId: `temp_${Date.now()}_${Math.random()}`,
-                        isPrimary: formData.images.length === 0
+                        isPrimary:
+                            formData.images.length === 0 && index === 0,
                     });
                 };
                 reader.readAsDataURL(file);
             });
         });
 
-        Promise.all(imagePromises).then(newImages => {
-            setFormData(prev => ({
+        Promise.all(imagePromises).then((newImages) => {
+            setFormData((prev) => ({
                 ...prev,
-                images: [...prev.images, ...newImages]
+                images: [...prev.images, ...newImages],
             }));
+            setImageFiles((prev) => [...prev, ...files]);
         });
     };
 
     // Remove image
     const handleRemoveImage = (index) => {
+        const currentImage = formData.images[index];
         const newImages = formData.images.filter((_, i) => i !== index);
+
+        // Track backend images to delete by publicId
+        if (
+            currentImage &&
+            currentImage.publicId &&
+            !String(currentImage.publicId).startsWith('temp_')
+        ) {
+            setImagesToDelete((prev) =>
+                prev.includes(currentImage.publicId)
+                    ? prev
+                    : [...prev, currentImage.publicId]
+            );
+        }
+
         // Make first image primary if we removed the primary one
-        if (newImages.length > 0 && formData.images[index].isPrimary) {
+        if (newImages.length > 0 && currentImage?.isPrimary) {
             newImages[0].isPrimary = true;
         }
-        setFormData(prev => ({
+
+        setFormData((prev) => ({
             ...prev,
-            images: newImages
+            images: newImages,
         }));
+
+        setImageFiles((prev) => {
+            const copy = [...prev];
+            copy.splice(index, 1);
+            return copy;
+        });
     };
 
     // Set primary image
@@ -246,42 +275,106 @@ const AddProduct = ({ onBack, onSave, product = null }) => {
     };
 
     // Handle form submission
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             return;
         }
 
-        // Prepare product data matching backend structure
+        // Prepare product data matching backend structure for local UI update
         const productData = {
             title: formData.title.trim(),
             slug: generateSlug(formData.title),
             description: formData.description.trim(),
             categoryId: formData.categoryId,
             price: parseFloat(formData.price),
-            originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : null,
+            originalPrice: formData.originalPrice
+                ? parseFloat(formData.originalPrice)
+                : null,
             discount: formData.discount ? parseFloat(formData.discount) : null,
             currency: formData.currency,
-            stock: parseInt(formData.stock),
+            stock: parseInt(formData.stock, 10),
             condition: formData.condition,
             tags: formData.tags,
             images: formData.images,
-            specs: formData.specs
+            specs: formData.specs,
         };
 
-        // Add product ID if editing
-        if (isEditing && product.id) {
+        // Add product ID if editing (backend _id is passed via product.id in dashboard)
+        if (isEditing && product && product.id) {
             productData.id = product.id;
         }
 
-        // Call onSave callback (in real app, this would make API call)
-        if (onSave) {
-            onSave(productData);
-        } else {
-            console.log('Product data to save:', productData);
-            alert('Product saved successfully! (This is a mock - integrate with API)');
-            onBack();
+        try {
+            const formDataPayload = new FormData();
+
+            formDataPayload.append('title', productData.title);
+            formDataPayload.append('slug', productData.slug);
+            formDataPayload.append('description', productData.description);
+            formDataPayload.append('categoryId', productData.categoryId);
+            formDataPayload.append('price', String(productData.price));
+            if (productData.originalPrice !== null) {
+                formDataPayload.append(
+                    'originalPrice',
+                    String(productData.originalPrice)
+                );
+            }
+            if (productData.discount !== null) {
+                formDataPayload.append('discount', String(productData.discount));
+            }
+            formDataPayload.append('currency', productData.currency);
+            formDataPayload.append('stock', String(productData.stock));
+            formDataPayload.append('condition', productData.condition);
+
+            // tags -> repeated field so backend sees an array
+            productData.tags.forEach((tag) => {
+                formDataPayload.append('tags', tag);
+            });
+
+            // specs -> flatten as specs[key] = value
+            Object.entries(productData.specs || {}).forEach(([key, value]) => {
+                formDataPayload.append(`specs[${key}]`, value);
+            });
+
+            // New images to upload
+            imageFiles.forEach((file) => {
+                formDataPayload.append('images', file);
+            });
+
+            // Images to delete for edits
+            if (isEditing && imagesToDelete.length) {
+                imagesToDelete.forEach((publicId) => {
+                    formDataPayload.append('imagesToDelete', publicId);
+                });
+            }
+
+            let response;
+            if (isEditing && product && product.id) {
+                response = await api.put(`/products/${product.id}`, formDataPayload, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                });
+            } else {
+                response = await api.post('/products', formDataPayload, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                });
+            }
+
+            const savedProduct = response?.data?.product;
+            if (savedProduct && !productData.id) {
+                productData.id = savedProduct._id;
+            }
+
+            if (onSave) {
+                onSave(productData);
+            } else {
+                console.log('Product data to save:', productData);
+                alert('Product saved successfully! (This is a mock - integrate with API)');
+                onBack();
+            }
+        } catch (error) {
+            console.error('Failed to save product:', error);
+            alert('Failed to save product. Please try again.');
         }
     };
 
