@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './ProductDetail.css';
+
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faArrowLeft,
@@ -13,7 +14,8 @@ import {
     faShieldAlt
 } from '@fortawesome/free-solid-svg-icons';
 
-const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow }) => {
+const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, similarProducts = [], similarError = '', onSelectSimilar }) => {
+
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [isInCart, setIsInCart] = useState(false);
@@ -23,6 +25,7 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow }) => {
         return (
             <div className="product-detail-page">
                 <div className="product-detail-container">
+
                     <div style={{ padding: '40px', textAlign: 'center' }}>
                         <h2>Product data is missing</h2>
                         <button className="back-button" onClick={onBack}>
@@ -289,6 +292,43 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow }) => {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Similar products section */}
+                <div className="similar-products-section">
+                    <h2>Similar products you might like</h2>
+                    {similarProducts && similarProducts.length > 0 ? (
+                        <div className="similar-products-grid">
+                            {similarProducts.map((item) => {
+                                const img =
+                                    (item.images && item.images[0]?.url) ||
+                                    'https://via.placeholder.com/300x300?text=Product';
+                                const pricePrefix = item.currency === 'USD' ? '$' : '₹';
+                                return (
+                                    <div
+                                        key={item._id}
+                                        className="similar-product-card"
+                                        onClick={() => onSelectSimilar && onSelectSimilar(item)}
+                                    >
+                                        <div className="similar-product-image">
+                                            <img src={img} alt={item.title} />
+                                        </div>
+                                        <div className="similar-product-info">
+                                            <h3 title={item.title}>{item.title}</h3>
+                                            <p className="similar-product-price">
+                                                {pricePrefix}{item.price}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="similar-products-empty">No similar products yet.</p>
+                    )}
+                    {similarError && (
+                        <p className="similar-products-error">{similarError}</p>
+                    )}
                 </div>
             </div>
         </div>
