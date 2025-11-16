@@ -13,6 +13,7 @@ import {
     faShieldAlt,
     faUser
 } from '@fortawesome/free-solid-svg-icons';
+import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 
 // 1. ACCEPT 'reviews' PROP
 const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow }) => {
@@ -22,13 +23,18 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
 
     // 2. ADDED HELPER FUNCTIONS FOR REVIEWS
     const renderStars = (rating) => {
-        return [...Array(5)].map((_, i) => (
-            <FontAwesomeIcon 
-                key={i} 
-                icon={faStar} 
-                className={i < Math.floor(rating || 0) ? 'filled' : ''}
-            />
-        ));
+        const filledCount = Math.max(0, Math.min(5, Math.floor(rating || 0)));
+        console.log('ratingAvg for product detail:', product.ratingAvg);
+        return [...Array(5)].map((_, i) => {
+            const isFilled = i < filledCount;
+            return (
+                <FontAwesomeIcon 
+                    key={i} 
+                    icon={isFilled ? faStar : faStarRegular} 
+                    className={isFilled ? "filled" : ""}
+                />
+            );
+        });
     };
 
     const formatDate = (dateString) => {

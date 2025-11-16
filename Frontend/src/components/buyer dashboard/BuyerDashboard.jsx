@@ -22,6 +22,7 @@ import {
   faComments,
   faRobot
 } from '@fortawesome/free-solid-svg-icons';
+import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 
 const BuyerDashboard = () => {
   const navigate = useNavigate();
@@ -339,13 +340,19 @@ const BuyerDashboard = () => {
                       )}
                       <div className="product-rating">
                         <div className="stars">
-                          {[...Array(5)].map((_, i) => (
-                            <FontAwesomeIcon
-                              key={i}
-                              icon={faStar}
-                              className={i < Math.floor(product.ratingAvg || 0) ? 'filled' : ''}
-                            />
-                          ))}
+                          {(() => {
+                            const filledCount = Math.max(0, Math.min(5, Math.floor(product.ratingAvg || 0)));
+                            return [...Array(5)].map((_, i) => {
+                              const isFilled = i < filledCount;
+                              return (
+                                <FontAwesomeIcon
+                                  key={i}
+                                  icon={isFilled ? faStar : faStarRegular}
+                                  className={isFilled ? 'filled' : ''}
+                                />
+                              );
+                            });
+                          })()}
                         </div>
                         <span className="rating-text">({product.ratingCount || 0})</span>
                       </div>
