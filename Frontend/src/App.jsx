@@ -44,9 +44,11 @@ function App() {
                 <Route
                   path="/dashboard/products/:productId"
                   element={
-                    <ProtectedRoute allowedRoles={['buyer', 'both']}>
-                      <ProductDetailPage />
-                    </ProtectedRoute>
+                    <ErrorBoundary>
+                      <ProtectedRoute allowedRoles={['buyer', 'both']}>
+                        <ProductDetailPage />
+                      </ProtectedRoute>
+                    </ErrorBoundary>
                   }
                 />
                 <Route

@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ProductDetail from '../components/buyer dashboard/ProductDetail';
 import { useProducts } from '../contexts/ProductsContext';
 import { useCart } from '../contexts/CartContext';
 import { getProductById as fetchProductById } from '../../api/product';
+// import DebugProductData from '../components/DebugProductData'; // Uncomment for debugging
 
 const ProductDetailPage = () => {
   const navigate = useNavigate();
@@ -16,41 +17,58 @@ const ProductDetailPage = () => {
 
   useEffect(() => {
     const loadProduct = async () => {
-      const existingProduct = getProductById(productId);
-      if (existingProduct) {
-        setProduct(existingProduct);
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         setError('');
+        
+        // First try to get from context
+        const existingProduct = getProductById(productId);
+        if (existingProduct) {
+          console.log('✅ Product found in context:', existingProduct);
+          setProduct(existingProduct);
+          setLoading(false);
+          return;
+        }
+
+        // If not in context, fetch from API
+        console.log('🔄 Fetching product from API:', productId);
         const response = await fetchProductById(productId);
+        console.log('📦 API Response:', response);
 
         let fetchedProduct = null;
         if (response?.success && response.product) {
           fetchedProduct = response.product;
         } else if (response?.data) {
           fetchedProduct = response.data;
+        } else if (response?.product) {
+          fetchedProduct = response.product;
         } else {
           fetchedProduct = response;
         }
 
-        if (fetchedProduct) {
+        console.log('✅ Fetched product:', fetchedProduct);
+
+        if (fetchedProduct && fetchedProduct._id) {
           setProduct(fetchedProduct);
         } else {
+          console.error('❌ Invalid product data:', fetchedProduct);
           setError('Product not found.');
         }
       } catch (fetchError) {
-        console.error('Failed to fetch product', fetchError);
-        setError(fetchError.response?.data?.message || 'Unable to load product.');
+        console.error('❌ Failed to fetch product:', fetchError);
+        console.error('Error details:', fetchError.response?.data);
+        setError(fetchError.response?.data?.message || 'Unable to load product. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
-    loadProduct();
+    if (productId) {
+      loadProduct();
+    } else {
+      setError('No product ID provided.');
+      setLoading(false);
+    }
   }, [productId, getProductById]);
 
   if (loading || productsLoading) {
@@ -100,12 +118,16 @@ const ProductDetailPage = () => {
   };
 
   return (
-    <ProductDetail
-      product={product}
-      onBack={handleBack}
-      onAddToCart={handleAddToCart}
-      onBuyNow={handleBuyNow}
-    />
+    <>
+      <ProductDetail
+        product={product}
+        onBack={handleBack}
+        onAddToCart={handleAddToCart}
+        onBuyNow={handleBuyNow}
+      />
+      {/* Uncomment below to see product data in bottom-right corner */}
+      {/* <DebugProductData product={product} /> */}
+    </>
   );
 };
 
