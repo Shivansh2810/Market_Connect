@@ -18,6 +18,19 @@ export default function GoogleCallback() {
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [userData, setUserData] = useState(null);
 
+  const performRedirect = (user) => {
+    const from = sessionStorage.getItem('login_redirect');
+    sessionStorage.removeItem('login_redirect');
+    if (from) {
+      console.log('➡️ Redirecting back to:', from);
+      navigate(from, { replace: true });
+    } else {
+      const dashboardPath = getDashboardPath(user);
+      console.log('➡️ Redirecting to:', dashboardPath);
+      navigate(dashboardPath, { replace: true });
+    }
+  };
+
   useEffect(() => {
     const handleGoogleCallback = async () => {
       try {
@@ -76,9 +89,7 @@ export default function GoogleCallback() {
           } else {
             console.log('✅ Phone number is valid, logging in...');
             login(user, token);
-            const dashboardPath = getDashboardPath(user);
-            console.log('➡️ Redirecting to:', dashboardPath);
-            navigate(dashboardPath, { replace: true });
+            performRedirect(user);
           }
         } else {
           throw new Error('Failed to get user profile');
@@ -139,10 +150,7 @@ export default function GoogleCallback() {
         if (token) {
           login(updatedUser, token);
         }
-        
-        const dashboardPath = getDashboardPath(updatedUser);
-        console.log('➡️ Redirecting to:', dashboardPath);
-        navigate(dashboardPath, { replace: true });
+        performRedirect(updatedUser);
       } else {
         throw new Error('Failed to update profile');
       }
@@ -161,9 +169,7 @@ export default function GoogleCallback() {
     
     if (userData && token) {
       login(userData, token);
-      const dashboardPath = getDashboardPath(userData);
-      console.log('➡️ Redirecting to:', dashboardPath);
-      navigate(dashboardPath, { replace: true });
+      performRedirect(userData);
     } else {
       setError('Unable to complete login. Please try again.');
     }

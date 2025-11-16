@@ -29,27 +29,19 @@ function App() {
             <Router>
               <div className="App">
                 <Routes>
-                  <Route path="/" element={<Login />} />
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/admin-login" element={<AdminLogin />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/reset-password/:token" element={<ResetPassword />} />
                   <Route path="/google-callback" element={<GoogleCallback />} />
                 <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute allowedRoles={['buyer', 'both']}>
-                      <BuyerDashboard />
-                    </ProtectedRoute>
-                  }
+                path="/dashboard"
+                element={<BuyerDashboard />}
                 />
                 <Route
-                  path="/dashboard/products/:productId"
-                  element={
-                    <ProtectedRoute allowedRoles={['buyer', 'both']}>
-                      <ProductDetailPage />
-                    </ProtectedRoute>
-                  }
+                path="/dashboard/products/:productId"
+                element={<ProductDetailPage />}
                 />
                 <Route
                   path="/checkout"

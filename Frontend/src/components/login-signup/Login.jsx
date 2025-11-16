@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import api from "../../../api/axios";
 import { useAuth } from "../../contexts/AuthContext";
@@ -8,6 +8,7 @@ import "./Login.css";
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const location = useLocation();
 
   const [accountType, setAccountType] = useState("buyer");
   const [emailOrPhone, setEmailOrPhone] = useState("");
@@ -84,29 +85,38 @@ export default function Login() {
       console.log('✅ Login API response:', response.data);
 
       if (response.data.token && response.data.user) {
-        console.log('🎯 Calling AuthContext.login()...');
-        
-        setError("");
-        login(response.data.user, response.data.token);
-        
-        console.log('➡️ User role:', response.data.user.role);
-        
-        if (response.data.user.role === 'admin') {
-          navigate('/admin');
-        } else if (response.data.user.role === 'both') {
-          if (accountType === 'seller') {
-            navigate('/seller-dashboard');
-          } else {
-            navigate('/dashboard');
-          }
-        } else if (response.data.user.role === 'seller') {
-          navigate('/seller-dashboard');
-        } else {
-          navigate('/dashboard');
-        }
+    console.log('🎯 Calling AuthContext.login()...');
+    
+    setError("");
+    login(response.data.user, response.data.token);
+    
+    // --- ADD THIS REDIRECT LOGIC ---
+    const from = location.state?.from?.pathname || null;
+    if (from) {
+     console.log('➡️ Redirecting back to:', from);
+     navigate(from, { replace: true });
+    } else {
+     // This is your existing logic, now as a fallback
+     console.log('➡️ User role:', response.data.user.role);
+     if (response.data.user.role === 'admin') {
+      navigate('/admin');
+     } else if (response.data.user.role === 'both') {
+      if (accountType === 'seller') {
+       navigate('/seller-dashboard');
       } else {
-        setError("Login failed. Please try again.");
+       navigate('/dashboard');
       }
+     } else if (response.data.user.role === 'seller') {
+      navigate('/seller-dashboard');
+     } else {
+      navigate('/dashboard');
+     }
+    }
+    // --- END OF REDIRECT LOGIC ---
+
+   } else {
+    setError("Login failed. Please try again.");
+   }
     } catch (err) {
       console.error('❌ Login error:', err);
       console.error('📡 Error response:', err.response);
@@ -149,13 +159,22 @@ export default function Login() {
 
   const handleGoogleLogin = () => {
     try {
-      setError("");
-      const base = api.defaults.baseURL || 'http://localhost:8080/api';
-      const googleAuthUrl = `${base}/users/auth/google`;
-      console.log('🔐 Redirecting to Google Auth:', googleAuthUrl);
-      
-      window.location.href = googleAuthUrl;
-    } catch (err) {
+    setError("");
+
+    // --- ADD THIS LOGIC ---
+    // Get the 'from' path, default to /dashboard if it doesn't exist
+    const from = location.state?.from?.pathname || '/dashboard';
+    // Store it so the callback page can read it
+    sessionStorage.setItem('login_redirect', from);
+    // --- END OF NEW LOGIC ---
+
+    const base = api.defaults.baseURL || 'http://localhost:8080/api';
+    const googleAuthUrl = `${base}/users/auth/google`;
+    console.log('🔐 Redirecting to Google Auth:', googleAuthUrl);
+    
+    window.location.href = googleAuthUrl;
+   } catch (err) {
+// ...
       console.error('❌ Google login error:', err);
       setError('Failed to start Google login. Please try again.');
     }
@@ -300,7 +319,7 @@ export default function Login() {
 
             <input
               type="text"
-              placeholder="Email / Mobile Number"
+              placeholder="Email"
               value={emailOrPhone}
               onChange={handleEmailChange}
               style={{
@@ -378,21 +397,6 @@ export default function Login() {
                 }}
               >
                 Signup
-              </span>
-            </p>
-            <p>
-              Admin?{" "}
-              <span 
-                onClick={() => !loading && navigate("/admin-login")} 
-                className="link"
-                style={{
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  opacity: loading ? 0.6 : 1,
-                  color: '#dc2626',
-                  fontWeight: '600'
-                }}
-              >
-                Admin Login
               </span>
             </p>
             <p 

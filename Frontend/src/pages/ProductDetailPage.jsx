@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext'; 
 import ProductDetail from '../components/buyer dashboard/ProductDetail';
 import { useProducts } from '../contexts/ProductsContext';
 import { useCart } from '../contexts/CartContext';
@@ -9,12 +10,22 @@ import api from '../../api/axios'; // Import the base api instance
 const ProductDetailPage = () => {
   const navigate = useNavigate();
   const { productId } = useParams();
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const { loading: productsLoading } = useProducts(); // Keep this for the initial load feel
   const { addToCart, replaceCartWith } = useCart();
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]); // <-- 1. ADD REVIEWS STATE
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const requireAuth = (actionCallback) => {
+    if (isAuthenticated) {
+    actionCallback();
+    } else {
+    navigate('/login', { state: { from: location } });
+    }
+ };
 
   useEffect(() => {
     // 2. MODIFIED THIS ENTIRE FUNCTION
@@ -110,14 +121,18 @@ const ProductDetailPage = () => {
   };
 
   const handleAddToCart = (selectedProduct, quantity) => {
+    requireAuth(() => { // Wrap logic
     addToCart(selectedProduct, quantity);
-  };
+    });
+ };
 
-  const handleBuyNow = (selectedProduct, quantity) => {
+ const handleBuyNow = (selectedProduct, quantity) => {
+    requireAuth(() => { // Wrap logic
     replaceCartWith(selectedProduct, quantity);
     navigate('/checkout');
-  };
-
+    });
+ };
+ 
   return (
     <>
       <ProductDetail

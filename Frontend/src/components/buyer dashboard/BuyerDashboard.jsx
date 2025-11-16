@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './dashboard.css';
 import Profile from '../profile/Profile';
 import CustomerService from '../customerService/CustomerService';
@@ -25,7 +25,8 @@ import {
 
 const BuyerDashboard = () => {
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
+  const location = useLocation(); // Get location for login redirect
+  const { logout, user, isAuthenticated } = useAuth();
   const { products, categories, loading: productsLoading, error: productsError, refresh } = useProducts();
   const { auctions } = useAuction();
   const {
@@ -37,6 +38,14 @@ const BuyerDashboard = () => {
     itemCount,
     totalAmount
   } = useCart();
+
+  const requireAuth = (actionCallback) => {
+    if (isAuthenticated) {
+      actionCallback();
+    } else {
+      navigate('/login', { state: { from: location } });
+    }
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -112,19 +121,27 @@ const BuyerDashboard = () => {
   };
 
   const handleAddProductToCart = (product) => {
-    addToCart(product, 1);
-    setIsCartOpen(true);
+    requireAuth(() => {
+      addToCart(product, 1);
+      setIsCartOpen(true);
+    });
   };
 
   const handleBuyNow = (product) => {
-    replaceCartWith(product, 1);
-    navigate('/checkout');
+    requireAuth(() => { // Wrap logic
+      replaceCartWith(product, 1);
+      navigate('/checkout');
+    });
   };
 
   const handleCheckout = () => {
-    setIsCartOpen(false);
-    navigate('/checkout');
+    requireAuth(() => { // Wrap logic
+      setIsCartOpen(false);
+      navigate('/checkout');
+    });
   };
+
+  const canBecomeSeller = !isAuthenticated || (isAuthenticated && user.role !== 'seller' && user.role !== 'both');
 
   if (productsLoading) {
     return (
@@ -199,12 +216,18 @@ const BuyerDashboard = () => {
               <FontAwesomeIcon icon={faShoppingCart} />
               {itemCount > 0 && <span className="cart-badge">{itemCount}</span>}
             </button>
-            <button className="action-btn" onClick={() => setCurrentView('profile')}>
+            <button 
+              className="action-btn" 
+              onClick={() => requireAuth(() => setCurrentView('profile'))}
+              title={isAuthenticated ? 'View Profile' : 'Login / Register'}
+            >
               <FontAwesomeIcon icon={faUser} />
             </button>
-            <button className="action-btn logout-btn" onClick={handleLogout} title="Logout">
-              <FontAwesomeIcon icon={faSignOutAlt} />
-            </button>
+            {isAuthenticated && (
+              <button className="action-btn logout-btn" onClick={handleLogout} title="Logout">
+                <FontAwesomeIcon icon={faSignOutAlt} />
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -216,9 +239,10 @@ const BuyerDashboard = () => {
               <FontAwesomeIcon icon={faHome} />
               <span>Dashboard</span>
             </div>
-            <div 
-              className="nav-item" 
-              onClick={() => navigate('/auctions')}
+            <div
+              className="nav-item"
+              // ** CHANGE: Wrapped with requireAuth **
+              onClick={() => requireAuth(() => navigate('/auctions'))}
               style={{ cursor: 'pointer' }}
             >
               <FontAwesomeIcon icon={faGavel} />
@@ -227,10 +251,11 @@ const BuyerDashboard = () => {
                 <span className="auction-badge">{auctions.length}</span>
               )}
             </div>
-            {user && user.role !== 'seller' && user.role !== 'both' && (
-              <div 
-                className="nav-item become-seller-item" 
-                onClick={() => navigate('/become-seller')}
+            {canBecomeSeller && (
+              <div
+                className="nav-item become-seller-item"
+                // ** CHANGE: Wrapped with requireAuth **
+                onClick={() => requireAuth(() => navigate('/become-seller'))}
                 style={{ cursor: 'pointer' }}
               >
                 <FontAwesomeIcon icon={faStore} />
@@ -366,76 +391,100 @@ const BuyerDashboard = () => {
       ></div>
       <div className={`cart-drawer ${isCartOpen ? 'open' : ''}`}>
         <div className="cart-drawer-header">
-          <h3>Your Cart ({itemCount} items)</h3>
+          <h3>Your Cart ({isAuthenticated ? itemCount : 0} items)</h3>
           <button className="cart-close-btn" onClick={() => setIsCartOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
         <div className="cart-drawer-content">
-          {items.length > 0 ? (
-            <>
-              <div className="cart-items-list">
-                {items.map((item) => (
-                  <div key={item.productId} className="cart-item-drawer">
-                    <img
-                      src={item.productDetails?.image || ''}
-                      alt={item.productDetails?.title || 'Product'}
-                    />
-                    <div className="cart-item-info">
-                      <span className="cart-item-title">{item.productDetails?.title}</span>
-                      <div className="cart-item-pricing">
-                        <span className="cart-item-price">
-                          {item.productDetails?.currency === 'USD' ? '$' : '₹'}
-                          {item.productDetails?.price || 0}
-                        </span>
-                        <div className="quantity-controls-drawer">
-                          <button
-                            className="quantity-btn-drawer"
-                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                          >
-                            -
-                          </button>
-                          <span className="quantity-drawer">{item.quantity}</span>
-                          <button
-                            className="quantity-btn-drawer"
-                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                          >
-                            +
-                          </button>
+          {isAuthenticated ? (
+            // 1. USER IS LOGGED IN
+            items.length > 0 ? (
+              // 1a. Logged in and has items
+              <>
+                <div className="cart-items-list">
+                  {items.map((item) => (
+                    <div key={item.productId} className="cart-item-drawer">
+                      <img
+                        src={item.productDetails?.image || ''}
+                        alt={item.productDetails?.title || 'Product'}
+                      />
+                      <div className="cart-item-info">
+                        <span className="cart-item-title">{item.productDetails?.title}</span>
+                        <div className="cart-item-pricing">
+                          <span className="cart-item-price">
+                            {item.productDetails?.currency === 'USD' ? '$' : '₹'}
+                            {item.productDetails?.price || 0}
+                          </span>
+                          <div className="quantity-controls-drawer">
+                            <button
+                              className="quantity-btn-drawer"
+                              onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                            >
+                              -
+                            </button>
+                            <span className="quantity-drawer">{item.quantity}</span>
+                            <button
+                              className="quantity-btn-drawer"
+                              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          className="remove-item-btn"
+                          onClick={() => removeFromCart(item.productId)}
+                        >
+                          Remove
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        className="remove-item-btn"
-                        onClick={() => removeFromCart(item.productId)}
-                      >
-                        Remove
-                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="cart-drawer-footer">
+                  <div className="cart-total-drawer">
+                    <div className="subtotal">
+                      <span>Subtotal ({itemCount} items):</span>
+                      <strong>₹{totalAmount.toFixed(2)}</strong>
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="cart-drawer-footer">
-                <div className="cart-total-drawer">
-                  <div className="subtotal">
-                    <span>Subtotal ({itemCount} items):</span>
-                    <strong>₹{totalAmount.toFixed(2)}</strong>
-                  </div>
+                  <button className="checkout-btn-drawer" onClick={handleCheckout}>
+                    Proceed to Checkout
+                  </button>
                 </div>
-                <button className="checkout-btn-drawer" onClick={handleCheckout}>
-                  Proceed to Checkout
+              </>
+            ) : (
+              // 1b. Logged in and cart is empty
+              <div className="empty-cart">
+                <FontAwesomeIcon
+                  icon={faShoppingCart}
+                  style={{ fontSize: '48px', color: '#ccc', marginBottom: '20px' }}
+                />
+                <p>Your cart is empty</p>
+                <button className="continue-shopping-btn" onClick={() => setIsCartOpen(false)}>
+                  Continue Shopping
                 </button>
               </div>
-            </>
+            )
           ) : (
-            <div className="empty-cart">
+            // 2. USER IS A GUEST
+            <div className="empty-cart" style={{ padding: '20px', textAlign: 'center' }}>
               <FontAwesomeIcon
-                icon={faShoppingCart}
+                icon={faUser}
                 style={{ fontSize: '48px', color: '#ccc', marginBottom: '20px' }}
               />
-              <p>Your cart is empty</p>
-              <button className="continue-shopping-btn" onClick={() => setIsCartOpen(false)}>
-                Continue Shopping
+              <h4 style={{ marginBottom: '10px' }}>Please log in</h4>
+              <p style={{ marginBottom: '20px' }}>Log in to view your cart and start shopping.</p>
+              <button
+                className="checkout-btn-drawer" // Re-use the checkout button style
+                onClick={() => {
+                  setIsCartOpen(false); // Close drawer
+                  navigate('/login', { state: { from: location } }); // Go to login
+                }}
+              >
+                Login / Register
               </button>
             </div>
           )}
@@ -443,7 +492,7 @@ const BuyerDashboard = () => {
       </div>
 
       {/* Floating Chatbot Button */}
-      <button 
+      <button
         className="floating-chatbot-btn"
         onClick={() => setShowChatbot(true)}
         title="Need help? Chat with us!"
