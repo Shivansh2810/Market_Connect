@@ -22,6 +22,11 @@ exports.createProduct = async (req, res) => {
       images: images,
     };
 
+    // Normalize specs to a plain object so Mongoose Map can cast it correctly
+    if (productData.specs && typeof productData.specs === "object") {
+      productData.specs = { ...productData.specs };
+    }
+
     const product = await Product.create(productData);
     res.status(200).json({ success: true, product });
   } catch (error) {
@@ -116,6 +121,11 @@ exports.getProductById = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const product = req.product; //isOwner has params attached with product found by ID
+
+    // Normalize specs to a plain object before applying updates
+    if (req.body.specs && typeof req.body.specs === "object") {
+      req.body.specs = { ...req.body.specs };
+    }
 
     product.set(req.body);
 
