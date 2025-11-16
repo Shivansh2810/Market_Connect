@@ -34,6 +34,32 @@ exports.createProduct = async (req, res) => {
   }
 };
 
+// GET /api/products/:id/similar
+// Returns products from the same category as the given product, excluding the product itself
+exports.getSimilarProducts = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const baseProduct = await Product.findById(id).select("categoryId");
+    if (!baseProduct || baseProduct.isDeleted) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const similarProducts = await Product.find({
+      _id: { $ne: id },
+      categoryId: baseProduct.categoryId,
+      isDeleted: false,
+    })
+      .populate("categoryId", "name")
+      .sort({ createdAt: -1 })
+      .limit(8);
+
+    res.status(200).json({ success: true, products: similarProducts });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
 //browse products
 exports.getAllProducts = async (req, res) => {
   try {
