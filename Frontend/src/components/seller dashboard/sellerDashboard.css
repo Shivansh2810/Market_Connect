@@ -1212,6 +1212,34 @@
     }
 }
 
+@media (max-width: 400px) {
+    .dashboard-content {
+        padding: 10px;
+    }
+
+    .main-content {
+        padding: 14px;
+    }
+
+    .metrics-grid {
+        gap: 12px;
+    }
+
+    .products-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .product-image {
+        height: 180px;
+    }
+
+    .btn-primary {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+}
+
 /* Section Header */
 .section-header {
     margin-bottom: 25px;

@@ -45,6 +45,7 @@
     padding: 15px 20px;
     max-width: 1200px;
     margin: 0 auto;
+    position: relative;
 }
 
 .logo-section {
@@ -540,6 +541,31 @@
     transform: none;
 }
 
+/* Desktop hover behavior: show actions on hover only */
+@media (hover: hover) and (pointer: fine) {
+    .product-actions {
+        opacity: 0;
+        transform: translateY(8px);
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .product-card:hover .product-actions {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+}
+
+/* Touch devices: always show actions (no hover) */
+@media (hover: none) and (pointer: coarse) {
+    .product-actions {
+        opacity: 1 !important;
+        transform: none !important;
+        pointer-events: auto !important;
+    }
+}
+
 /* Cart Drawer - Right Side Panel (Amazon Style) */
 .cart-drawer-overlay {
     position: fixed;
@@ -858,6 +884,10 @@
     .mobile-menu-btn {
         display: block;
         order: 2;
+        position: absolute;
+        right: 12px;
+        top: 8px;
+        transform: none;
     }
     
     .header-actions {
@@ -887,10 +917,12 @@
         position: static;
         order: 2;
         padding: 15px;
+        display: none;
     }
     
     .sidebar.mobile-open {
         display: block;
+        order: 1; /* show above main content when open */
     }
     
     .main-content {
@@ -960,6 +992,10 @@
         order: 2;
         font-size: 18px;
         padding: 6px;
+        position: absolute;
+        right: 12px;
+        top: 6px;
+        transform: none;
     }
     
     .header-actions {
@@ -999,12 +1035,15 @@
         width: 100%;
         position: static;
         order: 2;
-        padding: 12px;
-        border-radius: 8px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+        height: fit-content;
+        display: none;
     }
     
     .sidebar.mobile-open {
         display: block;
+        order: 1; /* show above main content when open */
     }
     
     .main-content {
@@ -1132,6 +1171,38 @@
         width: 16px;
         height: 16px;
         font-size: 10px;
+    }
+}
+
+@media (max-width: 400px) {
+    .dashboard-content {
+        padding: 8px;
+    }
+
+    .main-content {
+        padding: 10px;
+    }
+
+    .header-content {
+        padding: 6px 8px;
+    }
+
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .product-image {
+        height: 110px;
+    }
+
+    .product-actions {
+        gap: 4px;
+    }
+
+    .add-to-cart-btn,
+    .buy-now-btn {
+        padding: 6px 8px;
+        font-size: 11px;
     }
 }
 
