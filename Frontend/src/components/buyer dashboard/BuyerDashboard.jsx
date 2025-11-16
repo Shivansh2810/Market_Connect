@@ -17,6 +17,8 @@ import {
   faSignOutAlt,
   faStore
 } from '@fortawesome/free-solid-svg-icons';
+import * as auctionAPI from '../../../api/auction';
+import AuctionListing from '../auction/AuctionListing';
 
 const BuyerDashboard = () => {
   const navigate = useNavigate();
@@ -39,6 +41,25 @@ const BuyerDashboard = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [auctions, setAuctions] = useState([]);
+  const [auctionsLoading, setAuctionsLoading] = useState(false);
+
+  // Fetch active auctions on component mount
+  React.useEffect(() => {
+    const fetchAuctions = async () => {
+      try {
+        setAuctionsLoading(true);
+        const data = await auctionAPI.getActiveAuctions();
+        setAuctions(Array.isArray(data) ? data : data.data || []);
+      } catch (error) {
+        console.error('Error fetching auctions:', error);
+        setAuctions([]);
+      } finally {
+        setAuctionsLoading(false);
+      }
+    };
+    fetchAuctions();
+  }, []);
 
   const categoryOptions = useMemo(() => {
     const categoryNames = (categories || [])
@@ -267,6 +288,17 @@ const BuyerDashboard = () => {
             <h2>Welcome to Market Connect</h2>
             <p>Discover amazing products at great prices</p>
           </div>
+
+          {/* Auctions Section */}
+          {auctions.length > 0 && (
+            <section className="auctions-section-wrapper">
+              <div className="auctions-header">
+                <h3>🔨 Live Auctions</h3>
+                <p className="auctions-subtitle">Bid on exclusive items before they're gone</p>
+              </div>
+              <AuctionListing auctions={auctions} onNavigate={(id) => navigate(`/auction/${id}`)} />
+            </section>
+          )}
 
           <section className="products-section">
             <div className="products-grid">
