@@ -126,7 +126,7 @@ def reset_conversation():
             "details": str(e)
         }), 500
 
-if __name__ == "_main_":
+if __name__ == "__main__":
     port = 5000
     print(f"Chatbot API server starting on port {port}")
     print("Welcome to the Market Connect customer service API!")
