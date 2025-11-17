@@ -1,4 +1,4 @@
-const express = require("express");
+/* const express = require("express");
 const router = express.Router();
 const returnController = require("../controllers/returnController");
 const { protect } = require("../middlewares/auth");
@@ -14,4 +14,4 @@ router.get("/seller/all", protect, returnController.getSellerReturns);
 router.put("/:returnId/approve", protect, returnController.approveReturn);
 router.put("/:returnId/reject", protect, returnController.rejectReturn);
 
-module.exports = router;
+module.exports = router; */
