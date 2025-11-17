@@ -414,7 +414,7 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="dashboard">
+    <div className="dashboard admin-dashboard">
       <header className="dashboard-header">
         <div className="header-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button
