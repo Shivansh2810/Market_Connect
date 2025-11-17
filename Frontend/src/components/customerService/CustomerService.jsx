@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './customerService.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import api from '../../../api/axios';
+
 import { 
     faArrowLeft,
     faHeadset,
@@ -21,9 +23,13 @@ const CustomerService = ({ onBack }) => {
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+    const [sessionId, setSessionId] = useState(() => session_${Date.now()}_${Math.random().toString(36).substr(2, 9)});
     const [faqs, setFaqs] = useState([]);
     const [openFaqIndex, setOpenFaqIndex] = useState(null);
+    const [savedChats, setSavedChats] = useState([]);
+    const [isChatListOpen, setIsChatListOpen] = useState(false);
+    const [isLoadingChats, setIsLoadingChats] = useState(false);
+
     const messagesEndRef = useRef(null);
     const messagesContainerRef = useRef(null);
 
@@ -48,8 +54,48 @@ const CustomerService = ({ onBack }) => {
         fetchFaqs();
     }, []);
 
+    const fetchSavedChats = async () => {
+        try {
+            setIsLoadingChats(true);
+            const res = await api.get('/chats');
+            const data = res.data && res.data.data ? res.data.data : [];
+            setSavedChats(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Error fetching saved chats:', err);
+            setSavedChats([]);
+        } finally {
+            setIsLoadingChats(false);
+        }
+    };
+
+    useEffect(() => {
+        // Load initial chat history list for authenticated users
+        fetchSavedChats();
+    }, []);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const handleLoadChat = async (chatSummary) => {
+        try {
+            const res = await api.get(/chats/${chatSummary.sessionId});
+            const chatData = res.data && res.data.data ? res.data.data : null;
+            if (chatData && Array.isArray(chatData.messages)) {
+                setSessionId(chatData.sessionId);
+                const restoredMessages = chatData.messages.map((m, idx) => ({
+                    id: ${chatData._id || 'chat'}_${idx}_${Date.now()},
+                    text: m.text,
+                    sender: m.sender,
+                    timestamp: m.timestamp || new Date().toISOString(),
+                }));
+                setMessages(restoredMessages);
+                setError(null);
+                setIsChatListOpen(false);
+            }
+        } catch (err) {
+            console.error('Error loading chat by sessionId:', err);
+        }
     };
 
     const handleSendMessage = async (e) => {
@@ -71,7 +117,7 @@ const CustomerService = ({ onBack }) => {
 
             try {
                 // Send message to Python chatbot API
-                const response = await fetch(`${CHATBOT_API_URL}/message`, {
+                const response = await fetch(${CHATBOT_API_URL}/message, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -83,7 +129,7 @@ const CustomerService = ({ onBack }) => {
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(HTTP error! status: ${response.status});
                 }
 
                 const data = await response.json();
@@ -95,8 +141,17 @@ const CustomerService = ({ onBack }) => {
                     sender: 'bot',
                     timestamp: new Date().toISOString()
                 };
-                
-                setMessages(prev => [...prev, botMessage]);
+                const newMessages = [...messages, userMessageObj, botMessage];
+                setMessages(newMessages);
+
+                try {
+                    await api.post('/chats', {
+                        sessionId,
+                        messages: newMessages,
+                    });
+                    fetchSavedChats();
+                } catch (saveErr) {
+                }
             } catch (err) {
                 console.error('Error sending message to chatbot:', err);
                 setError('Failed to connect to chatbot. Please ensure the chatbot server is running.');
@@ -104,13 +159,22 @@ const CustomerService = ({ onBack }) => {
                 // Add error message
                 const errorMessage = {
                     id: Date.now() + 1,
-                    text: 'Sorry, I\'m having trouble connecting right now. Please try again later or contact support at support@marketconnect.com',
+                    text: 'Sorry, I\'m having trouble connecting right now. Please try again later or contact support at hml72417@gmail.com',
                     sender: 'bot',
                     timestamp: new Date().toISOString(),
                     isError: true
                 };
-                
-                setMessages(prev => [...prev, errorMessage]);
+                const newMessages = [...messages, userMessageObj, errorMessage];
+                setMessages(newMessages);
+
+                try {
+                    await api.post('/chats', {
+                        sessionId,
+                        messages: newMessages,
+                    });
+                    fetchSavedChats();
+                } catch (saveErr) {
+                }
             } finally {
                 setIsLoading(false);
             }
@@ -135,7 +199,7 @@ const CustomerService = ({ onBack }) => {
 
         try {
             // Send message to Python chatbot API
-            const response = await fetch(`${CHATBOT_API_URL}/message`, {
+            const response = await fetch(${CHATBOT_API_URL}/message, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -147,7 +211,7 @@ const CustomerService = ({ onBack }) => {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(HTTP error! status: ${response.status});
             }
 
             const data = await response.json();
@@ -159,8 +223,17 @@ const CustomerService = ({ onBack }) => {
                 sender: 'bot',
                 timestamp: new Date().toISOString()
             };
-            
-            setMessages(prev => [...prev, botMessage]);
+            const newMessages = [...messages, userMessageObj, botMessage];
+            setMessages(newMessages);
+
+            try {
+                await api.post('/chats', {
+                    sessionId,
+                    messages: newMessages,
+                });
+                fetchSavedChats();
+            } catch (saveErr) {
+            }
         } catch (err) {
             console.error('Error sending message to chatbot:', err);
             setError('Failed to connect to chatbot. Please ensure the chatbot server is running.');
@@ -168,13 +241,22 @@ const CustomerService = ({ onBack }) => {
             // Add error message
             const errorMessage = {
                 id: Date.now() + 1,
-                text: 'Sorry, I\'m having trouble connecting right now. Please try again later or contact support at support@marketconnect.com',
+                text: 'Sorry, I\'m having trouble connecting right now. Please try again later or contact support at hml72417@gmail.com',
                 sender: 'bot',
                 timestamp: new Date().toISOString(),
                 isError: true
             };
-            
-            setMessages(prev => [...prev, errorMessage]);
+            const newMessages = [...messages, userMessageObj, errorMessage];
+            setMessages(newMessages);
+
+            try {
+                await api.post('/chats', {
+                    sessionId,
+                    messages: newMessages,
+                });
+                fetchSavedChats();
+            } catch (saveErr) {
+            }
         } finally {
             setIsLoading(false);
         }
@@ -182,7 +264,7 @@ const CustomerService = ({ onBack }) => {
 
     const handleResetConversation = async () => {
         try {
-            await fetch(`${CHATBOT_API_URL}/reset`, {
+            await fetch(${CHATBOT_API_URL}/reset, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -198,6 +280,23 @@ const CustomerService = ({ onBack }) => {
             // Still clear messages locally even if API call fails
             setMessages([]);
         }
+    };
+
+    const handleFaqToChat = (faq, idx, event) => {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        const botMessage = {
+            id: Date.now(),
+            text: faq.answer,
+            sender: 'bot',
+            timestamp: new Date().toISOString()
+        };
+
+        setMessages(prev => [...prev, botMessage]);
+        setOpenFaqIndex(idx);
     };
 
     return (
@@ -221,16 +320,72 @@ const CustomerService = ({ onBack }) => {
                                     <p>Our customer service team is here to assist you</p>
                                 </div>
                             </div>
-                            {messages.length > 0 && (
-                                <button 
-                                    className="reset-conversation-btn"
-                                    onClick={handleResetConversation}
-                                    title="Reset Conversation"
-                                >
-                                    <FontAwesomeIcon icon={faRedo} />
-                                    Reset
-                                </button>
-                            )}
+                            <div className="chatbot-header-actions">
+                                <div className="chat-history-wrapper">
+                                    <button
+                                        className="chat-history-toggle"
+                                        onClick={() => {
+                                            const next = !isChatListOpen;
+                                            setIsChatListOpen(next);
+                                            if (next) {
+                                                fetchSavedChats();
+                                            }
+                                        }}
+                                    >
+                                        <FontAwesomeIcon icon={faComments} />
+                                        <span>Previous Conversations</span>
+                                    </button>
+                                    {isChatListOpen && (
+                                        <div className="chat-history-dropdown">
+                                            {isLoadingChats ? (
+                                                <p className="chat-history-status">Loading conversations...</p>
+                                            ) : savedChats.length === 0 ? (
+                                                <p className="chat-history-status">No saved conversations yet.</p>
+                                            ) : (
+                                                <ul className="chat-history-list">
+                                                    {savedChats.map((chat) => (
+                                                        <li
+                                                            key={chat._id}
+                                                            className="chat-history-item"
+                                                            onClick={() => handleLoadChat(chat)}
+                                                        >
+                                                            <div className="chat-history-title">
+                                                                {chat.firstMessage || 'New conversation'}
+                                                            </div>
+                                                            <div className="chat-history-meta">
+                                                                <span>{chat.messageCount} messages</span>
+                                                                <span>
+                                                                    {chat.lastMessageTime
+                                                                        ? new Date(chat.lastMessageTime).toLocaleString([], {
+                                                                              hour: '2-digit',
+                                                                              minute: '2-digit',
+                                                                              day: '2-digit',
+                                                                              month: 'short',
+                                                                          })
+                                                                        : ''}
+                                                                </span>
+                                                            </div>
+                                                            <div className="chat-history-preview">
+                                                                {chat.lastMessage}
+                                                            </div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                {messages.length > 0 && (
+                                    <button 
+                                        className="reset-conversation-btn"
+                                        onClick={handleResetConversation}
+                                        title="Reset Conversation"
+                                    >
+                                        <FontAwesomeIcon icon={faRedo} />
+                                        Reset
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         <div className="chatbot-messages" ref={messagesContainerRef}>
@@ -275,7 +430,7 @@ const CustomerService = ({ onBack }) => {
                                     {messages.map(message => (
                                         <div 
                                             key={message.id} 
-                                            className={`message ${message.sender === 'user' ? 'user-message' : 'bot-message'} ${message.isError ? 'error-message' : ''}`}
+                                            className={message ${message.sender === 'user' ? 'user-message' : 'bot-message'} ${message.isError ? 'error-message' : ''}}
                                         >
                                             <div className="message-content">
                                                 {message.sender === 'bot' && (
@@ -339,8 +494,8 @@ const CustomerService = ({ onBack }) => {
                                 <FontAwesomeIcon icon={faHeadset} />
                                 Contact Information
                             </h3>
-                            <p><strong>Email:</strong> support@marketconnect.com</p>
-                            <p><strong>Phone:</strong> +91 1800-123-4567</p>
+                            <p><strong>Email:</strong> hml72417@gmail.com</p>
+                            <p><strong>Phone:</strong> +91 9157927168</p>
                             <p><strong>Hours:</strong> 24/7 Customer Support</p>
                         </div>
 
@@ -354,7 +509,7 @@ const CustomerService = ({ onBack }) => {
                             ) : (
                                 <div className="faq-list">
                                     {faqs.map((f, idx) => (
-                                        <div key={f._id || idx} className={`faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                                        <div key={f._id || idx} className={faq-item ${openFaqIndex === idx ? 'open' : ''}}>
                                             <button 
                                                 className="faq-question"
                                                 onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
@@ -368,7 +523,7 @@ const CustomerService = ({ onBack }) => {
                                                     <div className="faq-actions">
                                                         <button 
                                                             className="quick-question-btn"
-                                                            onClick={() => handleQuickQuestion(f.question)}
+                                                            onClick={(e) => handleFaqToChat(f, idx, e)}
                                                         >
                                                             <FontAwesomeIcon icon={faQuestionCircle} /> Ask this
                                                         </button>

@@ -72,8 +72,8 @@
     letter-spacing: 1px;
 }
 
-.mobile-menu-btn {
-    display: inline-flex; /* tight click area around icon */
+.admin-dashboard .mobile-menu-btn {
+    display: none; /* hidden by default (desktop/tablet) */
     background: none;
     border: none;
     color: white;
@@ -487,16 +487,20 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .header-content {
+    .admin-dashboard .header-content {
         padding: 10px 15px;
         gap: 8px;
     }
 
-    .logo-section h1 {
+    .admin-dashboard .logo-section h1 {
         font-size: 18px;
     }
 
-    .dashboard-content {
+    .admin-dashboard .mobile-menu-btn {
+        display: inline-flex; /* show only on small screens */
+    }
+
+    .admin-dashboard .dashboard-content {
         flex-direction: column;
         padding: 15px;
         gap: 15px;

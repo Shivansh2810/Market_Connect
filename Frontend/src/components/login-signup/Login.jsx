@@ -90,29 +90,34 @@ export default function Login() {
     setError("");
     login(response.data.user, response.data.token);
     
-    // --- ADD THIS REDIRECT LOGIC ---
-    const from = location.state?.from?.pathname || null;
-    if (from) {
-     console.log('➡️ Redirecting back to:', from);
-     navigate(from, { replace: true });
-    } else {
-     // This is your existing logic, now as a fallback
-     console.log('➡️ User role:', response.data.user.role);
-     if (response.data.user.role === 'admin') {
+    const userRole = response.data.user.role;
+    console.log('➡️ User role:', userRole);
+    console.log('➡️ Account type selected:', accountType);
+
+    // 1. Always prioritize Admin
+    if (userRole === 'admin') {
+      console.log('➡️ Redirecting to /admin');
       navigate('/admin');
-     } else if (response.data.user.role === 'both') {
-      if (accountType === 'seller') {
-       navigate('/seller-dashboard');
-      } else {
-       navigate('/dashboard');
-      }
-     } else if (response.data.user.role === 'seller') {
+    } 
+    // 2. Prioritize Seller if selected
+    else if (accountType === 'seller' && (userRole === 'seller' || userRole === 'both')) {
+      console.log('➡️ Redirecting to /seller-dashboard');
       navigate('/seller-dashboard');
-     } else {
-      navigate('/dashboard');
-     }
+    } 
+    // 3. Handle Buyer (this is where the 'from' redirect now lives)
+    else {
+      // Check for a redirect-back path, only for buyers
+      const from = location.state?.from?.pathname || null;
+      
+      if (from) {
+        console.log('➡️ Buyer redirecting back to:', from);
+        navigate(from, { replace: true });
+      } else {
+        // Default buyer dashboard
+        console.log('➡️ Buyer redirecting to default /dashboard');
+        navigate('/dashboard');
+      }
     }
-    // --- END OF REDIRECT LOGIC ---
 
    } else {
     setError("Login failed. Please try again.");
