@@ -206,24 +206,55 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // Update order
-    const order = await Order.findById(orderId);
+    // Correction of Error: RACE CONDITION (Concurrency) + IDEMPOTENCY (Double Payment)
+
+    // uisng one single atomic step
+    // if the order was ALREADY processed (by a duplicate request), this update fails.
+    const order = await Order.findOneAndUpdate(
+      { 
+        _id: orderId, 
+        orderStatus: { $ne: "Order Placed" } // The Guard Condition
+      },
+      {
+        $set: {
+          orderStatus: "Order Placed",
+          orderPlacedAt: new Date(razorpayPayment.created_at * 1000)
+        }
+      },
+      { new: true } // Returns the updated document if successful, or null if not
+    );
+
+    // Case 1: The update failed (returned null)
     if (!order) {
-      return res.status(404).json({
+      // Check WHY it failed
+      const existingOrder = await Order.findById(orderId);
+      
+      if (!existingOrder) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Order not found" 
+        });
+      }
+
+      // If it exists and is ALREADY placed, this is the IDEMPOTENCY handling.
+      // We return success but DO NOT deduct stock again.
+      if (existingOrder.orderStatus === "Order Placed") {
+        return res.status(200).json({
+          success: true,
+          message: "Payment verified successfully (Order was already processed)",
+          data: { payment, order: existingOrder },
+        });
+      }
+      
+      // Fallback error
+      return res.status(400).json({
         success: false,
-        message: "Order not found",
+        message: "Order status could not be updated"
       });
     }
 
-    // Set order status to "Order Placed"
-    order.orderStatus = "Order Placed";
-
-    // Store Razorpay payment timestamp [Convert Razorpay timestamp (seconds) to Date]
-    order.orderPlacedAt = new Date(razorpayPayment.created_at * 1000);
-
-    await order.save();
-
-    // Reduce product stock ONLY after successful payment
+    // Case 2: The update succeeded!
+    // This request got through successfully. Now it is safe to deduct stock.
     for (const item of order.orderItems) {
       const product = await Product.findById(item.product);
       if (product) {
@@ -240,6 +271,7 @@ exports.verifyPayment = async (req, res) => {
         order,
       },
     });
+
   } catch (error) {
     console.error("Payment verification error:", error);
     res.status(500).json({
@@ -479,12 +511,5 @@ exports.getRefundStatus = async (req, res) => {
   }
 };
 
-// We Export the helper function for use in other controllers
-module.exports = {
-  createRazorpayOrder,
-  verifyPayment,
-  getPaymentByOrderId,
-  initiateRefund,
-  getRefundStatus,
-  processRefund, // EXPORTING THIS for returnController
-};
+// Export the helper function for use in other controllers
+exports.processRefund = processRefund;

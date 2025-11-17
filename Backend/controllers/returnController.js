@@ -1,4 +1,4 @@
-/* const Return = require("../models/return");
+const Return = require("../models/return");
 const Order = require("../models/order");
 const Payment = require("../models/payment");
 const Product = require("../models/product");
@@ -668,4 +668,4 @@ module.exports = {
   approveReturn,
   rejectReturn,
   getReturnsByOrderId,
-}; */
+};
