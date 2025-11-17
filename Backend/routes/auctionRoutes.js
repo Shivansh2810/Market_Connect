@@ -11,6 +11,7 @@ const {
 
 //Public
 router.get("/", auctionController.getActiveAuctions);
+router.get("/upcoming", auctionController.getUpcomingAuctions);
 router.get("/:id", auctionController.getAuctionById);
 
 //Admin
