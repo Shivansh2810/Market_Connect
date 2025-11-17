@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ReviewManagement.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -10,102 +10,44 @@ import {
     faUser,
     faCalendar
 } from '@fortawesome/free-solid-svg-icons';
+import api from '../../../api/axios';
 
 const ReviewManagement = ({ product, onBack }) => {
     const [filterRating, setFilterRating] = useState('all');
+    const [reviews, setReviews] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Sample reviews data - Matching backend Review model structure exactly
-    // Backend Review model: productId, sellerId, buyerId, orderId, rating (1-5), comment, images[], status (visible/hidden/reported), timestamps
-    // Backend populates buyerId with User data (name, email)
-    const sampleReviews = [
-        {
-            _id: 'rev001',
-            productId: product?.id || '507f1f77bcf86cd799439011',
-            sellerId: product?.sellerId || '507f191e810c19729de860ea',
-            buyerId: {
-                _id: '507f1f77bcf86cd799439010',
-                name: 'John Doe',
-                email: 'john@example.com'
-            },
-            orderId: '507f1f77bcf86cd799439021',
-            rating: 5,
-            comment: 'This product exceeded my expectations. Great quality and fast shipping. Highly recommended!',
-            images: [],
-            status: 'visible',
-            createdAt: '2024-01-15T10:30:00Z',
-            updatedAt: '2024-01-15T10:30:00Z'
-        },
-        {
-            _id: 'rev002',
-            productId: product?.id || '507f1f77bcf86cd799439011',
-            sellerId: product?.sellerId || '507f191e810c19729de860ea',
-            buyerId: {
-                _id: '507f1f77bcf86cd799439011',
-                name: 'Jane Smith',
-                email: 'jane@example.com'
-            },
-            orderId: '507f1f77bcf86cd799439022',
-            rating: 4,
-            comment: 'The product is good but the packaging could be better. Overall satisfied with the purchase.',
-            images: [],
-            status: 'visible',
-            createdAt: '2024-01-14T14:20:00Z',
-            updatedAt: '2024-01-14T14:20:00Z'
-        },
-        {
-            _id: 'rev003',
-            productId: product?.id || '507f1f77bcf86cd799439011',
-            sellerId: product?.sellerId || '507f191e810c19729de860ea',
-            buyerId: {
-                _id: '507f1f77bcf86cd799439012',
-                name: 'Mike Johnson',
-                email: 'mike@example.com'
-            },
-            orderId: '507f1f77bcf86cd799439023',
-            rating: 3,
-            comment: 'It works but nothing special. Expected more for the price.',
-            images: [],
-            status: 'visible',
-            createdAt: '2024-01-13T16:45:00Z',
-            updatedAt: '2024-01-13T16:45:00Z'
-        },
-        {
-            _id: 'rev004',
-            productId: product?.id || '507f1f77bcf86cd799439011',
-            sellerId: product?.sellerId || '507f191e810c19729de860ea',
-            buyerId: {
-                _id: '507f1f77bcf86cd799439013',
-                name: 'Sarah Williams',
-                email: 'sarah@example.com'
-            },
-            orderId: '507f1f77bcf86cd799439024',
-            rating: 5,
-            comment: 'Perfect product! Exactly as described. Will definitely buy again.',
-            images: [],
-            status: 'visible',
-            createdAt: '2024-01-12T11:15:00Z',
-            updatedAt: '2024-01-12T11:15:00Z'
-        },
-        {
-            _id: 'rev005',
-            productId: product?.id || '507f1f77bcf86cd799439011',
-            sellerId: product?.sellerId || '507f191e810c19729de860ea',
-            buyerId: {
-                _id: '507f1f77bcf86cd799439014',
-                name: 'David Brown',
-                email: 'david@example.com'
-            },
-            orderId: '507f1f77bcf86cd799439025',
-            rating: 2,
-            comment: 'The product arrived damaged. Poor quality control.',
-            images: [],
-            status: 'visible',
-            createdAt: '2024-01-11T09:30:00Z',
-            updatedAt: '2024-01-11T09:30:00Z'
-        }
-    ];
+    // Fetch reviews from backend
+    useEffect(() => {
+        const fetchReviews = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                
+                let response;
+                if (product && product._id) {
+                    // Fetch reviews for specific product
+                    response = await api.get(`/reviews/product/${product._id}`);
+                } else {
+                    // Fetch all seller reviews (seller stats endpoint)
+                    response = await api.get('/reviews/me/seller/stats');
+                }
+                
+                if (response.data.success) {
+                    setReviews(response.data.data || []);
+                }
+            } catch (err) {
+                console.error('Failed to fetch reviews:', err);
+                setError('Failed to load reviews');
+                setReviews([]);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    const [reviews, setReviews] = useState(sampleReviews);
+        fetchReviews();
+    }, [product]);
 
     // Filter reviews
     const filteredReviews = reviews.filter(review => {
@@ -227,7 +169,11 @@ const ReviewManagement = ({ product, onBack }) => {
 
                         {/* Reviews List */}
                         <div className="reviews-list">
-                            {filteredReviews.length > 0 ? (
+                            {loading ? (
+                                <div className="loading-state">Loading reviews...</div>
+                            ) : error ? (
+                                <div className="error-state">{error}</div>
+                            ) : filteredReviews.length > 0 ? (
                                 filteredReviews.map(review => (
                                     <div key={review._id} className={`review-card ${review.status === 'visible' ? '' : review.status}`}>
                                         <div className="review-card-header">
