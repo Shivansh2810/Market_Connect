@@ -23,7 +23,9 @@ const CustomerService = ({ onBack }) => {
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [sessionId, setSessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+    const [sessionId, setSessionId] = useState(
+        () => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    );
     const [faqs, setFaqs] = useState([]);
     const [openFaqIndex, setOpenFaqIndex] = useState(null);
     const [savedChats, setSavedChats] = useState([]);
