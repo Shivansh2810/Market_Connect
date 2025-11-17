@@ -13,12 +13,15 @@ import {
     faCreditCard,
     faCog,
     faSignOutAlt,
-    faArrowLeft
+    faArrowLeft,
+    faUndo
 } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../../api/axios';
 import { getCurrentUserProfile, getCurrentUserOrders, updateCurrentUserProfile } from '../../../api/user';
+import { requestReturn } from '../../../api/return';
+import { createReview } from '../../../api/review';
 
 const Profile = ({ onBack }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -29,6 +32,22 @@ const Profile = ({ onBack }) => {
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [showReturnModal, setShowReturnModal] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [returnReason, setReturnReason] = useState('');
+    const [returnDescription, setReturnDescription] = useState('');
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [submittingReturn, setSubmittingReturn] = useState(false);
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [reviewData, setReviewData] = useState({
+        orderId: '',
+        productId: '',
+        productName: '',
+        rating: 0,
+        comment: ''
+    });
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [reviewedProducts, setReviewedProducts] = useState(new Set());
 
     const navigate = useNavigate();
     const { logout } = useAuth();
@@ -138,6 +157,134 @@ const Profile = ({ onBack }) => {
             setError(message);
         } finally {
             setDeleting(false);
+        }
+    };
+
+    const handleReturnOrder = (order) => {
+        setSelectedOrder(order);
+        setSelectedItems(order.orderItems.map(item => ({
+            productId: item.product._id || item.product,
+            quantity: item.quantity,
+            selected: true
+        })));
+        setReturnReason('');
+        setReturnDescription('');
+        setShowReturnModal(true);
+    };
+
+    const handleItemSelection = (productId, checked) => {
+        setSelectedItems(prev => 
+            prev.map(item => 
+                item.productId === productId 
+                    ? { ...item, selected: checked }
+                    : item
+            )
+        );
+    };
+
+    const handleSubmitReturn = async () => {
+        if (!returnReason) {
+            alert('Please select a reason for return');
+            return;
+        }
+
+        const itemsToReturn = selectedItems.filter(item => item.selected);
+        if (itemsToReturn.length === 0) {
+            alert('Please select at least one item to return');
+            return;
+        }
+
+        try {
+            setSubmittingReturn(true);
+            setError('');
+
+            const returnData = {
+                orderId: selectedOrder._id,
+                items: itemsToReturn.map(item => ({
+                    productId: item.productId,
+                    quantity: item.quantity
+                })),
+                reason: returnReason,
+                description: returnDescription
+            };
+
+            await requestReturn(returnData);
+            
+            alert('Return request submitted successfully! Awaiting seller approval.');
+            setShowReturnModal(false);
+            
+            // Refresh orders
+            const ordersResponse = await getCurrentUserOrders();
+            if (ordersResponse?.success && Array.isArray(ordersResponse.data)) {
+                setOrderHistory(ordersResponse.data);
+            }
+        } catch (returnError) {
+            console.error('Failed to submit return request', returnError);
+            const message = returnError.response?.data?.message || 'Failed to submit return request';
+            alert(message);
+        } finally {
+            setSubmittingReturn(false);
+        }
+    };
+
+    const canReturnOrder = (order) => {
+        return order.orderStatus === 'Delivered';
+    };
+
+    const handleWriteReview = (order, item) => {
+        const productId = item.product._id || item.product;
+        setReviewData({
+            orderId: order._id,
+            productId: productId,
+            productName: item.name,
+            rating: 0,
+            comment: ''
+        });
+        setShowReviewModal(true);
+    };
+
+    const handleRatingClick = (rating) => {
+        setReviewData(prev => ({ ...prev, rating }));
+    };
+
+    const handleSubmitReview = async () => {
+        if (reviewData.rating === 0) {
+            alert('Please select a rating');
+            return;
+        }
+
+        try {
+            setSubmittingReview(true);
+            setError('');
+
+            const payload = {
+                productId: reviewData.productId,
+                orderId: reviewData.orderId,
+                rating: reviewData.rating,
+                comment: reviewData.comment || '',
+                images: [] // Can be extended for image upload
+            };
+
+            await createReview(payload);
+            
+            // Add to reviewed products set
+            setReviewedProducts(prev => new Set([...prev, reviewData.productId]));
+            
+            alert('Review submitted successfully! Thank you for your feedback.');
+            setShowReviewModal(false);
+            setReviewData({
+                orderId: '',
+                productId: '',
+                productName: '',
+                rating: 0,
+                comment: ''
+            });
+        } catch (reviewError) {
+            console.error('Failed to submit review', reviewError);
+            const message = reviewError.response?.data?.message || 'Failed to submit review';
+            alert(message);
+        } finally {
+            setSubmittingReview(false);
         }
     };
 
@@ -311,15 +458,49 @@ const Profile = ({ onBack }) => {
                                         <strong>Items ({totalItems}):</strong>
                                         <ul>
                                             {order.orderItems.map((item, index) => (
-                                                <li key={index} style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px'}}>
-                                                    {item.image && (
-                                                        <img 
-                                                            src={item.image} 
-                                                            alt={item.name}
-                                                            style={{width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px'}}
-                                                        />
+                                                <li key={index} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '6px'}}>
+                                                    <div style={{display: 'flex', alignItems: 'center', gap: '10px', flex: 1}}>
+                                                        {item.image && (
+                                                            <img 
+                                                                src={item.image} 
+                                                                alt={item.name}
+                                                                style={{width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px'}}
+                                                            />
+                                                        )}
+                                                        <div>
+                                                            <div style={{fontWeight: '500'}}>{item.name}</div>
+                                                            <div style={{fontSize: '13px', color: '#666'}}>Qty: {item.quantity} - ₹{item.price * item.quantity}</div>
+                                                        </div>
+                                                    </div>
+                                                    {order.orderStatus === 'Delivered' && (
+                                                        reviewedProducts.has(item.product._id || item.product) ? (
+                                                            <span style={{
+                                                                padding: '6px 12px',
+                                                                fontSize: '12px',
+                                                                color: '#28a745',
+                                                                fontWeight: '500',
+                                                                whiteSpace: 'nowrap'
+                                                            }}>
+                                                                ✓ Reviewed
+                                                            </span>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleWriteReview(order, item)}
+                                                                style={{
+                                                                    padding: '6px 12px',
+                                                                    fontSize: '12px',
+                                                                    backgroundColor: '#3c009d',
+                                                                    color: 'white',
+                                                                    border: 'none',
+                                                                    borderRadius: '4px',
+                                                                    cursor: 'pointer',
+                                                                    whiteSpace: 'nowrap'
+                                                                }}
+                                                            >
+                                                                Write Review
+                                                            </button>
+                                                        )
                                                     )}
-                                                    <span>{item.name} x {item.quantity} - ₹{item.price * item.quantity}</span>
                                                 </li>
                                             ))}
                                         </ul>
@@ -341,6 +522,18 @@ const Profile = ({ onBack }) => {
                                         </div>
                                     </div>
                                 </div>
+                                {canReturnOrder(order) && (
+                                    <div className="order-actions" style={{marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee'}}>
+                                        <button 
+                                            className="btn btn-secondary"
+                                            onClick={() => handleReturnOrder(order)}
+                                            style={{display: 'flex', alignItems: 'center', gap: '8px'}}
+                                        >
+                                            <FontAwesomeIcon icon={faUndo} />
+                                            Request Return
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -455,6 +648,178 @@ const Profile = ({ onBack }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Return Order Modal */}
+            {showReturnModal && selectedOrder && (
+                <div className="modal-overlay" onClick={() => setShowReturnModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Request Return</h2>
+                            <button className="modal-close" onClick={() => setShowReturnModal(false)}>
+                                <FontAwesomeIcon icon={faTimes} />
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <p style={{marginBottom: '15px', color: '#666'}}>
+                                Order #{selectedOrder._id.substring(selectedOrder._id.length - 8)}
+                            </p>
+
+                            <div className="form-group">
+                                <label>Select Items to Return:</label>
+                                <div className="return-items-list">
+                                    {selectedOrder.orderItems.map((item, index) => (
+                                        <div key={index} className="return-item-checkbox">
+                                            <input
+                                                type="checkbox"
+                                                id={`item-${index}`}
+                                                checked={selectedItems[index]?.selected || false}
+                                                onChange={(e) => handleItemSelection(
+                                                    item.product._id || item.product,
+                                                    e.target.checked
+                                                )}
+                                            />
+                                            <label htmlFor={`item-${index}`}>
+                                                {item.image && (
+                                                    <img 
+                                                        src={item.image} 
+                                                        alt={item.name}
+                                                        style={{width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', marginRight: '10px'}}
+                                                    />
+                                                )}
+                                                <span>{item.name} x {item.quantity} - ₹{item.price * item.quantity}</span>
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Reason for Return *</label>
+                                <select 
+                                    value={returnReason} 
+                                    onChange={(e) => setReturnReason(e.target.value)}
+                                    className="form-input"
+                                    required
+                                >
+                                    <option value="">Select a reason</option>
+                                    <option value="Damaged Item">Damaged Item</option>
+                                    <option value="Wrong Item Sent">Wrong Item Sent</option>
+                                    <option value="Item Not as Described">Item Not as Described</option>
+                                    <option value="Size Issue">Size Issue</option>
+                                    <option value="No Longer Needed">No Longer Needed</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Additional Details (Optional)</label>
+                                <textarea
+                                    value={returnDescription}
+                                    onChange={(e) => setReturnDescription(e.target.value)}
+                                    className="form-input"
+                                    rows="4"
+                                    placeholder="Please provide any additional information about your return request..."
+                                />
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button 
+                                className="btn btn-secondary" 
+                                onClick={() => setShowReturnModal(false)}
+                                disabled={submittingReturn}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={handleSubmitReturn}
+                                disabled={submittingReturn}
+                            >
+                                {submittingReturn ? 'Submitting...' : 'Submit Return Request'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Review Modal */}
+            {showReviewModal && (
+                <div className="modal-overlay" onClick={() => setShowReviewModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Write a Review</h2>
+                            <button className="modal-close" onClick={() => setShowReviewModal(false)}>
+                                <FontAwesomeIcon icon={faTimes} />
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <p style={{marginBottom: '20px', color: '#666', fontWeight: '500'}}>
+                                {reviewData.productName}
+                            </p>
+
+                            <div className="form-group">
+                                <label>Your Rating *</label>
+                                <div className="star-rating-input">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            className={`star-btn ${star <= reviewData.rating ? 'filled' : ''}`}
+                                            onClick={() => handleRatingClick(star)}
+                                        >
+                                            ★
+                                        </button>
+                                    ))}
+                                </div>
+                                {reviewData.rating > 0 && (
+                                    <p style={{marginTop: '8px', fontSize: '14px', color: '#666'}}>
+                                        {reviewData.rating === 1 && 'Poor'}
+                                        {reviewData.rating === 2 && 'Fair'}
+                                        {reviewData.rating === 3 && 'Good'}
+                                        {reviewData.rating === 4 && 'Very Good'}
+                                        {reviewData.rating === 5 && 'Excellent'}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="form-group">
+                                <label>Your Review (Optional)</label>
+                                <textarea
+                                    value={reviewData.comment}
+                                    onChange={(e) => setReviewData(prev => ({ ...prev, comment: e.target.value }))}
+                                    className="form-input"
+                                    rows="6"
+                                    placeholder="Share your experience with this product..."
+                                    maxLength="3000"
+                                />
+                                <p style={{fontSize: '12px', color: '#999', marginTop: '5px', textAlign: 'right'}}>
+                                    {reviewData.comment.length}/3000
+                                </p>
+                            </div>
+
+                            <div style={{padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px', fontSize: '13px', color: '#666'}}>
+                                <strong>Note:</strong> Your review will be visible to other customers. Please be honest and respectful.
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button 
+                                className="btn btn-secondary" 
+                                onClick={() => setShowReviewModal(false)}
+                                disabled={submittingReview}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={handleSubmitReview}
+                                disabled={submittingReview || reviewData.rating === 0}
+                            >
+                                {submittingReview ? 'Submitting...' : 'Submit Review'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
