@@ -21,7 +21,7 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    const { orderItems, shippingInfo, payment } = req.body;
+    const { orderItems, shippingInfo } = req.body;
 
     // verifying user existence
     const user = await User.findById(req.user._id).populate(
@@ -97,7 +97,7 @@ exports.createOrder = async (req, res) => {
       seller: assignedSeller, // assigned through above logic
       shippingInfo,
       orderItems: finalOrderItems,
-      payment,
+      // payment will be added later when payment is initiated
       itemsPrice,
       taxPrice,
       shippingPrice,

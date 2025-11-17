@@ -1,0 +1,162 @@
+.available-coupons {
+  margin-bottom: 12px;
+}
+
+.available-coupons-loading {
+  padding: 12px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.toggle-coupons-btn {
+  width: 100%;
+  padding: 10px 12px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2563eb;
+  text-align: left;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-coupons-btn:hover {
+  background-color: #eff6ff;
+  border-color: #2563eb;
+}
+
+.coupons-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.coupon-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: #fff;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.coupon-card:hover {
+  border-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+}
+
+.coupon-card.not-applicable {
+  opacity: 0.6;
+  border-color: #e2e8f0;
+}
+
+.coupon-card.not-applicable:hover {
+  border-color: #e2e8f0;
+  box-shadow: none;
+}
+
+.coupon-code-badge {
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.coupon-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coupon-description {
+  margin: 0;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.coupon-details-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.coupon-discount-text {
+  color: #22c55e;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.coupon-min-order {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.coupon-validity {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.btn-apply-coupon-card {
+  padding: 8px 16px;
+  background-color: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-apply-coupon-card:hover {
+  background-color: #1d4ed8;
+}
+
+.not-applicable-text {
+  padding: 8px 12px;
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* Scrollbar styling */
+.coupons-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.coupons-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.coupons-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.coupons-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

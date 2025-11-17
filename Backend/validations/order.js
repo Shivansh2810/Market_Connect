@@ -2,7 +2,10 @@ const Joi = require('joi');
 const addressSchema = require("./sharedSchema");
 
 const orderItemSchema = Joi.object({
-    productId: Joi.string().hex().length(24).required(),
+    productId: Joi.alternatives().try(
+        Joi.string().hex().length(24), // Valid MongoDB ObjectId
+        Joi.string().valid('cart')      // Special case for cart orders
+    ).required(),
     quantity: Joi.number().integer().min(1).required()
 });
 
