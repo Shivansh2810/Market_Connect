@@ -178,13 +178,16 @@ const AuctionDetail = () => {
               {(localAuction.bids || []).length === 0 ? (
                 <div className="bid-item">No bids yet</div>
               ) : (
-                localAuction.bids.map((b, idx) => (
-                  <div key={b.id} className={`bid-item ${idx === 0 ? 'latest' : ''}`}>
+                localAuction.bids.map((b, idx) => {
+                  const key = b.id || `${idx}-${b.amount}-${b.time || ''}`;
+                  return (
+                  <div key={key} className={`bid-item ${idx === 0 ? 'latest' : ''}`}>
                     <span className="bid-bidder">{b.bidder}</span>
                     <span className="bid-amount">₹{b.amount}</span>
                     <span className="bid-time">{new Date(b.time).toLocaleString()}</span>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

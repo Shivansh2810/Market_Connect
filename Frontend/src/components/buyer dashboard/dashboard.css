@@ -62,13 +62,13 @@
 }
 
 .mobile-menu-btn {
-    display: none;
+    display: none; /* hidden by default (desktop / larger screens) */
     background: none;
     border: none;
     color: white;
     font-size: 20px;
     cursor: pointer;
-    padding: 8px;
+    padding: 4px 6px; /* tighter click area around icon */
     border-radius: 4px;
     transition: background-color 0.3s;
 }
@@ -883,9 +883,8 @@
     
     .mobile-menu-btn {
         display: block;
-        order: 2;
         position: absolute;
-        right: 12px;
+        left: 10px;
         top: 8px;
         transform: none;
     }
@@ -989,11 +988,10 @@
     
     .mobile-menu-btn {
         display: block;
-        order: 2;
         font-size: 18px;
-        padding: 6px;
+        padding: 4px 6px;
         position: absolute;
-        right: 12px;
+        left: 10px;
         top: 6px;
         transform: none;
     }

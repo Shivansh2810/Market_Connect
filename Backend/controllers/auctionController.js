@@ -57,7 +57,34 @@ exports.getActiveAuctions = async (req, res) => {
       "auctionDetails.endTime": { $gt: now },
     })
       .populate("sellerId", "name")
+      .populate({
+        path: "auctionDetails.bidHistory",
+        populate: { path: "user", select: "name" },
+        options: { sort: { createdAt: -1 } },
+      })
       .sort({ "auctionDetails.endTime": 1 });
+
+    res.status(200).json({ success: true, data: auctions });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+exports.getUpcomingAuctions = async (req, res) => {
+  try {
+    const now = new Date();
+    const auctions = await Product.find({
+      isAuction: true,
+      "auctionDetails.status": "Pending",
+      "auctionDetails.startTime": { $gt: now },
+    })
+      .populate("sellerId", "name")
+      .populate({
+        path: "auctionDetails.bidHistory",
+        populate: { path: "user", select: "name" },
+        options: { sort: { createdAt: -1 } },
+      })
+      .sort({ "auctionDetails.startTime": 1 });
 
     res.status(200).json({ success: true, data: auctions });
   } catch (error) {
