@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import './ProductDetail.css'; // <-- Make sure this file exists
+import React, { useState, useEffect } from 'react';
+import './ProductDetail.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
     faArrowLeft,
@@ -13,24 +13,23 @@ import {
     faShieldAlt,
     faUser
 } from '@fortawesome/free-solid-svg-icons';
-import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
+import { getSimilarProducts } from '../../../api/product';
 
-// 1. ACCEPT 'reviews' PROP
 const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow }) => {
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [isInCart, setIsInCart] = useState(false);
+    const [similarProducts, setSimilarProducts] = useState([]);
+    const [loadingSimilar, setLoadingSimilar] = useState(false);
 
-    // 2. ADDED HELPER FUNCTIONS FOR REVIEWS
     const renderStars = (rating) => {
         const filledCount = Math.max(0, Math.min(5, Math.floor(rating || 0)));
-        console.log('ratingAvg for product detail:', product.ratingAvg);
         return [...Array(5)].map((_, i) => {
             const isFilled = i < filledCount;
             return (
                 <FontAwesomeIcon 
                     key={i} 
-                    icon={isFilled ? faStar : faStarRegular} 
+                    icon={faStar} 
                     className={isFilled ? "filled" : ""}
                 />
             );
@@ -90,10 +89,34 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
 
     const conditionInfo = getConditionBadge(product.condition || 'new');
     
-    // 3. SELLER NAME LOGIC (this will now work correctly)
     const sellerName = (product.sellerId && typeof product.sellerId === 'object')
         ? product.sellerId.sellerInfo?.shopName || product.sellerId.name || 'Seller'
-        : 'Market Connect'; // Fallback if sellerId is somehow missing
+        : 'Market Connect';
+
+    useEffect(() => {
+        const fetchSimilarProducts = async () => {
+            if (!product?._id) return;
+            
+            try {
+                setLoadingSimilar(true);
+                const response = await getSimilarProducts(product._id);
+                if (response.success && response.products) {
+                    setSimilarProducts(response.products);
+                }
+            } catch (error) {
+                console.error('Error fetching similar products:', error);
+            } finally {
+                setLoadingSimilar(false);
+            }
+        };
+
+        fetchSimilarProducts();
+    }, [product?._id]);
+
+    const handleSimilarProductClick = (similarProduct) => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.location.href = `/dashboard/products/${similarProduct._id}`;
+    };
 
     return (
         <div className="product-detail-page">
@@ -322,7 +345,60 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
                         <p>No reviews yet for this product.</p>
                     )}
                 </div>
-                {/* --- END OF NEW SECTION --- */}
+
+                {similarProducts.length > 0 && (
+                    <div className="similar-products-section">
+                        <h2 className="similar-products-title">Similar Products You May Like</h2>
+                        {loadingSimilar ? (
+                            <div className="similar-products-loading">
+                                <p>Loading similar products...</p>
+                            </div>
+                        ) : (
+                            <div className="similar-products-grid">
+                                {similarProducts.map((similarProduct) => {
+                                    const similarPrimaryImage = similarProduct.images?.find(img => img.isPrimary)?.url 
+                                        || similarProduct.images?.[0]?.url 
+                                        || 'https://via.placeholder.com/300x300?text=No+Image';
+                                    
+                                    return (
+                                        <div 
+                                            key={similarProduct._id} 
+                                            className="similar-product-card"
+                                            onClick={() => handleSimilarProductClick(similarProduct)}
+                                        >
+                                            <div className="similar-product-image">
+                                                <img src={similarPrimaryImage} alt={similarProduct.title} />
+                                                {similarProduct.stock <= 0 && (
+                                                    <div className="out-of-stock-overlay">Out of Stock</div>
+                                                )}
+                                            </div>
+                                            <div className="similar-product-info">
+                                                <h4 className="similar-product-title">{similarProduct.title}</h4>
+                                                <div className="similar-product-rating">
+                                                    <div className="stars">
+                                                        {[...Array(5)].map((_, i) => (
+                                                            <FontAwesomeIcon 
+                                                                key={i} 
+                                                                icon={faStar} 
+                                                                className={i < Math.floor(similarProduct.ratingAvg || 0) ? 'filled' : ''}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                    <span className="rating-count">({similarProduct.ratingCount || 0})</span>
+                                                </div>
+                                                <div className="similar-product-price">
+                                                    <span className="price">
+                                                        {similarProduct.currency === 'USD' ? '$' : '₹'}{similarProduct.price}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
 
             </div>
         </div>
