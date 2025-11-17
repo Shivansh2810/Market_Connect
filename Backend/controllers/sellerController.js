@@ -4,8 +4,6 @@ const mongoose = require("mongoose");
 const Product = require("../models/product");
 const Review = require("../models/review");
 
-// GET /api/seller/my-sales
-// Uses per-item Product.sellerId to include cart orders containing this seller's items.
 const getMySales = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -50,7 +48,7 @@ const getMySales = async (req, res) => {
           },
         },
       },
-      // hydrate buyer basic info
+      
       {
         $lookup: {
           from: "users",
@@ -96,7 +94,7 @@ const getMySales = async (req, res) => {
   }
 };
 
-// GET /api/seller/my-returns
+
 const getMyReturns = async (req, res) => {
   try {
     const returns = await Return.find({ seller: req.user._id })
@@ -110,7 +108,7 @@ const getMyReturns = async (req, res) => {
   }
 };
 
-// PUT /api/seller/my-returns/:id/status
+
 const updateReturnStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -122,7 +120,7 @@ const updateReturnStatus = async (req, res) => {
     if (ret.seller.toString() !== req.user._id.toString())
       return res.status(403).json({ message: "Access denied" });
 
-    // basic allowed statuses for seller actions
+    
     const allowed = ["Approved", "Rejected", "Received by Seller", "Completed"];
     if (status && !allowed.includes(status))
       return res.status(400).json({ message: "Invalid status" });
@@ -139,14 +137,11 @@ const updateReturnStatus = async (req, res) => {
   }
 };
 
-// GET /api/seller/dashboard
-// Computes stats per seller-owned items rather than order-level seller.
+
 const getDashboardStats = async (req, res) => {
   try {
     const sellerObjId = new mongoose.Types.ObjectId(req.user._id);
 
-    // totalOrders (distinct orders with any seller-owned item)
-    // totalRevenue (sum of price*qty for seller-owned items) excluding cancelled/payment failed
     const [agg] = await Order.aggregate([
       { $match: { orderStatus: { $nin: ["Cancelled", "Payment Failed"] } } },
       { $unwind: "$orderItems" },
@@ -181,19 +176,17 @@ const getDashboardStats = async (req, res) => {
     const totalOrders = agg?.totalOrders || 0;
     const totalRevenue = agg?.totalRevenue || 0;
 
-    // total products (owned by seller)
     const totalProducts = await Product.countDocuments({
       sellerId: sellerObjId,
       isDeleted: false,
     });
 
-    // pending returns (kept by seller field in returns model)
+
     const pendingReturns = await Return.countDocuments({
       seller: sellerObjId,
       status: "Requested",
     });
 
-    // average rating for seller
     const [ratingAgg] = await Review.aggregate([
       { $match: { sellerId: sellerObjId, status: "visible" } },
       {
@@ -208,7 +201,6 @@ const getDashboardStats = async (req, res) => {
     const avgRating = ratingAgg ? ratingAgg.avgRating : 0;
     const ratingCount = ratingAgg ? ratingAgg.ratingCount : 0;
 
-    // top products by quantity sold for this seller
     const topProducts = await Order.aggregate([
       { $unwind: "$orderItems" },
       {
@@ -268,7 +260,6 @@ const getDashboardStats = async (req, res) => {
 
 module.exports = {
   getMySales,
-  // getMySaleById removed; use `GET /api/orders/:orderId` (orderController.getOrderById)
   getMyReturns,
   updateReturnStatus,
   getDashboardStats,
