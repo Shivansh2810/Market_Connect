@@ -1,4 +1,8 @@
+<<<<<<< HEAD
  const express = require("express");
+=======
+/* const express = require("express");
+>>>>>>> 5db66cf7a98cd23d4abdedf7daa79b0a13d21c30
 const router = express.Router();
 const returnController = require("../controllers/returnController");
 const { protect } = require("../middlewares/auth");
@@ -14,4 +18,4 @@ router.get("/seller/all", protect, returnController.getSellerReturns);
 router.put("/:returnId/approve", protect, returnController.approveReturn);
 router.put("/:returnId/reject", protect, returnController.rejectReturn);
 
-module.exports = router;
+module.exports = router; */
