@@ -1,7 +1,7 @@
 import api from "./axios";
 
-export const applyCoupon = async (code) =>
-  (await api.post("/coupons/apply", { code })).data;
+export const applyCoupon = async (couponCode, cartValue) =>
+  (await api.post("/coupons/apply", { couponCode, cartValue })).data;
 
 export const getAllCoupons = async () => {
   try {

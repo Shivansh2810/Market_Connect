@@ -79,12 +79,12 @@ const CustomerService = ({ onBack }) => {
 
     const handleLoadChat = async (chatSummary) => {
         try {
-            const res = await api.get(/chats/${chatSummary.sessionId});
+            const res = await api.get(`/chats/${chatSummary.sessionId}`);
             const chatData = res.data && res.data.data ? res.data.data : null;
             if (chatData && Array.isArray(chatData.messages)) {
                 setSessionId(chatData.sessionId);
                 const restoredMessages = chatData.messages.map((m, idx) => ({
-                    id: ${chatData._id || 'chat'}_${idx}_${Date.now()},
+                    id: `${chatData._id || 'chat'}_${idx}_${Date.now()}`,
                     text: m.text,
                     sender: m.sender,
                     timestamp: m.timestamp || new Date().toISOString(),
@@ -117,7 +117,7 @@ const CustomerService = ({ onBack }) => {
 
             try {
                 // Send message to Python chatbot API
-                const response = await fetch(${CHATBOT_API_URL}/message, {
+                const response = await fetch(`${CHATBOT_API_URL}/message`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -129,7 +129,7 @@ const CustomerService = ({ onBack }) => {
                 });
 
                 if (!response.ok) {
-                    throw new Error(HTTP error! status: ${response.status});
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -199,7 +199,7 @@ const CustomerService = ({ onBack }) => {
 
         try {
             // Send message to Python chatbot API
-            const response = await fetch(${CHATBOT_API_URL}/message, {
+            const response = await fetch(`${CHATBOT_API_URL}/message`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -211,7 +211,7 @@ const CustomerService = ({ onBack }) => {
             });
 
             if (!response.ok) {
-                throw new Error(HTTP error! status: ${response.status});
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
@@ -264,7 +264,7 @@ const CustomerService = ({ onBack }) => {
 
     const handleResetConversation = async () => {
         try {
-            await fetch(${CHATBOT_API_URL}/reset, {
+            await fetch(`${CHATBOT_API_URL}/reset`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -430,7 +430,7 @@ const CustomerService = ({ onBack }) => {
                                     {messages.map(message => (
                                         <div 
                                             key={message.id} 
-                                            className={message ${message.sender === 'user' ? 'user-message' : 'bot-message'} ${message.isError ? 'error-message' : ''}}
+                                            className={`message ${message.sender === 'user' ? 'user-message' : 'bot-message'} ${message.isError ? 'error-message' : ''}`}
                                         >
                                             <div className="message-content">
                                                 {message.sender === 'bot' && (
@@ -509,7 +509,7 @@ const CustomerService = ({ onBack }) => {
                             ) : (
                                 <div className="faq-list">
                                     {faqs.map((f, idx) => (
-                                        <div key={f._id || idx} className={faq-item ${openFaqIndex === idx ? 'open' : ''}}>
+                                        <div key={f._id || idx} className={`faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
                                             <button 
                                                 className="faq-question"
                                                 onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
