@@ -24,8 +24,7 @@ const orderRoutes = require("./routes/order");
 const productRoutes = require("./routes/product");
 const categoryRoutes = require("./routes/category");
 const paymentRoutes = require("./routes/payment");
-// commented for time-being to solve errors
-//const returnRoutes = require("./routes/return");
+const returnRoutes = require("./routes/return");
 const analyticsRoutes = require('./routes/sellerAnalyticsRoutes.js');
 const auctionRoutes = require('./routes/auctionRoutes');
 const chatRoutes = require("./routes/chat");
@@ -64,8 +63,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
-// commented for time-being to solve errors
-//app.use("/api/returns", returnRoutes);
+app.use("/api/returns", returnRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use("/api/chats", chatRoutes);
