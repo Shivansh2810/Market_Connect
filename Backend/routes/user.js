@@ -35,7 +35,7 @@ router.post("/admin/login", validate(adminLoginSchema), userController.adminLogi
 
 router.put(
   "/upgradetoseller",
-  protect,
+  protect, 
   validate(upgradeToSellerSchema),
   userController.upgradeToSeller
 );
