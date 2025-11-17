@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createOrder } from '../../api/order';
+import { applyCoupon } from '../../api/coupon';
 import PaymentGateway from '../components/payment/PaymentGateway';
+import AvailableCoupons from '../components/payment/AvailableCoupons';
 import './CheckoutPage.css';
 
 const CheckoutPage = () => {
@@ -21,6 +23,12 @@ const CheckoutPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showShippingForm, setShowShippingForm] = useState(true);
+  
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState(null);
 
   const handleShippingChange = (e) => {
     const { name, value } = e.target;
@@ -28,6 +36,51 @@ const CheckoutPage = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    try {
+      setCouponLoading(true);
+      setCouponError(null);
+
+      // Calculate cart value before tax and shipping
+      const cartValue = totalAmount;
+
+      const response = await applyCoupon(couponCode.trim().toUpperCase(), cartValue);
+
+      if (response.success) {
+        setAppliedCoupon(response.data);
+        setCouponError(null);
+      } else {
+        setCouponError(response.message || 'Failed to apply coupon');
+        setAppliedCoupon(null);
+      }
+    } catch (err) {
+      console.error('Coupon application error:', err);
+      setCouponError(err.response?.data?.message || 'Invalid or expired coupon');
+      setAppliedCoupon(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError(null);
+  };
+
+  const handleSelectCoupon = (code) => {
+    setCouponCode(code);
+    // Auto-apply the selected coupon
+    setTimeout(() => {
+      handleApplyCoupon();
+    }, 100);
   };
 
   const validateShippingInfo = () => {
@@ -59,30 +112,21 @@ const CheckoutPage = () => {
       setLoading(true);
       setError(null);
 
-      // Prepare order items - convert cart items to order format
-      // If cart has multiple items, use "cart" format; otherwise use individual items
-      const orderItems = items.length > 1 
-        ? [{ productId: 'cart', quantity: 1 }] // Cart order format
-        : items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity
-          }));
+      // Prepare order items - send actual product IDs and quantities
+      // Since frontend cart is in localStorage (not synced to backend),
+      // we send the actual items instead of using "cart" keyword
+      const orderItems = items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }));
 
-      // Calculate prices (matching backend logic)
-      const itemsPrice = totalAmount;
-      const taxPrice = parseFloat((0.18 * itemsPrice).toFixed(2));
-      const shippingPrice = itemsPrice > 1000 ? 0 : 50;
-      const calculatedTotalPrice = itemsPrice + taxPrice + shippingPrice;
-
-      // Create order
-      // Note: Payment ID is required by validation, but payment will be created later
-      // We use a placeholder ObjectId format that passes validation
-      // The actual payment will be created and linked when user initiates payment
+      // Create order without payment field (payment will be created later)
       const orderData = {
         shippingInfo,
-        orderItems,
-        payment: '000000000000000000000000' // Placeholder ObjectId - payment created later
+        orderItems
       };
+
+      console.log('Creating order with data:', JSON.stringify(orderData, null, 2));
 
       const response = await createOrder(orderData);
 
@@ -95,13 +139,27 @@ const CheckoutPage = () => {
 
     } catch (err) {
       console.error('Order creation error:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to create order. Please try again.');
+      console.error('Error response:', err.response?.data);
+      
+      // Show detailed error message
+      let errorMessage = 'Failed to create order. Please try again.';
+      
+      if (err.response?.data?.errors) {
+        // Joi validation errors
+        errorMessage = err.response.data.errors.join(', ');
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePaymentSuccess = (paymentData) => {
+  const handlePaymentSuccess = () => {
     // Payment successful - clear cart and redirect
     clearCart();
     navigate('/dashboard', {
@@ -164,9 +222,11 @@ const CheckoutPage = () => {
 
   // Calculate prices for display
   const itemsPrice = totalAmount;
-  const taxPrice = parseFloat((0.18 * itemsPrice).toFixed(2));
-  const shippingPrice = itemsPrice > 1000 ? 0 : 50;
-  const finalTotalPrice = itemsPrice + taxPrice + shippingPrice;
+  const discountAmount = appliedCoupon?.cartSummary?.discountAmount || 0;
+  const priceAfterDiscount = itemsPrice - discountAmount;
+  const taxPrice = parseFloat((0.18 * priceAfterDiscount).toFixed(2));
+  const shippingPrice = priceAfterDiscount > 1000 ? 0 : 50;
+  const finalTotalPrice = priceAfterDiscount + taxPrice + shippingPrice;
 
   return (
     <div className="checkout-page">
@@ -316,12 +376,76 @@ const CheckoutPage = () => {
 
         {/* Right Column - Price Details */}
         <div className="checkout-right">
+          {/* Coupon Section */}
+          <div className="coupon-section">
+            <h3>Apply Coupon</h3>
+            {!appliedCoupon ? (
+              <>
+                <div className="coupon-input-group">
+                  <input
+                    type="text"
+                    placeholder="Enter coupon code"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    disabled={couponLoading}
+                    className="coupon-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="btn-apply-coupon"
+                  >
+                    {couponLoading ? 'Applying...' : 'Apply'}
+                  </button>
+                </div>
+                <AvailableCoupons 
+                  cartValue={totalAmount} 
+                  onSelectCoupon={handleSelectCoupon}
+                />
+              </>
+            ) : (
+              <div className="coupon-applied">
+                <div className="coupon-success">
+                  <span className="coupon-icon">✓</span>
+                  <div className="coupon-details">
+                    <strong>{appliedCoupon.coupon.code}</strong>
+                    <p>{appliedCoupon.coupon.description}</p>
+                    <span className="coupon-discount">
+                      You saved ₹{appliedCoupon.cartSummary.discountAmount.toFixed(2)}!
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="btn-remove-coupon"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+            {couponError && (
+              <div className="coupon-error">
+                {couponError}
+              </div>
+            )}
+          </div>
+
           <div className="price-details">
             <h2>Price Details</h2>
             <div className="price-row">
               <span>Items ({itemCount})</span>
               <span>₹{itemsPrice.toFixed(2)}</span>
             </div>
+            {appliedCoupon && (
+              <div className="price-row discount-row">
+                <span>Discount ({appliedCoupon.coupon.code})</span>
+                <span className="discount-amount">
+                  -₹{discountAmount.toFixed(2)}
+                </span>
+              </div>
+            )}
             <div className="price-row">
               <span>Tax (18% GST)</span>
               <span>₹{taxPrice.toFixed(2)}</span>
@@ -337,6 +461,11 @@ const CheckoutPage = () => {
               <span>Total Amount</span>
               <span>₹{finalTotalPrice.toFixed(2)}</span>
             </div>
+            {appliedCoupon && (
+              <div className="savings-info">
+                Total Savings: ₹{discountAmount.toFixed(2)}
+              </div>
+            )}
           </div>
 
           <button
