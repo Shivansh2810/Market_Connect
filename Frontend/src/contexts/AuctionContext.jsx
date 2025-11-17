@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import { getActiveAuctions as fetchActiveAuctions, getAuctionById } from '../../api/auction';
+import { getActiveAuctions as fetchActiveAuctions, getUpcomingAuctions as fetchUpcomingAuctions, getAuctionById } from '../../api/auction';
 import { useAuth } from './AuthContext';
 
 const AuctionContext = createContext(null);
 
 export const AuctionProvider = ({ children }) => {
   const [auctions, setAuctions] = useState([]);
+  const [upcomingAuctions, setUpcomingAuctions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const socketRef = useRef(null);
@@ -42,17 +43,25 @@ export const AuctionProvider = ({ children }) => {
       setError('');
       console.log('🔄 Loading auctions from backend...');
       
-      const data = await fetchActiveAuctions();
-      console.log('📦 Backend response:', data);
+      const [activeData, upcomingData] = await Promise.all([
+        fetchActiveAuctions(),
+        fetchUpcomingAuctions(),
+      ]);
+      console.log('📦 Active auctions response:', activeData);
+      console.log('📦 Upcoming auctions response:', upcomingData);
       
-      // backend may return array of products
-      const arr = Array.isArray(data) ? data : (data.data || []);
-      console.log('📋 Auctions array:', arr);
+      const activeArr = Array.isArray(activeData) ? activeData : (activeData.data || []);
+      const upcomingArr = Array.isArray(upcomingData) ? upcomingData : (upcomingData.data || []);
+      console.log('📋 Active auctions array:', activeArr);
+      console.log('📋 Upcoming auctions array:', upcomingArr);
       
-      const mapped = arr.map(transformProductToAuction);
-      console.log('✅ Transformed auctions:', mapped);
+      const mappedActive = activeArr.map(transformProductToAuction);
+      const mappedUpcoming = upcomingArr.map(transformProductToAuction);
+      console.log('✅ Transformed active auctions:', mappedActive);
+      console.log('✅ Transformed upcoming auctions:', mappedUpcoming);
       
-      setAuctions(mapped);
+      setAuctions(mappedActive);
+      setUpcomingAuctions(mappedUpcoming);
     } catch (err) {
       console.error('❌ Failed to load auctions:', err);
       setError(err.message || 'Failed to load auctions');
@@ -182,6 +191,7 @@ export const AuctionProvider = ({ children }) => {
 
   const value = useMemo(() => ({
     auctions,
+    upcomingAuctions,
     loading,
     error,
     refresh: loadAuctions,
@@ -198,7 +208,7 @@ export const AuctionProvider = ({ children }) => {
         throw err;
       }
     }
-  }), [auctions, loading, error, user]);
+  }), [auctions, upcomingAuctions, loading, error, user]);
 
   return <AuctionContext.Provider value={value}>{children}</AuctionContext.Provider>;
 };

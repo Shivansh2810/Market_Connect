@@ -11,6 +11,17 @@ export const getActiveAuctions = async () => {
   }
 };
 
+// Get upcoming auctions
+export const getUpcomingAuctions = async () => {
+  try {
+    const response = await api.get("/auctions/upcoming");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching upcoming auctions:", error);
+    throw error;
+  }
+};
+
 // Get auction by ID
 export const getAuctionById = async (id) => {
   try {
