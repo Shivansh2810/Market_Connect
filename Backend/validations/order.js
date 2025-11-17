@@ -9,7 +9,7 @@ const orderItemSchema = Joi.object({
 const createOrderSchema = Joi.object({
     shippingInfo: addressSchema.required(),
     orderItems: Joi.array().items(orderItemSchema).min(1).required(),
-    payment: Joi.string().hex().length(24).required()
+    //payment: Joi.string().hex().length(24).required()
 });
 
 const updateOrderStatusSchema = Joi.object({
