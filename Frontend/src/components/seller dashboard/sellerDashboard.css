@@ -1003,6 +1003,15 @@
     background-color: var(--primary-dark);
 }
 
+.btn-resolve.reject {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-resolve.reject:hover {
+    background-color: #5a6268;
+}
+
 .btn-view {
     padding: 6px 16px;
     background-color: var(--primary-color);
