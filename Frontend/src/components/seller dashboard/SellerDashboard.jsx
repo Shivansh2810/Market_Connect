@@ -260,19 +260,35 @@ const SellerDashboard = () => {
         }
     };
 
-    const handleReturnResolution = async (returnId, payload) => {
+    const handleReturnResolution = async (returnId, action) => {
         try {
-            await api.put(`/seller/my-returns/${returnId}/status`, payload);
-            setReturns(prev =>
-                prev.map(ret =>
-                    ret._id === returnId
-                        ? { ...ret, status: payload.status || ret.status, resolution: payload.resolution || ret.resolution }
-                        : ret
-                )
-            );
+            let endpoint, payload;
+            
+            if (action === 'approve') {
+                // Use the return controller approve endpoint (when uncommented)
+                endpoint = `/returns/${returnId}/approve`;
+                payload = {};
+            } else if (action === 'reject') {
+                // Use the return controller reject endpoint (when uncommented)
+                const reason = prompt('Please provide a reason for rejection:');
+                if (!reason) return;
+                endpoint = `/returns/${returnId}/reject`;
+                payload = { rejectionReason: reason };
+            } else {
+                // Fallback to seller endpoint for other status updates
+                endpoint = `/seller/my-returns/${returnId}/status`;
+                payload = action;
+            }
+
+            await api.put(endpoint, payload);
+            
+            // Refresh returns list
+            fetchReturns();
+            alert('Return status updated successfully');
         } catch (err) {
             console.error(err);
-            alert('Failed to update return');
+            const message = err.response?.data?.message || 'Failed to update return';
+            alert(message);
         }
     };
 
@@ -855,40 +871,60 @@ const SellerDashboard = () => {
                                             )}
                                             {filteredReturns.map(returnItem => (
                                                 <tr key={returnItem._id}>
-                                                    <td>{returnItem._id}</td>
-                                                    <td>{returnItem.order}</td>
+                                                    <td>{returnItem._id.substring(returnItem._id.length - 8)}</td>
+                                                    <td>{typeof returnItem.order === 'object' ? returnItem.order._id?.substring(returnItem.order._id.length - 8) : returnItem.order?.substring(returnItem.order.length - 8)}</td>
                                                     <td>{returnItem.buyer?.name || returnItem.buyer?.email || 'N/A'}</td>
-                                                    <td>{returnItem.reason}</td>
-                                                    <td>₹{returnItem.order?.totalPrice || returnItem.amount || 0}</td>
+                                                    <td>
+                                                        <div style={{maxWidth: '200px'}}>
+                                                            <strong>{returnItem.reason}</strong>
+                                                            {returnItem.description && (
+                                                                <div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>
+                                                                    {returnItem.description}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td>₹{returnItem.refundAmount?.toFixed(2) || returnItem.order?.totalPrice || 0}</td>
                                                     <td>
                                                         <span className={`badge status-${returnItem.status.toLowerCase().replace(/\s/g, '-')}`}>
                                                             {returnItem.status}
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        {returnItem.resolution ? (
-                                                            <span className="badge resolved">{returnItem.resolution}</span>
-                                                        ) : (
+                                                        {returnItem.status === 'Requested' ? (
                                                             <div className="resolution-buttons">
                                                                 <button
                                                                     className="btn-resolve refund"
-                                                                    onClick={() => handleReturnResolution(returnItem._id, { status: 'Approved', resolution: 'Refund' })}
+                                                                    onClick={() => handleReturnResolution(returnItem._id, 'approve')}
+                                                                    title="Approve return and process refund"
                                                                 >
-                                                                    Approve refund
+                                                                    Approve
                                                                 </button>
                                                                 <button
-                                                                    className="btn-resolve credit"
-                                                                    onClick={() => handleReturnResolution(returnItem._id, { status: 'Approved', resolution: 'Store Credit' })}
+                                                                    className="btn-resolve reject"
+                                                                    onClick={() => handleReturnResolution(returnItem._id, 'reject')}
+                                                                    title="Reject return request"
                                                                 >
-                                                                    Offer credit
+                                                                    Reject
                                                                 </button>
                                                             </div>
+                                                        ) : returnItem.status === 'Rejected' ? (
+                                                            <span style={{color: '#dc3545', fontSize: '12px'}}>
+                                                                {returnItem.rejectionReason || 'Rejected'}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="badge resolved">{returnItem.status}</span>
                                                         )}
                                                     </td>
                                                     <td>
                                                         <button 
                                                             className="btn-view"
-                                                            onClick={() => alert('Detailed return view coming soon')}
+                                                            onClick={() => {
+                                                                const items = returnItem.items?.map(item => 
+                                                                    `${item.name} x ${item.quantity} - ₹${item.price * item.quantity}`
+                                                                ).join('\n') || 'No items';
+                                                                alert(`Return Details:\n\nReturn ID: ${returnItem._id}\nReason: ${returnItem.reason}\nDescription: ${returnItem.description || 'N/A'}\nRefund Amount: ₹${returnItem.refundAmount}\n\nItems:\n${items}`);
+                                                            }}
                                                         >
                                                             View
                                                         </button>
@@ -910,31 +946,41 @@ const SellerDashboard = () => {
                             </div>
 
                             <div className="reviews-list">
-                                {products.map(product => (
-                                    <div key={product.id} className="review-card">
-                                        <div className="review-product">
-                                            <img src={product.image} alt={product.title} />
-                                            <div>
-                                                <h4>{product.title}</h4>
-                                                <div className="product-rating">
-                                                    <FontAwesomeIcon icon={faStar} />
-                                                    {product.rating.toFixed(1)} ({product.reviews} reviews)
+                                {isProductsLoading ? (
+                                    <div className="loading-state small">Loading products...</div>
+                                ) : products.length === 0 ? (
+                                    <div className="empty-state">No products found</div>
+                                ) : (
+                                    products.map(product => (
+                                        <div key={product.id || product._id} className="review-card">
+                                            <div className="review-product">
+                                                <img src={product.image} alt={product.title} />
+                                                <div>
+                                                    <h4>{product.title}</h4>
+                                                    <div className="product-rating">
+                                                        <FontAwesomeIcon icon={faStar} />
+                                                        {product.rating.toFixed(1)} ({product.reviews} reviews)
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <div className="review-actions">
+                                                <button 
+                                                    className="btn-view"
+                                                    onClick={() => {
+                                                        // Pass product with correct _id for API call
+                                                        setSelectedProduct({
+                                                            ...product,
+                                                            _id: product.id || product._id
+                                                        });
+                                                        setCurrentView('reviewManagement');
+                                                    }}
+                                                >
+                                                    View Reviews
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="review-actions">
-                                            <button 
-                                                className="btn-view"
-                                                onClick={() => {
-                                                    setSelectedProduct(product);
-                                                    setCurrentView('reviewManagement');
-                                                }}
-                                            >
-                                                View Reviews
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </div>
                         </>
                     )}

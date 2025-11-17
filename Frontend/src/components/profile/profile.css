@@ -578,3 +578,294 @@
         font-size: 20px;
     }
 }
+/* 
+Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: var(--border-radius);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 5px;
+    transition: var(--transition);
+}
+
+.modal-close:hover {
+    color: var(--danger-color);
+}
+
+.modal-body {
+    padding: 30px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    padding: 20px 30px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Return Items List */
+.return-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.return-item-checkbox {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+.return-item-checkbox:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(60, 0, 157, 0.05);
+}
+
+.return-item-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    cursor: pointer;
+}
+
+.return-item-checkbox label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    flex: 1;
+    margin: 0;
+    font-weight: normal;
+}
+
+.return-item-checkbox label span {
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+/* Order Actions */
+.order-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Additional Status Colors */
+.order-status.payment-pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.order-status.processing {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+
+.order-status.cancelled {
+    background-color: #f8d7da;
+    color: #842029;
+}
+
+.order-status.returned {
+    background-color: #e7e7e7;
+    color: #495057;
+}
+
+.order-status.refunded {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.order-status.partially-refunded {
+    background-color: #fff3cd;
+    color: #664d03;
+}
+
+/* Empty State */
+.profile-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    font-size: 16px;
+}
+
+/* Error Message */
+.profile-error-inline {
+    background-color: #f8d7da;
+    color: #842029;
+    padding: 12px 20px;
+    margin: 20px 30px;
+    border-radius: 8px;
+    border: 1px solid #f5c2c7;
+}
+
+/* Loading State */
+.profile-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 20px;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.profile-error {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.profile-error p {
+    color: var(--danger-color);
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+/* Addresses List */
+.addresses-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.address-card {
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.address-hint {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Shipping Info */
+.shipping-info {
+    margin-top: 10px;
+    padding: 8px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.shipping-info strong {
+    color: var(--text-primary);
+}
+
+/* Order Pricing */
+.order-pricing {
+    min-width: 200px;
+    text-align: right;
+}
+
+.order-pricing > div {
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.delivery-date {
+    color: var(--success-color);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Star Rating Input */
+.star-rating-input {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.star-btn {
+    background: none;
+    border: none;
+    font-size: 40px;
+    color: #ddd;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.star-btn:hover {
+    transform: scale(1.1);
+}
+
+.star-btn.filled {
+    color: #ffc107;
+}
+
+.star-btn:not(.filled):hover {
+    color: #ffdb4d;
+}
+
+/* Review Modal Specific Styles */
+.modal-content textarea.form-input {
+    font-family: inherit;
+    resize: vertical;
+}
+
+.modal-body .form-group:last-of-type {
+    margin-bottom: 20px;
+}
