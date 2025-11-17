@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
-// Create Nodemailer transporter
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Test transporter connection
+
 transporter.verify(function (error, success) {
   if (error) {
     console.log('Email transporter error:', error);
@@ -98,7 +98,6 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Check if user signed up with Google
     if (user.googleId && !user.password) {
       return res.status(401).json({
         message: "This account uses Google login. Please use Google login.",
@@ -374,7 +373,6 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    // Add password validation here (same as signup)
     if (password.length < 6) {
       return res.status(400).json({ 
         message: "Password must be at least 6 characters long" 
@@ -399,7 +397,6 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    // Set the password - this will trigger the pre-save hook to hash it
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
@@ -613,7 +610,6 @@ exports.deleteAddress = async (req, res) => {
   }
 };
 
-// Delete currently authenticated user
 exports.deleteMe = async (req, res) => {
   try {
     const userId = req.user && req.user._id;
