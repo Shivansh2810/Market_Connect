@@ -1,4 +1,4 @@
-/* const express = require("express");
+const express = require("express");
 const router = express.Router();
 const paymentController = require("../controllers/paymentController");
 const { protect } = require("../middlewares/auth");
@@ -21,4 +21,4 @@ router.post("/initiate-refund", protect, paymentController.initiateRefund);
 router.get("/refund/status/:orderId", protect, paymentController.getRefundStatus);
 
 module.exports = router;
- */
+ 
