@@ -1,0 +1,97 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import AuctionListing from '../AuctionListing';
+import { AuthProvider } from '../../../contexts/AuthContext';
+import { AuctionProvider } from '../../../contexts/AuctionContext';
+import * as auctionAPI from '../../../../api/auction';
+
+vi.mock('../../../../api/auction');
+vi.mock('socket.io-client', () => ({
+  io: vi.fn(() => ({
+    on: vi.fn(),
+    emit: vi.fn(),
+    disconnect: vi.fn(),
+    connected: true
+  }))
+}));
+
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+const mockAuctions = [
+  {
+    _id: '1',
+    title: 'Test Auction 1',
+    auctionDetails: {
+      startPrice: 1000,
+      currentBid: 1500,
+      endTime: new Date(Date.now() + 3600000).toISOString(),
+      status: 'active'
+    },
+    images: [{ url: 'test1.jpg' }]
+  }
+];
+
+const renderAuctionListing = () => {
+  return render(
+    <BrowserRouter>
+      <AuthProvider>
+        <AuctionProvider>
+          <AuctionListing />
+        </AuctionProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+};
+
+describe('AuctionListing Component', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    auctionAPI.getActiveAuctions.mockResolvedValue(mockAuctions);
+  });
+
+  it('renders auction listing page', async () => {
+    renderAuctionListing();
+    
+    await waitFor(() => {
+      expect(screen.getByText(/Auctions/i)).toBeInTheDocument();
+    });
+  });
+
+  it('displays active auctions', async () => {
+    renderAuctionListing();
+    
+    await waitFor(() => {
+      expect(screen.getByText('Test Auction 1')).toBeInTheDocument();
+    });
+  });
+
+  it('navigates to auction detail', async () => {
+    renderAuctionListing();
+    
+    await waitFor(() => {
+      const auctionCard = screen.getByText('Test Auction 1');
+      fireEvent.click(auctionCard);
+    });
+    
+    expect(mockNavigate).toHaveBeenCalledWith('/auctions/1');
+  });
+
+  it('filters auctions', async () => {
+    renderAuctionListing();
+    
+    await waitFor(() => {
+      const filterSelect = screen.getByRole('combobox');
+      fireEvent.change(filterSelect, { target: { value: 'active' } });
+    });
+    
+    expect(screen.getByText('Test Auction 1')).toBeInTheDocument();
+  });
+});
