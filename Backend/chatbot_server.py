@@ -2,7 +2,14 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 from difflib import SequenceMatcher
+from dotenv import load_dotenv
+from pathlib import Path
+import os
 
+# Load environment variables from .env located in the same directory as this file,
+# regardless of the current working directory when the script is run.
+env_path = Path(__file__).with_name('.env')
+load_dotenv(dotenv_path=env_path)
 
 app = Flask(__name__)
 CORS(app)  # allows frontend requests from localhost
@@ -56,6 +63,74 @@ def find_best_faq_answer(user_text: str):
         return best
     return None
 
+
+def generate_ai_response(user_text: str, faq_answer: str | None = None):
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        print("[chatbot_server] GROQ_API_KEY is not set; falling back to rule-based replies.")
+        return None
+
+    system_prompt = (
+        "You are a helpful, friendly customer service assistant for MarketConnect. "
+        "Answer user questions clearly and concisely. "
+        "Always respond in plain text only without any Markdown, HTML, or formatting markers like **, *, or bullet symbols. "
+        "If the user asks for contact information (email, phone, support, customer service number, or how to contact you), you must always answer with EXACTLY this information: "
+        "Email: hml72417@gmail.com . "
+        "Phone: +91 9157927168 . "
+    )
+
+    if faq_answer:
+        user_prompt = (
+            "User question: " + user_text + "\n\n"
+            "There is a relevant FAQ answer: " + faq_answer + "\n\n"
+            "Use the FAQ as primary guidance, but you may rephrase it naturally."
+        )
+    else:
+        user_prompt = (
+            "User question: " + user_text + "\n\n"
+            "Provide a clear, helpful customer support answer."
+        )
+
+    try:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "llama-3.1-8b-instant",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "temperature": 0.4,
+                "max_tokens": 256,
+            },
+            timeout=15,
+        )
+
+        if response.status_code != 200:
+            print(f"[chatbot_server] Groq API returned status {response.status_code}: {response.text[:300]}")
+            return None
+
+        data = response.json()
+        choices = data.get("choices") or []
+        if not choices:
+            print("[chatbot_server] Groq API response had no choices; falling back.")
+            return None
+
+        message = choices[0].get("message") or {}
+        content = message.get("content")
+        if not content or not isinstance(content, str):
+            print("[chatbot_server] Groq API message content missing or not a string; falling back.")
+            return None
+
+        return content.strip()
+    except Exception as e:
+        print(f"[chatbot_server] Exception while calling Groq API: {e}")
+        return None
+
 @app.route("/api/chatbot/health", methods=["GET"])
 def health_check():
     """Health check endpoint"""
@@ -72,12 +147,10 @@ def chat():
         if not user_message:
             return jsonify({"error": "Message is required"}), 400
         
-        # Try FAQ-based answer first
-        faq_answer = find_best_faq_answer(user_message)
-        if faq_answer:
-            reply = faq_answer
+        ai_reply = generate_ai_response(user_message, None)
+        if ai_reply:
+            reply = ai_reply
         else:
-            # Simple rule-based responses (fallback)
             user_message_lower = user_message.lower()
             if "return" in user_message_lower:
                 reply = "You can return your product within 7 days of delivery. Please visit the Return section in your account to initiate a return."
