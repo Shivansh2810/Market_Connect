@@ -1,10 +1,17 @@
 const groq = require('../config/groqConfig'); // Change from openaiConfig
 const Product = require('../models/product');
+const Category = require('../models/category');
 
 class QueryUnderstanding {
-  async analyzeQuery(userQuery, conversationHistory = []) {
-    const systemPrompt = `You are a shopping query understanding system. Analyze the user's query and extract shopping intent. Return a JSON object with these fields:
-    - categories: array of relevant product categories
+  async analyzeQuery(userQuery, conversationHistory = [], availableCategories = []) {
+    const categoryList = (availableCategories || []).join(', ');
+
+    const systemPrompt = `You are a shopping query understanding system for an ecommerce site.
+    Analyze the user's query and extract shopping intent. You MUST choose categories ONLY from this list of valid categories (case-insensitive):
+    [${categoryList}]
+
+    Return a JSON object with these fields:
+    - categories: array of relevant category names taken ONLY from the list above (exact spelling as in the list)
     - attributes: array of key attributes like "gift", "for_her", "eco_friendly"
     - price_range: object with min and max numbers
     - occasion: string like "birthday", "anniversary", "personal use"
@@ -13,7 +20,7 @@ class QueryUnderstanding {
     
     User Query: "${userQuery}"
     
-    Return ONLY valid JSON, no other text. Example: {"categories": ["electronics"], "price_range": {"min": 0, "max": 100}}`;
+    Return ONLY valid JSON, no other text. Example: {"categories": ["Electronics"], "price_range": {"min": 0, "max": 100}}`;
 
     try {
       const response = await groq.createChatCompletion([
@@ -128,29 +135,75 @@ class ResponseGenerator {
 }
 
 class ProductSearchService {
-  async searchProducts(intentData) {
+  /**
+   * intentData: structured intent from LLM
+   * userQuery: original text the user typed (used as fallback keywords)
+   * categoryIds: array of Category _id values chosen by the LLM
+   */
+  async searchProducts(intentData, userQuery, categoryIds = []) {
     try {
-      const query = { isDeleted: { $ne: true } };
+      const baseQuery = { isDeleted: { $ne: true } };
 
-      if (intentData && Array.isArray(intentData.categories) && intentData.categories.length > 0) {
-        query["category"] = { $in: intentData.categories };
+      // Build keyword list from intent and raw query (generic, no hardcoded categories)
+      const keywords = [];
+
+      if (intentData) {
+        if (Array.isArray(intentData.categories)) keywords.push(...intentData.categories);
+        if (Array.isArray(intentData.attributes)) keywords.push(...intentData.attributes);
+        if (typeof intentData.occasion === "string") keywords.push(intentData.occasion);
+        if (typeof intentData.style === "string") keywords.push(intentData.style);
+        if (typeof intentData.use_case === "string") keywords.push(intentData.use_case);
       }
 
-      if (intentData && intentData.price_range) {
-        const { min, max } = intentData.price_range;
-        query["price"] = {};
-        if (typeof min === "number") {
-          query["price"].$gte = min;
-        }
-        if (typeof max === "number") {
-          query["price"].$lte = max;
-        }
-        if (Object.keys(query["price"]).length === 0) {
-          delete query["price"];
-        }
+      if (typeof userQuery === "string" && userQuery.trim().length > 0) {
+        const rawWords = userQuery
+          .toLowerCase()
+          .split(/[^a-z0-9]+/)
+          .filter((w) => w && w.length >= 3);
+        keywords.push(...rawWords);
       }
 
-      const products = await Product.find(query).limit(20).exec();
+      const uniqKeywords = Array.from(new Set(keywords.map((k) => String(k).trim().toLowerCase()).filter(Boolean)));
+
+      const query = { ...baseQuery };
+
+      // If specific categories were chosen by the LLM, filter by those categoryIds
+      if (Array.isArray(categoryIds) && categoryIds.length > 0) {
+        query["categoryId"] = { $in: categoryIds };
+      }
+
+      if (uniqKeywords.length > 0) {
+        const regexes = uniqKeywords.map((c) =>
+          new RegExp(c.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&"), "i")
+        );
+
+        query["$or"] = [
+          { tags: { $in: uniqKeywords } },
+          { title: { $in: regexes } },
+          { description: { $in: regexes } },
+        ];
+      }
+
+      let products = await Product.find(query).limit(20).exec();
+
+      // Fallback: if nothing matched, ignore intent and do a broad text search on the raw query
+      if ((!products || products.length === 0) && userQuery && userQuery.trim().length > 0) {
+        const q = userQuery.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+        const textRegex = new RegExp(q, "i");
+        const fallbackQuery = {
+          isDeleted: { $ne: true },
+          $or: [
+            { title: textRegex },
+            { description: textRegex },
+            { tags: { $in: [userQuery.trim().toLowerCase()] } },
+          ],
+        };
+
+        products = await Product.find(fallbackQuery)
+          .limit(20)
+          .exec();
+      }
+
       return products;
     } catch (error) {
       console.error("Product search error:", error);
@@ -189,8 +242,20 @@ const assistantController = {
       
       console.log(`Processing message for session ${session_id}: "${message}"`);
       
-      const intentData = await queryUnderstanding.analyzeQuery(message, conversationHistory);
-      const products = await productSearch.searchProducts(intentData);
+      // Load all categories once for this request so the LLM can choose from real ones
+      const allCategories = await Category.find({}).select('name _id').lean();
+      const categoryNames = allCategories.map((c) => c.name);
+      
+      const intentData = await queryUnderstanding.analyzeQuery(message, conversationHistory, categoryNames);
+
+      // Map chosen category names back to their ObjectIds
+      const requestedNames = (intentData.categories || []).map((n) => String(n).toLowerCase());
+      const chosenCategoryIds = allCategories
+        .filter((c) => requestedNames.includes(String(c.name).toLowerCase()))
+        .map((c) => c._id);
+
+      const products = await productSearch.searchProducts(intentData, message, chosenCategoryIds);
+      
       const response = await responseGenerator.generateResponse(message, products, conversationHistory);
       
       conversationHistory.push({ 

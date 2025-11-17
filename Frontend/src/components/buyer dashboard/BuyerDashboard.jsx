@@ -23,6 +23,7 @@ import {
   faRobot
 } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
+import { sendAssistantQuery } from '../../../api/assistant';
 
 const BuyerDashboard = () => {
   const navigate = useNavigate();
@@ -56,6 +57,10 @@ const BuyerDashboard = () => {
   const [showChatbot, setShowChatbot] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [assistantSessionId] = useState(() => `shop_assistant_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`);
+  const [assistantProducts, setAssistantProducts] = useState(null);
+  const [assistantLoading, setAssistantLoading] = useState(false);
+  const [assistantError, setAssistantError] = useState('');
 
   const categoryOptions = useMemo(() => {
     const categoryNames = (categories || [])
@@ -77,12 +82,18 @@ const BuyerDashboard = () => {
   };
 
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    const hasAssistantResults = Array.isArray(assistantProducts);
+    const sourceProducts = hasAssistantResults ? assistantProducts : products;
+
+    return sourceProducts.filter((product) => {
       if (!product || product.isDeleted) return false;
 
-      const matchesSearch =
-        product.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = hasAssistantResults
+        ? true
+        : (
+            product.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            product.description?.toLowerCase().includes(searchTerm.toLowerCase())
+          );
 
       const matchesCategory =
         selectedCategory === 'All' ||
@@ -93,7 +104,7 @@ const BuyerDashboard = () => {
 
       return matchesSearch && matchesCategory && matchesPrice;
     });
-  }, [products, searchTerm, selectedCategory, priceRange]);
+  }, [products, assistantProducts, searchTerm, selectedCategory, priceRange]);
 
   const sortedProducts = useMemo(() => {
     const productsToSort = [...filteredProducts];
@@ -112,6 +123,69 @@ const BuyerDashboard = () => {
     });
   }, [filteredProducts, sortBy]);
 
+  const handleAssistantSearch = async () => {
+    const trimmed = searchTerm.trim();
+    if (!trimmed || assistantLoading) return;
+
+    setAssistantLoading(true);
+    setAssistantError('');
+
+    try {
+      const data = await sendAssistantQuery({
+        message: trimmed,
+        sessionId: assistantSessionId,
+      });
+
+      if (Array.isArray(data.products) && data.products.length > 0) {
+        setAssistantProducts(
+          data.products.map((p) => {
+            const id = p._id || p.id;
+            // Try to find the full product from the loaded catalogue
+            const baseProduct = products.find(
+              (prod) => String(prod._id) === String(id)
+            );
+
+            const normalized = {
+              ...p,
+              _id: id,
+              title: p.name || p.title || baseProduct?.title || 'Product',
+              ratingAvg: p.rating ?? p.ratingAvg ?? baseProduct?.ratingAvg ?? 0,
+              ratingCount:
+                p.reviewCount ?? p.ratingCount ?? baseProduct?.ratingCount ?? 0,
+              price:
+                typeof p.price === 'number'
+                  ? p.price
+                  : baseProduct?.price ?? 0,
+              currency: baseProduct?.currency || 'INR',
+              stock:
+                typeof baseProduct?.stock === 'number' ? baseProduct.stock : 0,
+              images:
+                p.images ||
+                (p.image_url
+                  ? [{
+                      url: p.image_url,
+                      publicId: 'assistant',
+                      isPrimary: true,
+                    }]
+                  : baseProduct?.images || []),
+              category: baseProduct?.category || baseProduct?.categoryId,
+            };
+
+            return baseProduct ? { ...baseProduct.toObject?.() ?? baseProduct, ...normalized } : normalized;
+          })
+        );
+      } else {
+        setAssistantProducts([]);
+      }
+    } catch (err) {
+      console.error('Assistant search error:', err);
+      setAssistantError('Assistant search failed. Please try again.');
+      setAssistantProducts(null);
+    } finally {
+      setAssistantLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -129,14 +203,14 @@ const BuyerDashboard = () => {
   };
 
   const handleBuyNow = (product) => {
-    requireAuth(() => { // Wrap logic
+    requireAuth(() => {
       replaceCartWith(product, 1);
       navigate('/checkout');
     });
   };
 
   const handleCheckout = () => {
-    requireAuth(() => { // Wrap logic
+    requireAuth(() => {
       setIsCartOpen(false);
       navigate('/checkout');
     });
@@ -198,13 +272,24 @@ const BuyerDashboard = () => {
 
           <div className="search-section">
             <div className="search-bar">
-              <FontAwesomeIcon icon={faSearch} className="search-icon" />
-              <input
-                type="text"
-                placeholder="Search for products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              <button
+                type="button"
+                className="assistant-search-btn"
+                onClick={handleAssistantSearch}
+                disabled={assistantLoading || !searchTerm.trim()}
+                title="Smart search assistant"
+              >
+                <FontAwesomeIcon icon={faRobot} />
+              </button>
+              <div className="search-input-wrapper">
+                <FontAwesomeIcon icon={faSearch} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search for products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
@@ -217,8 +302,8 @@ const BuyerDashboard = () => {
               <FontAwesomeIcon icon={faShoppingCart} />
               {itemCount > 0 && <span className="cart-badge">{itemCount}</span>}
             </button>
-            <button 
-              className="action-btn" 
+            <button
+              className="action-btn"
               onClick={() => requireAuth(() => setCurrentView('profile'))}
               title={isAuthenticated ? 'View Profile' : 'Login / Register'}
             >
@@ -242,7 +327,6 @@ const BuyerDashboard = () => {
             </div>
             <div
               className="nav-item"
-              // ** CHANGE: Wrapped with requireAuth **
               onClick={() => requireAuth(() => navigate('/auctions'))}
               style={{ cursor: 'pointer' }}
             >
@@ -260,7 +344,6 @@ const BuyerDashboard = () => {
             {canBecomeSeller && (
               <div
                 className="nav-item become-seller-item"
-                // ** CHANGE: Wrapped with requireAuth **
                 onClick={() => requireAuth(() => navigate('/become-seller'))}
                 style={{ cursor: 'pointer' }}
               >
@@ -275,6 +358,10 @@ const BuyerDashboard = () => {
               <h3>Featured Products</h3>
               <span className="product-count">{sortedProducts.length} products</span>
             </div>
+
+            {assistantError && (
+              <div className="assistant-error-text">{assistantError}</div>
+            )}
 
             <div className="filter-group">
               <label>Category</label>

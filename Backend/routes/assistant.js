@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const assistantController = require('../controllers/shoppingAssistantController');
+const assistantController = require('../controllers/assistantController');
 
 //Process user message and return assistant response
 router.post('/chat', assistantController.processMessage);

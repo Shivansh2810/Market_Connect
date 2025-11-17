@@ -23,11 +23,13 @@ const sellerRoutes = require("./routes/seller");
 const orderRoutes = require("./routes/order");
 const productRoutes = require("./routes/product");
 const categoryRoutes = require("./routes/category");
+const faqRoutes = require("./routes/faq");
 const paymentRoutes = require("./routes/payment");
 const returnRoutes = require("./routes/return");
 const analyticsRoutes = require('./routes/sellerAnalyticsRoutes.js');
 const auctionRoutes = require('./routes/auctionRoutes');
 const chatRoutes = require("./routes/chat");
+const assistantRoutes = require("./routes/assistant");
 
 mongoose
   .connect(process.env.ATLASDB_URL)
@@ -55,6 +57,7 @@ app.get("/", (req, res) => {
 app.use("/api/users", userRoutes);
 
 // Mount other routes
+app.use("/api/faqs", faqRoutes);
 app.use("/api", productRoutes);
 app.use("/api/category", categoryRoutes);
 app.use("/api/reviews", reviewRoutes); 
@@ -67,6 +70,7 @@ app.use("/api/returns", returnRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use("/api/chats", chatRoutes);
+app.use("/api/assistant", assistantRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
