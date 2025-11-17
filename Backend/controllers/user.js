@@ -10,17 +10,26 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
+  },
+  tls: {
+    rejectUnauthorized: false // Accept self-signed certificates
   }
 });
 
 
-transporter.verify(function (error, success) {
-  if (error) {
-    console.log('Email transporter error:', error);
-  } else {
-    console.log('Email server is ready to send messages');
-  }
-});
+// Only verify email transporter if credentials are provided
+if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+  transporter.verify(function (error, success) {
+    if (error) {
+      console.log('⚠️  Email transporter error:', error.message);
+      console.log('💡 Email functionality disabled. Set EMAIL_PASSWORD in .env to enable.');
+    } else {
+      console.log('✅ Email server is ready to send messages');
+    }
+  });
+} else {
+  console.log('ℹ️  Email not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env to enable email functionality.');
+}
 
 const ADMIN_EMAILS = ['admin@marketplace.com'];
 
