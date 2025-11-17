@@ -29,7 +29,7 @@ const BuyerDashboard = () => {
   const location = useLocation(); // Get location for login redirect
   const { logout, user, isAuthenticated } = useAuth();
   const { products, categories, loading: productsLoading, error: productsError, refresh } = useProducts();
-  const { auctions } = useAuction();
+  const { auctions, upcomingAuctions = [] } = useAuction();
   const {
     items,
     addToCart,
@@ -248,9 +248,14 @@ const BuyerDashboard = () => {
             >
               <FontAwesomeIcon icon={faGavel} />
               <span>Live Auctions</span>
-              {auctions && auctions.length > 0 && (
-                <span className="auction-badge">{auctions.length}</span>
-              )}
+              {(() => {
+                const liveCount = auctions ? auctions.length : 0;
+                const upcomingCount = upcomingAuctions ? upcomingAuctions.length : 0;
+                const totalCount = liveCount + upcomingCount;
+                return totalCount > 0 ? (
+                  <span className="auction-badge">{totalCount}</span>
+                ) : null;
+              })()}
             </div>
             {canBecomeSeller && (
               <div

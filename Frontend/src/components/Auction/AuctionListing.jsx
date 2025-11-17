@@ -4,7 +4,7 @@ import { useAuction } from '../../contexts/AuctionContext';
 import './AuctionListing.css';
 
 const AuctionListing = () => {
-  const { auctions: allAuctions = [], getTimeRemaining } = useAuction();
+  const { auctions: allAuctions = [], upcomingAuctions: allUpcoming = [], getTimeRemaining } = useAuction();
   const navigate = useNavigate();
 
   // ----------------------
@@ -50,14 +50,16 @@ const AuctionListing = () => {
   // DETERMINE WHICH AUCTIONS TO SHOW
   // ----------------------
   const activeRealAuctions = allAuctions.filter(a => a?.status === 'active' && a?.title);
+  const upcomingRealAuctions = allUpcoming.filter(a => a?.title);
 
-  // Show real auctions if available, otherwise show empty state (no demo fallback)
+  // Show real active auctions if available, otherwise show empty state
   const auctionsToShow = activeRealAuctions;
 
   // ----------------------
   // TIMER
   // ----------------------
   const [timeUpdates, setTimeUpdates] = useState({});
+  const [upcomingTimeUpdates, setUpcomingTimeUpdates] = useState({});
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -72,10 +74,22 @@ const AuctionListing = () => {
         };
       });
       setTimeUpdates(updates);
+
+      const upcomingUpdates = {};
+      upcomingRealAuctions.forEach(a => {
+        upcomingUpdates[a.id] = getTimeRemaining?.(a.startTime) || {
+          total: Date.parse(a.startTime) - Date.now(),
+          seconds: 0,
+          minutes: 0,
+          hours: 0,
+          days: 0,
+        };
+      });
+      setUpcomingTimeUpdates(upcomingUpdates);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [auctionsToShow]);
+  }, [auctionsToShow, upcomingRealAuctions, getTimeRemaining]);
 
   const formatTime = (time) => {
     if (!time || time.total <= 0) return 'Ended';
@@ -96,7 +110,7 @@ const AuctionListing = () => {
         <p>Browse and bid on exclusive products</p>
       </div>
 
-      {auctionsToShow.length === 0 ? (
+      {auctionsToShow.length === 0 && upcomingRealAuctions.length === 0 ? (
         <div className="no-auctions">
           <div className="empty-state-icon">🔨</div>
           <h2>No Active Auctions</h2>
@@ -106,49 +120,101 @@ const AuctionListing = () => {
           </button>
         </div>
       ) : (
-        <div className="auctions-grid">
-          {auctionsToShow.map(auction => {
-            const timeLeft = timeUpdates[auction.id];
-            const isUrgent = timeLeft?.total > 0 && timeLeft.total < 5 * 60 * 1000;
+        <>
+          {auctionsToShow.length > 0 && (
+            <div className="auctions-section">
+              <h2 className="section-title">Live Auctions</h2>
+              <div className="auctions-grid">
+                {auctionsToShow.map(auction => {
+                  const timeLeft = timeUpdates[auction.id];
+                  const isUrgent = timeLeft?.total > 0 && timeLeft.total < 5 * 60 * 1000;
 
-            return (
-              <div 
-                key={auction.id}
-                className={`auction-card ${isUrgent ? 'urgent' : ''}`}
-                onClick={() => navigate(`/auctions/${auction.id}`)}
-              >
-                <div className="auction-image">
-                  <img src={auction.image} alt={auction.title} />
-                  {isUrgent && <div className="urgent-badge">Ending Soon!</div>}
-                </div>
+                  return (
+                    <div 
+                      key={auction.id}
+                      className={`auction-card ${isUrgent ? 'urgent' : ''}`}
+                      onClick={() => navigate(`/auctions/${auction.id}`)}
+                    >
+                      <div className="auction-image">
+                        <img src={auction.image} alt={auction.title} />
+                        {isUrgent && <div className="urgent-badge">Ending Soon!</div>}
+                      </div>
 
-                <div className="auction-info">
-                  <h3>{auction.title}</h3>
-                  <p className="auction-description">{auction.description}</p>
+                      <div className="auction-info">
+                        <h3>{auction.title}</h3>
+                        <p className="auction-description">{auction.description}</p>
 
-                  <div className="auction-details">
-                    <div className="bid-info">
-                      <span className="label">Current Bid:</span>
-                      <span className="current-bid">₹{auction.currentBid}</span>
+                        <div className="auction-details">
+                          <div className="bid-info">
+                            <span className="label">Current Bid:</span>
+                            <span className="current-bid">₹{auction.currentBid}</span>
+                          </div>
+
+                          <div className="time-remaining">
+                            <span className="label">Time Left:</span>
+                            <span className={`time ${isUrgent ? 'urgent-time' : ''}`}>
+                              {formatTime(timeLeft)}
+                            </span>
+                          </div>
+
+                          <div className="bid-count">
+                            <span>{auction.bids?.length || 0} bids</span>
+                          </div>
+                        </div>
+
+                      </div>
                     </div>
-
-                    <div className="time-remaining">
-                      <span className="label">Time Left:</span>
-                      <span className={`time ${isUrgent ? 'urgent-time' : ''}`}>
-                        {formatTime(timeLeft)}
-                      </span>
-                    </div>
-
-                    <div className="bid-count">
-                      <span>{auction.bids?.length || 0} bids</span>
-                    </div>
-                  </div>
-
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          )}
+
+          {upcomingRealAuctions.length > 0 && (
+            <div className="auctions-section upcoming-section">
+              <h2 className="section-title">Upcoming Auctions</h2>
+              <div className="auctions-grid">
+                {upcomingRealAuctions.map(auction => {
+                  const timeUntilStart = upcomingTimeUpdates[auction.id];
+                  const isSoon = timeUntilStart?.total > 0 && timeUntilStart.total < 60 * 60 * 1000;
+
+                  return (
+                    <div 
+                      key={auction.id}
+                      className={`auction-card upcoming ${isSoon ? 'urgent' : ''}`}
+                      onClick={() => navigate(`/auctions/${auction.id}`)}
+                    >
+                      <div className="auction-image">
+                        <img src={auction.image} alt={auction.title} />
+                        {isSoon && <div className="urgent-badge">Starting Soon!</div>}
+                      </div>
+
+                      <div className="auction-info">
+                        <h3>{auction.title}</h3>
+                        <p className="auction-description">{auction.description}</p>
+
+                        <div className="auction-details">
+                          <div className="bid-info">
+                            <span className="label">Starting Price:</span>
+                            <span className="current-bid">₹{auction.startingPrice}</span>
+                          </div>
+
+                          <div className="time-remaining">
+                            <span className="label">Starts In:</span>
+                            <span className={`time ${isSoon ? 'urgent-time' : ''}`}>
+                              {formatTime(timeUntilStart)}
+                            </span>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
