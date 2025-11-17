@@ -67,7 +67,7 @@ const userSchema = new Schema(
           if (this.password && !this.googleId) {
             return /^[6-9]\d{9}$/.test(v);
           }
-          return true; // Google users can have any phone or none
+          return true; 
         },
         message: "Please provide a valid 10-digit Indian mobile number"
       }
