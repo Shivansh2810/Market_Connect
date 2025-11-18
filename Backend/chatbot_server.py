@@ -15,6 +15,7 @@ app = Flask(__name__)
 CORS(app)  # allows frontend requests from localhost
 
 FAQ_API_URL = "http://localhost:8080/api/faqs"
+PRODUCT_API_URL = "http://localhost:8080/api/products"
 _faq_cache = []
 
 def load_faqs():
@@ -64,7 +65,71 @@ def find_best_faq_answer(user_text: str):
     return None
 
 
-def generate_ai_response(user_text: str, faq_answer: str | None = None):
+def search_products_for_chatbot(user_text: str):
+    """Query the existing products API for items related to the user text.
+
+    Returns a short text summary of a few matching products that can be
+    passed into the LLM, or None if nothing useful is found.
+    """
+    try:
+        # Use the keyword search already supported by the products API
+        keyword = user_text.strip()[:100]
+        params = {"keyword": keyword} if keyword else {}
+        resp = requests.get(PRODUCT_API_URL, params=params or None, timeout=5)
+        if resp.status_code != 200:
+            return None
+
+        data = resp.json() or {}
+        products = data.get("products") or []
+
+        # If nothing matched the keyword (e.g. very generic query like "electronics"),
+        # fall back to fetching a general list of products so we still ground answers
+        # in the Market Connect catalog.
+        if not products:
+            resp_fallback = requests.get(PRODUCT_API_URL, timeout=5)
+            if resp_fallback.status_code != 200:
+                return None
+            data_fb = resp_fallback.json() or {}
+            products = data_fb.get("products") or []
+            if not products:
+                return None
+
+        # Take just a few products to avoid overloading the prompt
+        top = products[:5]
+        lines = []
+        for p in top:
+            title = str(p.get("title") or "").strip()
+            price = p.get("price")
+            currency = p.get("currency") or "INR"
+            rating = p.get("ratingAvg")
+            stock = p.get("stock")
+
+            parts = [title] if title else []
+            if price is not None:
+                parts.append(f"Price: {price} {currency}")
+            if rating is not None:
+                parts.append(f"Rating: {rating}")
+            if stock is not None:
+                parts.append(f"Stock: {stock}")
+
+            if parts:
+                lines.append("; ".join(parts))
+
+        if not lines:
+            return None
+
+        return "\n".join(lines)
+    except Exception:
+        # Fail silently; chatbot can still answer without product context
+        return None
+
+
+def generate_ai_response(
+    user_text: str,
+    faq_answer: str | None = None,
+    product_context: str | None = None,
+    is_product_query: bool = False,
+):
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         print("[chatbot_server] GROQ_API_KEY is not set; falling back to rule-based replies.")
@@ -74,6 +139,13 @@ def generate_ai_response(user_text: str, faq_answer: str | None = None):
         "You are a helpful, friendly customer service assistant for MarketConnect. "
         "Answer user questions clearly and concisely. "
         "Always respond in plain text only without any Markdown, HTML, or formatting markers like **, *, or bullet symbols. "
+        "You must only answer questions related to Market Connect or customer service (such as orders, returns, shipping, payments, accounts, or products). "
+        "Any question about buying, finding, suggesting, comparing, or choosing products (including queries like 'suggest me some electronics' or 'suggest me some clothes') must be treated as related to Market Connect and answered. "
+        "You should base product suggestions primarily on the provided Market Connect product list when it is available, instead of generic or made-up examples. "
+        "This includes providing details and comparisons about products available on Market Connect when relevant. "
+        "If the system indicates that the query is product-related, you must NOT use the refusal message and you must answer helpfully using Market Connect products. "
+        "If the user asks any question that is not related to Market Connect or customer service, you must refuse and reply with: "
+        "I am a customer service chatbot and am not supposed to answer this. Please ask a question related to Market Connect or customer service. "
         "If the user asks for contact information (email, phone, support, customer service number, or how to contact you), you must always answer with EXACTLY this information: "
         "Email: hml72417@gmail.com . "
         "Phone: +91 9157927168 . "
@@ -89,6 +161,20 @@ def generate_ai_response(user_text: str, faq_answer: str | None = None):
         user_prompt = (
             "User question: " + user_text + "\n\n"
             "Provide a clear, helpful customer support answer."
+        )
+
+    if is_product_query:
+        user_prompt += (
+            "\n\nThe system has determined this is a Market Connect product-related question "
+            "(for example, about buying, finding, suggesting, comparing, or choosing products). "
+            "You must treat it as an in-scope Market Connect customer service query and you must NOT respond with the refusal message. "
+            "Instead, answer helpfully using the Market Connect product list if it is provided."
+        )
+
+    if product_context:
+        user_prompt += (
+            "\n\nHere are some relevant products from the Market Connect database that you can use in your answer when appropriate (do not list more than a few items and keep the answer concise):\n"
+            + product_context
         )
 
     try:
@@ -147,17 +233,31 @@ def chat():
         if not user_message:
             return jsonify({"error": "Message is required"}), 400
         
-        ai_reply = generate_ai_response(user_message, None)
+        user_message_lower = user_message.lower()
+
+        # Try to fetch product context for product-related questions
+        product_context = None
+        is_product_query = any(word in user_message_lower for word in [
+            "product", "products", "price", "buy", "sell", "purchase",
+            "compare", "comparison", "recommend", "suggest",
+            "cloth", "cloths", "clothes", "clothing", "fashion",
+            "electronics", "electronic", "laptop", "laptops",
+            "phone", "phones", "mobile", "mobiles", "tv", "tvs",
+        ])
+
+        if is_product_query:
+            product_context = search_products_for_chatbot(user_message)
+
+        ai_reply = generate_ai_response(user_message, None, product_context, is_product_query=is_product_query)
         if ai_reply:
             reply = ai_reply
         else:
-            user_message_lower = user_message.lower()
             if "return" in user_message_lower:
                 reply = "You can return your product within 7 days of delivery. Please visit the Return section in your account to initiate a return."
             elif "track" in user_message_lower or "order" in user_message_lower or "shipment" in user_message_lower:
-                reply = "You can track your order from the Dashboard → Orders section. Enter your order number to see the current status and delivery updates."
+                reply = "You can track your order from the Dashboard   Orders section. Enter your order number to see the current status and delivery updates."
             elif "address" in user_message_lower or "shipping" in user_message_lower:
-                reply = "To change your shipping address, go to Profile → Edit Shipping Address. You can add, edit, or remove addresses from there."
+                reply = "To change your shipping address, go to Profile   Edit Shipping Address. You can add, edit, or remove addresses from there."
             elif "payment" in user_message_lower or "pay" in user_message_lower:
                 reply = "We accept UPI, Credit/Debit Cards, and Net Banking. All payments are secure and encrypted. You can save payment methods in your Profile settings."
             elif "help" in user_message_lower or "support" in user_message_lower:

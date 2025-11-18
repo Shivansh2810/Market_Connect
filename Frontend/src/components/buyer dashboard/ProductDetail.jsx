@@ -23,17 +23,23 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
     const [loadingSimilar, setLoadingSimilar] = useState(false);
 
     const renderStars = (rating) => {
-        const filledCount = Math.max(0, Math.min(5, Math.floor(rating || 0)));
-        return [...Array(5)].map((_, i) => {
-            const isFilled = i < filledCount;
-            return (
-                <FontAwesomeIcon 
-                    key={i} 
-                    icon={faStar} 
-                    className={isFilled ? "filled" : ""}
-                />
-            );
-        });
+        const normalizedRating = parseFloat(rating) || 0;
+        const fullStars = Math.floor(normalizedRating);
+        const hasHalfStar = normalizedRating % 1 >= 0.5;
+        
+        return (
+            <div className="star-rating">
+                {[...Array(5)].map((_, i) => {
+                    if (i < fullStars) {
+                        return <FontAwesomeIcon key={i} icon={faStar} className="filled" />;
+                    } else if (i === fullStars && hasHalfStar) {
+                        return <FontAwesomeIcon key={i} icon={faStar} className="half-filled" />;
+                    } else {
+                        return <FontAwesomeIcon key={i} icon={faStar} className="empty" />;
+                    }
+                })}
+            </div>
+        );
     };
 
     const formatDate = (dateString) => {
@@ -174,10 +180,7 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
                                 </span>
                             )}
                             <div className="product-rating">
-                                <div className="stars">
-                                    {/* Use the new renderStars function */}
-                                    {renderStars(product.ratingAvg)}
-                                </div>
+                                {renderStars(product.ratingAvg)}
                                 <span className="rating-text">{product.ratingAvg?.toFixed(1) || '0.0'} ({product.ratingCount || 0} reviews)</span>
                             </div>
                         </div>
@@ -191,6 +194,50 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
                             {product.currency === 'USD' && (
                                 <span className="currency-badge">USD</span>
                             )}
+                        </div>
+
+                        {/* Quantity Selector */}
+                        <div className="quantity-selector">
+                            <label htmlFor="quantity">Quantity:</label>
+                            <div className="quantity-controls">
+                                <button 
+                                    onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                                    disabled={quantity <= 1}
+                                >
+                                    -
+                                </button>
+                                <input 
+                                    type="number" 
+                                    id="quantity"
+                                    min="1" 
+                                    value={quantity} 
+                                    onChange={(e) => {
+                                        const value = parseInt(e.target.value, 10);
+                                        if (!isNaN(value) && value >= 1) {
+                                            setQuantity(value);
+                                        }
+                                    }}
+                                />
+                                <button onClick={() => setQuantity(prev => prev + 1)}>+</button>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="action-buttons">
+                            <button 
+                                className="add-to-cart-btn"
+                                onClick={handleAddToCart}
+                                disabled={isInCart}
+                            >
+                                <FontAwesomeIcon icon={faShoppingCart} />
+                                {isInCart ? 'Added to Cart' : 'Add to Cart'}
+                            </button>
+                            <button 
+                                className="buy-now-btn"
+                                onClick={handleBuyNow}
+                            >
+                                Buy Now
+                            </button>
                         </div>
 
                         {product.specs && (() => {
