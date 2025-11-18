@@ -1,6 +1,8 @@
 const Order = require("../models/order");
 const Product = require("../models/product");
 const User = require("../models/user");
+const Coupon = require("../models/coupon");
+const { processRefund } = require("./paymentController"); // to handle refunds when cancelling paid orders
 const {
   createOrderSchema,
   updateOrderStatusSchema,
@@ -21,7 +23,7 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    const { orderItems, shippingInfo } = req.body;
+    const { orderItems, shippingInfo, couponCode } = req.body;
 
     // verifying user existence
     const user = await User.findById(req.user._id).populate(
@@ -44,6 +46,19 @@ exports.createOrder = async (req, res) => {
           .json({ success: false, message: "Cart is empty" });
       }
 
+      // Update: stock check correction
+      for (const item of user.buyerInfo.cart) {
+        if (!item.productId) {
+           return res.status(400).json({ success: false, message: "One or more items in cart are invalid." });
+        }
+        if (item.productId.stock < item.quantity) {
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient stock for ${item.productId.title}. Only ${item.productId.stock} left.`,
+          });
+        }
+      }
+
       finalOrderItems = user.buyerInfo.cart.map((item) => ({
         product: item.productId._id,
         quantity: item.quantity,
@@ -59,6 +74,8 @@ exports.createOrder = async (req, res) => {
         orderItems.map(async (item) => {
           const product = await Product.findById(item.productId);
           if (!product) throw new Error(`Product not found: ${item.productId}`);
+          
+          // stock check for DIRECT ORDER
           if (product.stock < item.quantity)
             throw new Error(`Insufficient stock for ${product.title}`);
 
@@ -80,7 +97,40 @@ exports.createOrder = async (req, res) => {
     );
     const taxPrice = parseFloat((0.18 * itemsPrice).toFixed(2)); // Considering standard 18% GST
     const shippingPrice = itemsPrice > 1000 ? 0 : 50; // Arbitrarily applying shipping cost of 50 only to items below price 1000
-    const totalPrice = itemsPrice + taxPrice + shippingPrice;
+    
+    // Initial Total Price
+    let totalPrice = itemsPrice + taxPrice + shippingPrice;
+
+    // Update: Coupon consideration
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ 
+        code: couponCode.toUpperCase() 
+      });
+
+      if (!coupon) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Invalid Coupon Code" 
+        });
+      }
+
+      // Check if coupon is valid for this specific order value (itemsPrice)
+      if (!coupon.isValid(itemsPrice)) { 
+        return res.status(400).json({ 
+          success: false, 
+          message: "Coupon is not applicable to this order" 
+        });
+      }
+
+      // Calculate and apply discount
+      const discount = coupon.calculateDiscount(itemsPrice);
+      
+      totalPrice = Math.max(0, totalPrice - discount);
+
+      // Increment coupon usage count
+      coupon.usedCount += 1;
+      await coupon.save();
+    }
 
     // Seller assignment logic: Directly storing the seller id of the product in a single order, while that of the first product in a cart order
     const firstProduct = await Product.findById(finalOrderItems[0].product);
@@ -94,15 +144,14 @@ exports.createOrder = async (req, res) => {
     // Create new order document
     const order = new Order({
       buyer: req.user._id,
-      seller: assignedSeller, // assigned through above logic
+      seller: assignedSeller,
       shippingInfo,
       orderItems: finalOrderItems,
-      // payment will be added later when payment is initiated
       itemsPrice,
       taxPrice,
       shippingPrice,
-      totalPrice,
-      orderStatus: "Payment Pending", // default case until payment is verified
+      totalPrice, // Includes coupon discount
+      orderStatus: "Payment Pending",
     });
 
     await order.save();
@@ -122,7 +171,7 @@ exports.createOrder = async (req, res) => {
     console.error("Create order error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to create order",
+      message: error.message || "Failed to create order", // Improved error msg
       error: error.message,
     });
   }
@@ -219,7 +268,7 @@ exports.updateOrderStatus = async (req, res) => {
     // Authorization check -> seller or admin
     const isAdmin = req.user.email === "admin@marketplace.com";
 
-    // Check if any item in the order belongs to this seller (for cart orders)
+    // Check if any item in the order belongs to this seller
     const orderItemProducts = await Product.find({
       _id: { $in: order.orderItems.map((item) => item.product) },
       sellerId: req.user._id,
@@ -236,8 +285,6 @@ exports.updateOrderStatus = async (req, res) => {
     // Updating order status
     order.orderStatus = req.body.status;
     await order.save();
-
-    // Note: Yet to handle stock adjustments on cancellation/return later, after integration of payment and returns
 
     res.status(200).json({
       success: true,
@@ -257,19 +304,22 @@ exports.updateOrderStatus = async (req, res) => {
 // -- Cancel order (for buyer)
 exports.cancelOrder = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.orderId);
+    // Find the order
+    const order = await Order.findById(req.params.orderId).populate("payment");
     if (!order) {
       return res
         .status(404)
         .json({ success: false, message: "Order not found" });
     }
 
+    // Authorization Check
     if (order.buyer.toString() !== req.user._id.toString()) {
       return res
         .status(403)
         .json({ success: false, message: "Unauthorized action" });
     }
 
+    // Check allowed statuses
     if (["Shipped", "Delivered"].includes(order.orderStatus)) {
       return res.status(400).json({
         success: false,
@@ -277,8 +327,36 @@ exports.cancelOrder = async (req, res) => {
       });
     }
 
-    order.orderStatus = "Cancelled";
-    await order.save();
+    // Update: Added the logic to refund order after cancellation
+    
+    // Case A: Order was placed and paid
+    if (order.orderStatus === "Order Placed") {
+      // Call the helper to process the refund with Razorpay
+      // NOTE: processRefund already manages stock restoration
+      const refundResult = await processRefund(
+        order._id, 
+        req.user._id, 
+        null, // full refund
+        "Order Cancelled by User"
+      );
+
+      if (!refundResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: "Failed to process refund: " + refundResult.message,
+        });
+      }
+      
+      // If refund successful, mark order as Cancelled
+      order.orderStatus = "Cancelled";
+      await order.save();
+    } 
+    
+    // Case B: Payment was Pending or Failed (No money taken, no stock deducted)
+    else {
+      order.orderStatus = "Cancelled";
+      await order.save();
+    }
 
     res.status(200).json({
       success: true,
