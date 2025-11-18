@@ -4,7 +4,7 @@ const createProductSchema = Joi.object({
     title: Joi.string().trim().min(3).max(140).required(),
     description: Joi.string().trim().max(5000).required(),
     categoryId: Joi.string().hex().length(24).required(),
-    tags: Joi.array().items(Joi.string().trim()).default([]),
+    tags: Joi.array().items(Joi.string().trim()).single().default([]),
     price: Joi.number().min(0).required(),
     currency: Joi.string().valid('INR', 'USD').default('INR'),
     stock: Joi.number().integer().min(0).required(),
@@ -16,7 +16,7 @@ const updateProductSchema = Joi.object({
     title: Joi.string().trim().min(3).max(140),
     description: Joi.string().trim().max(5000),
     categoryId: Joi.string().hex().length(24),
-    tags: Joi.array().items(Joi.string().trim()),
+    tags: Joi.array().items(Joi.string().trim()).single(),
     images: Joi.array().items(
         Joi.object({
             url: Joi.string().uri().required(),
