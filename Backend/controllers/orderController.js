@@ -1,6 +1,7 @@
 const Order = require("../models/order");
 const Product = require("../models/product");
 const User = require("../models/user");
+const Coupon = require("../models/coupon"); //
 const {
   createOrderSchema,
   updateOrderStatusSchema,
@@ -21,7 +22,7 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    const { orderItems, shippingInfo } = req.body;
+    const { orderItems, shippingInfo, couponCode } = req.body;
 
     // verifying user existence
     const user = await User.findById(req.user._id).populate(
@@ -80,7 +81,43 @@ exports.createOrder = async (req, res) => {
     );
     const taxPrice = parseFloat((0.18 * itemsPrice).toFixed(2)); // Considering standard 18% GST
     const shippingPrice = itemsPrice > 1000 ? 0 : 50; // Arbitrarily applying shipping cost of 50 only to items below price 1000
-    const totalPrice = itemsPrice + taxPrice + shippingPrice;
+    
+    // Initial Total Price
+    let totalPrice = itemsPrice + taxPrice + shippingPrice;
+
+    // --- COUPON LOGIC START ---
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ 
+        code: couponCode.toUpperCase() 
+      });
+
+      if (!coupon) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Invalid Coupon Code" 
+        });
+      }
+
+      // Check if coupon is valid for this specific order value (itemsPrice)
+      // isValid checks: isActive, expiry date, minOrderValue, and usageLimit
+      if (!coupon.isValid(itemsPrice)) { 
+        return res.status(400).json({ 
+          success: false, 
+          message: "Coupon is not applicable to this order" 
+        });
+      }
+
+      // Calculate and apply discount
+      const discount = coupon.calculateDiscount(itemsPrice); //
+      
+      // Ensure total price doesn't fall below 0 (though logic usually prevents this)
+      totalPrice = Math.max(0, totalPrice - discount);
+
+      // Increment coupon usage count
+      coupon.usedCount += 1;
+      await coupon.save();
+    }
+    // --- COUPON LOGIC END ---
 
     // Seller assignment logic: Directly storing the seller id of the product in a single order, while that of the first product in a cart order
     const firstProduct = await Product.findById(finalOrderItems[0].product);
@@ -101,7 +138,7 @@ exports.createOrder = async (req, res) => {
       itemsPrice,
       taxPrice,
       shippingPrice,
-      totalPrice,
+      totalPrice, // This now includes the coupon discount
       orderStatus: "Payment Pending", // default case until payment is verified
     });
 
