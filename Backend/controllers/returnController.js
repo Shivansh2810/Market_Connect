@@ -659,13 +659,3 @@ exports.getReturnsByOrderId = async (req, res) => {
     });
   }
 };
-
-module.exports = {
-  requestReturn,
-  getMyReturns,
-  getReturnById,
-  getSellerReturns,
-  approveReturn,
-  rejectReturn,
-  getReturnsByOrderId,
-};
