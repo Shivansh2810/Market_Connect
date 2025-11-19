@@ -14,4 +14,4 @@ router.get("/seller/all", protect, returnController.getSellerReturns);
 router.put("/:returnId/approve", protect, returnController.approveReturn);
 router.put("/:returnId/reject", protect, returnController.rejectReturn);
 
-module.exports = router;
+module.exports = router; 
