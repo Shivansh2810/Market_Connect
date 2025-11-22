@@ -5,15 +5,16 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-    
+    user: process.env.BREVO_EMAIL,    
+    pass: process.env.BREVO_SMTP_KEY,  
   },
 });
 
-if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+if (process.env.BREVO_EMAIL && process.env.BREVO_SMTP_KEY) {
   transporter.verify(function (error, success) {
     if (error) {
       console.log("Email transporter error:", error.message);
