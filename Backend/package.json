@@ -4,8 +4,12 @@
   "description": "Backend for the online marketplace",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
-  },
+  "start": "node app.js",
+  "test": "jest --runInBand --coverage",
+
+  "test:product": "jest test/product.*.test.js --coverage --collectCoverageFrom \"./controllers/productController.js\" \"./routes/product.js\" \"./validations/product.js\""
+},
+
   "dependencies": {
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
@@ -29,5 +33,10 @@
     "razorpay": "^2.9.6",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "jest-html-reporter": "^4.3.0",
+    "supertest": "^7.1.4"
   }
 }
