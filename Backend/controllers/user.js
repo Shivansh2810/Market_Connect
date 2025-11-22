@@ -5,31 +5,28 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
+    
   },
-  connectionTimeout: 10000,
 });
 
-// Only verify email transporter if credentials are provided
 if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
   transporter.verify(function (error, success) {
     if (error) {
-      console.log("⚠️  Email transporter error:", error.message);
+      console.log("Email transporter error:", error.message);
       console.log(
         "💡 Email functionality disabled. Set EMAIL_PASSWORD in .env to enable."
       );
     } else {
-      console.log("✅ Email server is ready to send messages");
+      console.log(" Email server is ready to send messages");
     }
   });
 } else {
   console.log(
-    "ℹ️  Email not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env to enable email functionality."
+    "  Email not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env to enable email functionality."
   );
 }
 
