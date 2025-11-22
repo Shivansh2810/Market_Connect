@@ -4,46 +4,42 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
-
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
+    pass: process.env.EMAIL_PASSWORD,
   },
-  tls: {
-    rejectUnauthorized: false // Accept self-signed certificates
-  }
+  connectionTimeout: 10000,
 });
-
 
 // Only verify email transporter if credentials are provided
 if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
   transporter.verify(function (error, success) {
     if (error) {
-      console.log('⚠️  Email transporter error:', error.message);
-      console.log('💡 Email functionality disabled. Set EMAIL_PASSWORD in .env to enable.');
+      console.log("⚠️  Email transporter error:", error.message);
+      console.log(
+        "💡 Email functionality disabled. Set EMAIL_PASSWORD in .env to enable."
+      );
     } else {
-      console.log('✅ Email server is ready to send messages');
+      console.log("✅ Email server is ready to send messages");
     }
   });
 } else {
-  console.log('ℹ️  Email not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env to enable email functionality.');
+  console.log(
+    "ℹ️  Email not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env to enable email functionality."
+  );
 }
 
-const ADMIN_EMAILS = ['admin@marketplace.com'];
+const ADMIN_EMAILS = ["admin@marketplace.com"];
 
 exports.signup = async (req, res) => {
   try {
-    const {
-      name,
-      email,
-      password, 
-      confirmPassword,
-      mobNo,
-    } = req.body;
+    const { name, email, password, confirmPassword, mobNo } = req.body;
 
-    if (!name || !email || !password || !confirmPassword|| !mobNo) {
+    if (!name || !email || !password || !confirmPassword || !mobNo) {
       return res
         .status(400)
         .json({ message: "All required fields must be filled" });
@@ -116,7 +112,9 @@ exports.login = async (req, res) => {
     if (user.role !== "both" && user.role !== role) {
       return res
         .status(403)
-        .json({ message: `Access denied for role: ${role}. Your role is: ${user.role}` });
+        .json({
+          message: `Access denied for role: ${role}. Your role is: ${user.role}`,
+        });
     }
 
     const isPasswordValid = await user.comparePassword(password);
@@ -135,7 +133,7 @@ exports.login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role, 
+        role: user.role,
       },
     });
   } catch (error) {
@@ -157,12 +155,14 @@ exports.adminLogin = async (req, res) => {
       email: email.trim().toLowerCase(),
     }).select("+password");
 
-    if (!user || user.role !== 'admin') {
+    if (!user || user.role !== "admin") {
       return res.status(401).json({ message: "Invalid admin credentials." });
     }
 
     if (!user.password) {
-      return res.status(401).json({ message: "Admin account cannot use Google login." });
+      return res
+        .status(401)
+        .json({ message: "Admin account cannot use Google login." });
     }
 
     const isPasswordValid = await user.comparePassword(password);
@@ -194,41 +194,43 @@ exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json({ 
-        message: "Email is required" 
+      return res.status(400).json({
+        message: "Email is required",
       });
     }
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
-    
+
     if (!user) {
-      return res.status(404).json({ 
-        message: "User hasn't registered with this email" 
+      return res.status(404).json({
+        message: "User hasn't registered with this email",
       });
     }
 
     if (user.googleId && !user.password) {
-      return res.status(400).json({ 
-        message: "This account uses Google login. Please use Google login instead." 
+      return res.status(400).json({
+        message:
+          "This account uses Google login. Please use Google login instead.",
       });
     }
 
-    const resetToken = crypto.randomBytes(20).toString('hex');
+    const resetToken = crypto.randomBytes(20).toString("hex");
     const resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpire = resetPasswordExpire;
     await user.save();
 
-    const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
     const mailOptions = {
       from: {
-        name: 'Market Connect',
-        address: process.env.EMAIL_USER
+        name: "Market Connect",
+        address: process.env.EMAIL_USER,
       },
       to: user.email,
-      subject: 'Password Reset Request - Market Connect',
+      subject: "Password Reset Request - Market Connect",
       html: `
         <!DOCTYPE html>
         <html>
@@ -346,22 +348,21 @@ exports.forgotPassword = async (req, res) => {
 
     await transporter.sendMail(mailOptions);
 
-    console.log('Password reset email sent to:', user.email);
-    
-    res.status(200).json({ 
-      message: "Password reset link has been sent to your email"
-    });
+    console.log("Password reset email sent to:", user.email);
 
+    res.status(200).json({
+      message: "Password reset link has been sent to your email",
+    });
   } catch (error) {
     console.error("Forgot password error:", error);
-    
+
     if (error.code) {
-      console.error('Nodemailer error code:', error.code);
-      console.error('Nodemailer error message:', error.message);
+      console.error("Nodemailer error code:", error.code);
+      console.error("Nodemailer error message:", error.message);
     }
-    
-    res.status(500).json({ 
-      message: "Failed to send reset email. Please try again later." 
+
+    res.status(500).json({
+      message: "Failed to send reset email. Please try again later.",
     });
   }
 };
@@ -371,38 +372,39 @@ exports.resetPassword = async (req, res) => {
     const { token, password, confirmPassword } = req.body;
 
     if (!token || !password || !confirmPassword) {
-      return res.status(400).json({ 
-        message: "All fields are required" 
+      return res.status(400).json({
+        message: "All fields are required",
       });
     }
 
     if (password !== confirmPassword) {
-      return res.status(400).json({ 
-        message: "Passwords do not match" 
+      return res.status(400).json({
+        message: "Passwords do not match",
       });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ 
-        message: "Password must be at least 6 characters long" 
+      return res.status(400).json({
+        message: "Password must be at least 6 characters long",
       });
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
     if (!passwordRegex.test(password)) {
-      return res.status(400).json({ 
-        message: "Password must contain at least one uppercase letter, one lowercase letter, and one number" 
+      return res.status(400).json({
+        message:
+          "Password must contain at least one uppercase letter, one lowercase letter, and one number",
       });
     }
 
     const user = await User.findOne({
       resetPasswordToken: token,
-      resetPasswordExpire: { $gt: Date.now() }
+      resetPasswordExpire: { $gt: Date.now() },
     });
 
     if (!user) {
-      return res.status(400).json({ 
-        message: "Invalid or expired reset token" 
+      return res.status(400).json({
+        message: "Invalid or expired reset token",
       });
     }
 
@@ -412,51 +414,51 @@ exports.resetPassword = async (req, res) => {
     await user.save();
 
     res.json({
-      message: "Password reset successfully"
+      message: "Password reset successfully",
     });
-
   } catch (error) {
     console.error("Reset password error:", error);
-    res.status(500).json({ 
-      message: "Internal server error" 
+    res.status(500).json({
+      message: "Internal server error",
     });
   }
 };
 
 exports.upgradeToSeller = async (req, res) => {
-    try {
-        const { shopName, shopAddress } = req.body;
-        if (!shopName || !shopAddress) {
-             return res.status(400).json({ message: "Shop name and address are required." });
-        }
-
-        const userId = req.user._id;
-
-        const user = await User.findById(userId);
-
-        if (user.role === 'seller' || user.role === 'both') {
-            return res.status(400).json({ message: "You are already a seller." });
-        }
-
-        user.role = 'both'; 
-        user.sellerInfo = { shopName, shopAddress };
-        
-        await user.save();
-
-        res.status(200).json({
-            message: "Congratulations! Your account has been upgraded to a seller.",
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                sellerInfo: user.sellerInfo
-            }
-        });
-
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+  try {
+    const { shopName, shopAddress } = req.body;
+    if (!shopName || !shopAddress) {
+      return res
+        .status(400)
+        .json({ message: "Shop name and address are required." });
     }
+
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+
+    if (user.role === "seller" || user.role === "both") {
+      return res.status(400).json({ message: "You are already a seller." });
+    }
+
+    user.role = "both";
+    user.sellerInfo = { shopName, shopAddress };
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Congratulations! Your account has been upgraded to a seller.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        sellerInfo: user.sellerInfo,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 exports.googleAuth = (req, res) => {
@@ -466,12 +468,12 @@ exports.googleAuth = (req, res) => {
     email: req.user.user.email,
     role: req.user.user.role,
     mobNo: req.user.user.mobNo,
-    googleId: req.user.user.googleId
+    googleId: req.user.user.googleId,
   };
 
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
   const redirectUrl = `${frontendUrl}/google-callback?token=${req.user.token}&userId=${req.user.user._id}`;
-  
+
   res.redirect(redirectUrl);
 };
 
@@ -514,7 +516,6 @@ exports.getMe = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -546,7 +547,6 @@ exports.getAddresses = async (req, res) => {
 
 exports.addAddress = async (req, res) => {
   try {
-
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -661,7 +661,7 @@ exports.getMyOrders = async (req, res) => {
 exports.googleAuthSuccess = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select("-password");
-    
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -672,13 +672,13 @@ exports.googleAuthSuccess = async (req, res) => {
       email: user.email,
       role: user.role,
       mobNo: user.mobNo,
-      googleId: user.googleId
+      googleId: user.googleId,
     };
 
     res.json({
       success: true,
       user: userData,
-      requiresPhoneUpdate: user.mobNo === "0000000000" || !user.mobNo
+      requiresPhoneUpdate: user.mobNo === "0000000000" || !user.mobNo,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
