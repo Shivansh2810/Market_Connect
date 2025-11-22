@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { upgradeToSeller } from '../../api/user';
+import { upgradeToSeller } from '../../services/user';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faStore, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
 import './BecomeSellerPage.css';

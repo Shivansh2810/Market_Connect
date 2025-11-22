@@ -4,8 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import ProductDetail from '../components/buyer dashboard/ProductDetail';
 import { useProducts } from '../contexts/ProductsContext';
 import { useCart } from '../contexts/CartContext';
-import { getProductById as fetchProductById } from '../../api/product';
-import api from '../../api/axios'; // Import the base api instance
+import { getProductById as fetchProductById } from '../../services/product';
+import api from '../../services/axios'; // Import the base api instance
 
 const ProductDetailPage = () => {
   const navigate = useNavigate();

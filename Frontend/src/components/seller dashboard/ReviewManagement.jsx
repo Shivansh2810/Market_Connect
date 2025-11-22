@@ -10,7 +10,7 @@ import {
     faUser,
     faCalendar
 } from '@fortawesome/free-solid-svg-icons';
-import api from '../../../api/axios';
+import api from '../../../services/axios';
 
 const ReviewManagement = ({ product, onBack }) => {
     const [filterRating, setFilterRating] = useState('all');

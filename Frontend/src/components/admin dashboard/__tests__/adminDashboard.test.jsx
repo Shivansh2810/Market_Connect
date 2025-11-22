@@ -3,14 +3,14 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import AdminDashboard from '../adminDashboard';
 import { AuthProvider } from '../../../contexts/AuthContext';
-import * as categoryAPI from '../../../../api/category';
-import * as couponAPI from '../../../../api/coupon';
-import * as auctionAPI from '../../../../api/auction';
+import * as categoryAPI from '../../../../services/category';
+import * as couponAPI from '../../../../services/coupon';
+import * as auctionAPI from '../../../../services/auction';
 
-vi.mock('../../../../api/category');
-vi.mock('../../../../api/coupon');
-vi.mock('../../../../api/auction');
-vi.mock('../../../../api/product');
+vi.mock('../../../../services/category');
+vi.mock('../../../../services/coupon');
+vi.mock('../../../../services/auction');
+vi.mock('../../../../services/product');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {

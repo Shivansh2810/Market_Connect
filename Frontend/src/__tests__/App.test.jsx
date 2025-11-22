@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import App from '../App';
-import * as productApi from '../../api/product';
-import * as auctionApi from '../../api/auction';
+import * as productApi from '../../services/product';
+import * as auctionApi from '../../services/auction';
 
-vi.mock('../../api/product');
-vi.mock('../../api/auction');
+vi.mock('../../services/product');
+vi.mock('../../services/auction');
 vi.mock('socket.io-client', () => ({
   io: vi.fn(() => ({
     on: vi.fn(),

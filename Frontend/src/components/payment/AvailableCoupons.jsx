@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllCoupons } from '../../../api/coupon';
+import { getAllCoupons } from '../../../services/coupon';
 import './AvailableCoupons.css';
 
 const AvailableCoupons = ({ cartValue, onSelectCoupon }) => {
