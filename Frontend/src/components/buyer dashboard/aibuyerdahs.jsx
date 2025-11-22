@@ -18,7 +18,7 @@ import {
 // const FAQ_API_URL = 'http://localhost:8080/services/faqs';
 
 const CHATBOT_API_URL = import.meta.env.VITE_CHATBOT_URL;
-const FAQ_API_URL = `${import.meta.env.VITE_BACKEND_URL}/services/faqs`;
+const FAQ_API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/faqs`;
 
 
 const AIChatbotDashboard = ({ onBack }) => {
