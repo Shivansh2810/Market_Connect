@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AddProduct from '../AddProduct';
 import { ProductsProvider } from '../../../contexts/ProductsContext';
-import api from '../../../../api/axios';
+import api from '../../../../services/axios';
 
-vi.mock('../../../../api/axios');
-vi.mock('../../../../api/product');
+vi.mock('../../../../services/axios');
+vi.mock('../../../../services/product');
 
 const mockOnBack = vi.fn();
 const mockOnSave = vi.fn();

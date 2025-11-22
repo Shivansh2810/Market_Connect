@@ -11,7 +11,7 @@ import {
   faImage,
   faUpload
 } from '@fortawesome/free-solid-svg-icons';
-import api from '../../../api/axios';
+import api from '../../../services/axios';
 
 const AddProduct = ({ onBack, onSave, product = null }) => {
   const { categories, loading: categoriesLoading } = useProducts(); // <-- 2. ADDED HOOK

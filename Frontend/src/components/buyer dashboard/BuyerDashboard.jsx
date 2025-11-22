@@ -23,7 +23,7 @@ import {
   faRobot
 } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
-import { sendAssistantQuery } from '../../../api/assistant';
+import { sendAssistantQuery } from '../../../services/assistant';
 
 const BuyerDashboard = () => {
   const navigate = useNavigate();

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
-import api from "../../../api/axios";
+import api from "../../../services/axios";
 import { useAuth } from "../../contexts/AuthContext";
 import "./Login.css";
 

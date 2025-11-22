@@ -3,10 +3,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import AdminLogin from '../AdminLogin';
 import { AuthProvider } from '../../../contexts/AuthContext';
-import api from '../../../../api/axios';
+import api from '../../../../services/axios';
 
 // Mock the API
-vi.mock('../../../../api/axios');
+vi.mock('../../../../services/axios');
 
 // Mock useNavigate
 const mockNavigate = vi.fn();

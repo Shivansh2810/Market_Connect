@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PaymentGateway from '../PaymentGateway';
-import api from '../../../../api/axios';
+import api from '../../../../services/axios';
 
-vi.mock('../../../../api/axios');
+vi.mock('../../../../services/axios');
 
 const mockOnSuccess = vi.fn();
 const mockOnCancel = vi.fn();

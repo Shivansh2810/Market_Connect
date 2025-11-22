@@ -4,9 +4,9 @@ import { BrowserRouter } from 'react-router-dom';
 import CheckoutPage from '../CheckoutPage';
 import { AuthProvider } from '../../contexts/AuthContext';
 import { CartProvider } from '../../contexts/CartContext';
-import api from '../../../api/axios';
+import api from '../../../services/axios';
 
-vi.mock('../../../api/axios');
+vi.mock('../../../services/axios');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {

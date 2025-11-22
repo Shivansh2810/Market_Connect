@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createRazorpayOrder, verifyPayment } from '../../../api/payment';
+import { createRazorpayOrder, verifyPayment } from '../../../services/payment';
 import './PaymentGateway.css';
 
 const loadRazorpayScript = () => {

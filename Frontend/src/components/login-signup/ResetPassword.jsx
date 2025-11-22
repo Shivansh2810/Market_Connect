@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../../../api/axios";
+import api from "../../../services/axios";
 import { useAuth } from "../../contexts/AuthContext";
 import "./ResetPassword.css";
 
