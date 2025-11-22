@@ -9,7 +9,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: `${process.env.CLIENT_URL}/google-callback`
+        callbackURL: `${process.env.BACKEND_URL}/google-callback`
       },
       async (accessToken, refreshToken, googleProfile, done) => {
         try {
