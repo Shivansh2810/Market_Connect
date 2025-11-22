@@ -12,7 +12,15 @@ env_path = Path(__file__).with_name('.env')
 load_dotenv(dotenv_path=env_path)
 
 app = Flask(__name__)
-CORS(app)  # allows frontend requests from localhost
+CORS(app, resources={
+    r"/api/chatbot/*": {
+        "origins": [
+            "https://market-connect-lsh3.vercel.app"
+        ],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "methods": ["GET", "POST", "OPTIONS"]
+    }
+})  # allows frontend requests from localhost
 
 # FAQ_API_URL = "http://localhost:8080/api/faqs"
 # PRODUCT_API_URL = "http://localhost:8080/api/products"
