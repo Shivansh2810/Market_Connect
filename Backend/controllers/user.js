@@ -460,19 +460,36 @@ exports.upgradeToSeller = async (req, res) => {
 };
 
 exports.googleAuth = (req, res) => {
-  const userData = {
-    id: req.user.user._id,
-    name: req.user.user.name,
-    email: req.user.user.email,
-    role: req.user.user.role,
-    mobNo: req.user.user.mobNo,
-    googleId: req.user.user.googleId,
-  };
+  try {
+    console.log('🔄 Google Auth Controller - Processing callback');
+    
+    if (!req.user || !req.user.user || !req.user.token) {
+      console.error('❌ Missing user data in request:', req.user);
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+    }
 
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-  const redirectUrl = `${frontendUrl}/google-callback?token=${req.user.token}&userId=${req.user.user._id}`;
+    const userData = {
+      id: req.user.user._id,
+      name: req.user.user.name,
+      email: req.user.user.email,
+      role: req.user.user.role,
+      mobNo: req.user.user.mobNo,
+      googleId: req.user.user.googleId,
+    };
 
-  res.redirect(redirectUrl);
+    console.log('✅ User data prepared:', { id: userData.id, email: userData.email });
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const redirectUrl = `${frontendUrl}/google-callback?token=${encodeURIComponent(req.user.token)}&userId=${encodeURIComponent(req.user.user._id)}`;
+
+    console.log('➡️ Redirecting to frontend:', redirectUrl);
+    res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('❌ Google Auth Controller Error:', error);
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    res.redirect(`${frontendUrl}/login?error=auth_processing_failed`);
+  }
 };
 
 exports.getMe = async (req, res) => {
