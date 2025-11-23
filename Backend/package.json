@@ -5,9 +5,12 @@
   "main": "app.js",
   "scripts": {
   "start": "node app.js",
+  "dev": "nodemon app.js",
   "test": "jest --runInBand --coverage",
-
-  "test:product": "jest test/product.*.test.js --coverage --collectCoverageFrom \"./controllers/productController.js\" \"./routes/product.js\" \"./validations/product.js\""
+  "test:product": "jest test/product.*.test.js --coverage --collectCoverageFrom \"./controllers/productController.js\" \"./routes/product.js\" \"./validations/product.js\"",
+  "seed": "node scripts/seedData.js",
+  "check-db": "node scripts/checkDatabase.js",
+  "create-admin": "node scripts/createAdmin.js"
 },
 
   "dependencies": {

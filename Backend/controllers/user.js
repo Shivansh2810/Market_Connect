@@ -7,29 +7,24 @@ const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
   host: "smtp-relay.brevo.com",
   port: 587,
-  secure: false,
+  secure: false, // true for 465, false for other ports
   auth: {
-    user: process.env.BREVO_EMAIL,    
-    pass: process.env.BREVO_SMTP_KEY,  
+    user: process.env.BREVO_EMAIL,
+    pass: process.env.BREVO_SMTP_KEY,
   },
+  tls: {
+    rejectUnauthorized: false // Only for development
+  }
 });
 
-if (process.env.BREVO_EMAIL && process.env.BREVO_SMTP_KEY) {
-  transporter.verify(function (error, success) {
-    if (error) {
-      console.log("Email transporter error:", error.message);
-      console.log(
-        "💡 Email functionality disabled. Set EMAIL_PASSWORD in .env to enable."
-      );
-    } else {
-      console.log(" Email server is ready to send messages");
-    }
-  });
-} else {
-  console.log(
-    "  Email not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env to enable email functionality."
-  );
-}
+// Test connection
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Brevo SMTP Error:", error.message);
+  } else {
+    console.log("✅ Brevo SMTP Server is ready to send emails");
+  }
+});
 
 const ADMIN_EMAILS = ["admin@marketplace.com"];
 
@@ -225,7 +220,7 @@ exports.forgotPassword = async (req, res) => {
     const mailOptions = {
       from: {
         name: "Market Connect",
-        address: process.env.EMAIL_USER,
+        address: process.env.SMTP_EMAIL,
       },
       to: user.email,
       subject: "Password Reset Request - Market Connect",
@@ -460,19 +455,34 @@ exports.upgradeToSeller = async (req, res) => {
 };
 
 exports.googleAuth = (req, res) => {
-  const userData = {
-    id: req.user.user._id,
-    name: req.user.user.name,
-    email: req.user.user.email,
-    role: req.user.user.role,
-    mobNo: req.user.user.mobNo,
-    googleId: req.user.user.googleId,
-  };
+  try {
+    console.log('🔄 Google Auth Controller - Processing callback');
+    
+    if (!req.user || !req.user.user || !req.user.token) {
+      console.error('❌ Missing user data in request:', req.user);
+      return res.redirect(`http://localhost:3000/login?error=auth_failed`);
+    }
 
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-  const redirectUrl = `${frontendUrl}/google-callback?token=${req.user.token}&userId=${req.user.user._id}`;
+    const userData = {
+      id: req.user.user._id,
+      name: req.user.user.name,
+      email: req.user.user.email,
+      role: req.user.user.role,
+      mobNo: req.user.user.mobNo,
+      googleId: req.user.user.googleId,
+    };
 
-  res.redirect(redirectUrl);
+    console.log('✅ User data prepared:', { id: userData.id, email: userData.email });
+
+    // Always redirect to localhost for development
+    const redirectUrl = `http://localhost:3000/google-callback?token=${encodeURIComponent(req.user.token)}&userId=${encodeURIComponent(req.user.user._id)}`;
+
+    console.log('➡️ Redirecting to frontend:', redirectUrl);
+    res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('❌ Google Auth Controller Error:', error);
+    res.redirect(`http://localhost:3000/login?error=auth_processing_failed`);
+  }
 };
 
 exports.getMe = async (req, res) => {

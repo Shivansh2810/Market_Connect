@@ -42,17 +42,52 @@ router.put(
 
 router.get(
   "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
+  (req, res, next) => {
+    console.log('🔐 Initiating Google OAuth flow');
+    next();
+  },
+  passport.authenticate("google", { 
+    scope: ["profile", "email"],
+    prompt: "select_account"
+  })
 );
 
 router.get(
   "/auth/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: `${
-      process.env.FRONTEND_URL || "http://localhost:3000"
-    }/login?error=google_auth_failed`,
-  }),
+  (req, res, next) => {
+    console.log('📥 Google OAuth callback received');
+    console.log('Query params:', req.query);
+    
+    // Check if there's an error from Google
+    if (req.query.error) {
+      console.error('❌ Google OAuth error:', req.query.error);
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      return res.redirect(`${frontendUrl}/login?error=${req.query.error}`);
+    }
+    
+    next();
+  },
+  (req, res, next) => {
+    passport.authenticate("google", {
+      session: false,
+    }, (err, user, info) => {
+      if (err) {
+        console.error('❌ Passport authentication error:', err);
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        return res.redirect(`${frontendUrl}/login?error=auth_error`);
+      }
+      
+      if (!user) {
+        console.error('❌ No user returned from passport:', info);
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        return res.redirect(`${frontendUrl}/login?error=no_user`);
+      }
+      
+      // Manually set user on request
+      req.user = user;
+      next();
+    })(req, res, next);
+  },
   userController.googleAuth
 );
 
