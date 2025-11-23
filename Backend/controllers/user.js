@@ -220,7 +220,7 @@ exports.forgotPassword = async (req, res) => {
     const mailOptions = {
       from: {
         name: "Market Connect",
-        address: process.env.SMTP_EMAIL,
+        address: process.env.EMAIL_FROM || process.env.BREVO_EMAIL,
       },
       to: user.email,
       subject: "Password Reset Request - Market Connect",
@@ -458,9 +458,11 @@ exports.googleAuth = (req, res) => {
   try {
     console.log('🔄 Google Auth Controller - Processing callback');
     
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    
     if (!req.user || !req.user.user || !req.user.token) {
       console.error('❌ Missing user data in request:', req.user);
-      return res.redirect(`http://localhost:3000/login?error=auth_failed`);
+      return res.redirect(`${frontendUrl}/login?error=auth_failed`);
     }
 
     const userData = {
@@ -474,14 +476,14 @@ exports.googleAuth = (req, res) => {
 
     console.log('✅ User data prepared:', { id: userData.id, email: userData.email });
 
-    // Always redirect to localhost for development
-    const redirectUrl = `http://localhost:3000/google-callback?token=${encodeURIComponent(req.user.token)}&userId=${encodeURIComponent(req.user.user._id)}`;
+    const redirectUrl = `${frontendUrl}/google-callback?token=${encodeURIComponent(req.user.token)}&userId=${encodeURIComponent(req.user.user._id)}`;
 
     console.log('➡️ Redirecting to frontend:', redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {
     console.error('❌ Google Auth Controller Error:', error);
-    res.redirect(`http://localhost:3000/login?error=auth_processing_failed`);
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    res.redirect(`${frontendUrl}/login?error=auth_processing_failed`);
   }
 };
 
