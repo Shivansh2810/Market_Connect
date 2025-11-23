@@ -465,8 +465,7 @@ exports.googleAuth = (req, res) => {
     
     if (!req.user || !req.user.user || !req.user.token) {
       console.error('❌ Missing user data in request:', req.user);
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+      return res.redirect(`http://localhost:3000/login?error=auth_failed`);
     }
 
     const userData = {
@@ -480,15 +479,14 @@ exports.googleAuth = (req, res) => {
 
     console.log('✅ User data prepared:', { id: userData.id, email: userData.email });
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const redirectUrl = `${frontendUrl}/google-callback?token=${encodeURIComponent(req.user.token)}&userId=${encodeURIComponent(req.user.user._id)}`;
+    // Always redirect to localhost for development
+    const redirectUrl = `http://localhost:3000/google-callback?token=${encodeURIComponent(req.user.token)}&userId=${encodeURIComponent(req.user.user._id)}`;
 
     console.log('➡️ Redirecting to frontend:', redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {
     console.error('❌ Google Auth Controller Error:', error);
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    res.redirect(`${frontendUrl}/login?error=auth_processing_failed`);
+    res.redirect(`http://localhost:3000/login?error=auth_processing_failed`);
   }
 };
 

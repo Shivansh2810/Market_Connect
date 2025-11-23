@@ -166,20 +166,17 @@ export default function Login() {
     try {
     setError("");
 
-    // --- ADD THIS LOGIC ---
     // Get the 'from' path, default to /dashboard if it doesn't exist
     const from = location.state?.from?.pathname || '/dashboard';
     // Store it so the callback page can read it
     sessionStorage.setItem('login_redirect', from);
-    // --- END OF NEW LOGIC ---
 
-    const base = api.defaults.baseURL || 'http://localhost:8080/api';
-    const googleAuthUrl = `${base}/users/auth/google`;
+    // Always use production backend for Google OAuth (callback URL must match Google Console)
+    const googleAuthUrl = 'https://market-connect-2qmb.onrender.com/api/users/auth/google';
     console.log('🔐 Redirecting to Google Auth:', googleAuthUrl);
     
     window.location.href = googleAuthUrl;
    } catch (err) {
-// ...
       console.error('❌ Google login error:', err);
       setError('Failed to start Google login. Please try again.');
     }

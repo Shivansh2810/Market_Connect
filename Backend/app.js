@@ -45,13 +45,18 @@ if (process.env.NODE_ENV !== "test") {
 app.use(cors({
   origin: [
     "http://localhost:3000",
+    "http://localhost:3001",
+    "https://market-connect-2qmb.onrender.com",
     process.env.FRONTEND_URL,
-  ],
+  ].filter(Boolean),
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(passport.initialize());
 
 
