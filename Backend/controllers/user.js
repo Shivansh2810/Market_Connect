@@ -7,29 +7,24 @@ const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
   host: "smtp-relay.brevo.com",
   port: 587,
-  secure: false,
+  secure: false, // true for 465, false for other ports
   auth: {
-    user: process.env.BREVO_EMAIL,    
-    pass: process.env.BREVO_SMTP_KEY,  
+    user: process.env.BREVO_EMAIL,
+    pass: process.env.BREVO_SMTP_KEY,
   },
+  tls: {
+    rejectUnauthorized: false // Only for development
+  }
 });
 
-if (process.env.BREVO_EMAIL && process.env.BREVO_SMTP_KEY) {
-  transporter.verify(function (error, success) {
-    if (error) {
-      console.log("Email transporter error:", error.message);
-      console.log(
-        "💡 Email functionality disabled. Set EMAIL_PASSWORD in .env to enable."
-      );
-    } else {
-      console.log(" Email server is ready to send messages");
-    }
-  });
-} else {
-  console.log(
-    "  Email not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env to enable email functionality."
-  );
-}
+// Test connection
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Brevo SMTP Error:", error.message);
+  } else {
+    console.log("✅ Brevo SMTP Server is ready to send emails");
+  }
+});
 
 const ADMIN_EMAILS = ["admin@marketplace.com"];
 
@@ -225,7 +220,7 @@ exports.forgotPassword = async (req, res) => {
     const mailOptions = {
       from: {
         name: "Market Connect",
-        address: process.env.EMAIL_USER,
+        address: process.env.SMTP_EMAIL,
       },
       to: user.email,
       subject: "Password Reset Request - Market Connect",

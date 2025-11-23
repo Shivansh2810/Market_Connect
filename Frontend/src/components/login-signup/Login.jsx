@@ -163,7 +163,7 @@ export default function Login() {
   };
 
   const handleGoogleLogin = () => {
-    try {
+  try {
     setError("");
 
     // Get the 'from' path, default to /dashboard if it doesn't exist
@@ -171,16 +171,17 @@ export default function Login() {
     // Store it so the callback page can read it
     sessionStorage.setItem('login_redirect', from);
 
-    // Always use production backend for Google OAuth (callback URL must match Google Console)
-    const googleAuthUrl = 'https://market-connect-2qmb.onrender.com/api/users/auth/google';
-    console.log('🔐 Redirecting to Google Auth:', googleAuthUrl);
+    // Use the correct backend URL based on environment
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+    const googleAuthUrl = `${backendUrl}/api/users/auth/google`;
     
+    console.log('🔐 Redirecting to Google Auth:', googleAuthUrl);
     window.location.href = googleAuthUrl;
-   } catch (err) {
-      console.error('❌ Google login error:', err);
-      setError('Failed to start Google login. Please try again.');
-    }
-  };
+  } catch (err) {
+    console.error('❌ Google login error:', err);
+    setError('Failed to start Google login. Please try again.');
+  }
+};
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
