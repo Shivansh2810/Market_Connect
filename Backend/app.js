@@ -92,11 +92,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORTT || 8080;
 
 if (require.main === module) {
   server.listen(PORT, () => {
-    console.log(`Server running on port ${PORTT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
