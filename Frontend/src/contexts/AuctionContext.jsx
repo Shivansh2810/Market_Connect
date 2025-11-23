@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import { getActiveAuctions as fetchActiveAuctions, getUpcomingAuctions as fetchUpcomingAuctions, getAuctionById } from '../../api/auction';
+import { getActiveAuctions as fetchActiveAuctions, getUpcomingAuctions as fetchUpcomingAuctions, getAuctionById } from '../../services/auction';
 import { useAuth } from './AuthContext';
 
 const AuctionContext = createContext(null);

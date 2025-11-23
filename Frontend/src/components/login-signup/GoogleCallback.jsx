@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import api from "../../../api/axios";
+import api from "../../../services/axios";
 import { getDashboardPath } from "../../utils/dashboardRoutes";
 import "./GoogleCallback.css";
 

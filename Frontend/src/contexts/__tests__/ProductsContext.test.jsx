@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { ProductsProvider, useProducts } from '../ProductsContext';
-import * as productApi from '../../../api/product';
+import * as productApi from '../../../services/product';
 
-vi.mock('../../../api/product');
+vi.mock('../../../services/product');
 
 const wrapper = ({ children }) => <ProductsProvider>{children}</ProductsProvider>;
 

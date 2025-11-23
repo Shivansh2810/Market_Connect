@@ -17,10 +17,10 @@ import {
   faTimes as faClose,
   faGavel
 } from '@fortawesome/free-solid-svg-icons';
-import * as categoryAPI from '../../../api/category';
-import * as couponAPI from '../../../api/coupon';
-import * as auctionAPI from '../../../api/auction';
-import * as productAPI from '../../../api/product';
+import * as categoryAPI from '../../../services/category';
+import * as couponAPI from '../../../services/coupon';
+import * as auctionAPI from '../../../services/auction';
+import * as productAPI from '../../../services/product';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();

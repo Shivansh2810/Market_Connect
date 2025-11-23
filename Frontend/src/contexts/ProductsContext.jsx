@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { getAllProducts, getCategories } from '../../api/product';
+import { getAllProducts, getCategories } from '../../services/product';
 
 const ProductsContext = createContext(null);
 

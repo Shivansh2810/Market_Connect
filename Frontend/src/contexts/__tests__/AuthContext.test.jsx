@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../AuthContext';
-import api from '../../../api/axios';
+import api from '../../../services/axios';
 
 // Mock the API
-vi.mock('../../../api/axios');
+vi.mock('../../../services/axios');
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
 

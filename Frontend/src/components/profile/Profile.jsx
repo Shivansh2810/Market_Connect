@@ -18,10 +18,10 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import api from '../../../api/axios';
-import { getCurrentUserProfile, getCurrentUserOrders, updateCurrentUserProfile } from '../../../api/user';
-import { requestReturn } from '../../../api/return';
-import { createReview } from '../../../api/review';
+import api from '../../../services/axios';
+import { getCurrentUserProfile, getCurrentUserOrders, updateCurrentUserProfile } from '../../../services/user';
+import { requestReturn } from '../../../services/return';
+import { createReview } from '../../../services/review';
 
 const Profile = ({ onBack }) => {
     const [isEditing, setIsEditing] = useState(false);

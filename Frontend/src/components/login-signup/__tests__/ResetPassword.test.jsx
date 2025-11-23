@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import ResetPassword from '../ResetPassword';
-import api from '../../../../api/axios';
+import api from '../../../../services/axios';
 
-vi.mock('../../../../api/axios');
+vi.mock('../../../../services/axios');
 
 const mockNavigate = vi.fn();
 const mockParams = { token: 'reset-token-123' };

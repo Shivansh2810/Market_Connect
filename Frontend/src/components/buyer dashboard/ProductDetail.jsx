@@ -13,7 +13,7 @@ import {
     faShieldAlt,
     faUser
 } from '@fortawesome/free-solid-svg-icons';
-import { getSimilarProducts } from '../../../api/product';
+import { getSimilarProducts } from '../../../services/product';
 
 const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow }) => {
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);

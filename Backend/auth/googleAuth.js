@@ -18,6 +18,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         callbackURL: callbackURL,
         proxy: true,
         passReqToCallback: false
+
       },
       async (accessToken, refreshToken, googleProfile, done) => {
         try {
