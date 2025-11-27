@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getActiveAuctions, getAuctionById, createAuction, cancelAuction } from '../auction';
+import { getActiveAuctions, getUpcomingAuctions, getAuctionById, createAuction, updateAuction, cancelAuction } from '../auction';
 import api from '../axios';
 
 // Mock the API
@@ -43,6 +43,38 @@ describe('Auction API', () => {
     });
   });
 
+  describe('getUpcomingAuctions', () => {
+    it('fetches upcoming auctions successfully', async () => {
+      const mockAuctions = {
+        success: true,
+        data: [
+          {
+            _id: '2',
+            title: 'Upcoming Auction',
+            auctionDetails: {
+              startPrice: 500,
+              status: 'Upcoming'
+            }
+          }
+        ]
+      };
+      
+      api.get.mockResolvedValueOnce({ data: mockAuctions });
+      
+      const result = await getUpcomingAuctions();
+      
+      expect(api.get).toHaveBeenCalledWith('/auctions/upcoming');
+      expect(result).toEqual(mockAuctions);
+    });
+
+    it('handles error when fetching upcoming auctions', async () => {
+      const mockError = new Error('Network error');
+      api.get.mockRejectedValueOnce(mockError);
+      
+      await expect(getUpcomingAuctions()).rejects.toThrow('Network error');
+    });
+  });
+
   describe('getAuctionById', () => {
     it('fetches auction by ID successfully', async () => {
       const mockAuction = {
@@ -63,6 +95,24 @@ describe('Auction API', () => {
       
       expect(api.get).toHaveBeenCalledWith('/auctions/123');
       expect(result).toEqual(mockAuction.data);
+    });
+
+    it('fetches auction by ID without nested data property', async () => {
+      const mockAuction = {
+        _id: '123',
+        title: 'Test Auction',
+        auctionDetails: {
+          startPrice: 1000,
+          currentBid: 1500
+        }
+      };
+      
+      api.get.mockResolvedValueOnce({ data: mockAuction });
+      
+      const result = await getAuctionById('123');
+      
+      expect(api.get).toHaveBeenCalledWith('/auctions/123');
+      expect(result).toEqual(mockAuction);
     });
 
     it('handles error when auction not found', async () => {
@@ -113,6 +163,39 @@ describe('Auction API', () => {
       api.post.mockRejectedValueOnce(mockError);
       
       await expect(createAuction({})).rejects.toEqual(mockError);
+    });
+  });
+
+  describe('updateAuction', () => {
+    it('updates auction successfully', async () => {
+      const updateData = {
+        endTime: '2024-12-21T18:00:00Z'
+      };
+      
+      const mockResponse = {
+        success: true,
+        message: 'Auction updated successfully'
+      };
+      
+      api.put.mockResolvedValueOnce({ data: mockResponse });
+      
+      const result = await updateAuction('123', updateData);
+      
+      expect(api.put).toHaveBeenCalledWith('/auctions/123', updateData);
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('handles error when updating auction', async () => {
+      const mockError = {
+        response: {
+          status: 404,
+          data: { message: 'Auction not found' }
+        }
+      };
+      
+      api.put.mockRejectedValueOnce(mockError);
+      
+      await expect(updateAuction('999', {})).rejects.toEqual(mockError);
     });
   });
 

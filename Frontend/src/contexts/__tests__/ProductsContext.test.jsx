@@ -213,4 +213,57 @@ describe('ProductsContext', () => {
     
     expect(result.current.products).toEqual(mockProducts);
   });
+
+  it('handles array response for categories', async () => {
+    const mockCategories = [{ _id: '1', name: 'Electronics' }];
+    
+    productApi.getAllProducts.mockResolvedValue({ success: true, products: [] });
+    productApi.getCategories.mockResolvedValue(mockCategories);
+    
+    const { result } = renderHook(() => useProducts(), { wrapper });
+    
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+    
+    expect(result.current.categories).toEqual(mockCategories);
+  });
+
+  it('derives categories from products with different category formats', async () => {
+    const mockProducts = [
+      { _id: '1', category: { name: 'Electronics' } },
+      { _id: '2', category: { title: 'Clothing' } },
+      { _id: '3', category: 'Books' },
+      { _id: '4', category: null }
+    ];
+    
+    productApi.getAllProducts.mockResolvedValue({ success: true, products: mockProducts });
+    productApi.getCategories.mockRejectedValue(new Error('Failed'));
+    
+    const { result } = renderHook(() => useProducts(), { wrapper });
+    
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+    
+    expect(result.current.categories.length).toBeGreaterThan(0);
+  });
+
+  it('gets product by id property', async () => {
+    const mockProducts = [
+      { id: '1', title: 'Product 1', price: 100 }
+    ];
+    
+    productApi.getAllProducts.mockResolvedValue({ success: true, products: mockProducts });
+    productApi.getCategories.mockResolvedValue({ success: true, categories: [] });
+    
+    const { result } = renderHook(() => useProducts(), { wrapper });
+    
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+    
+    const product = result.current.getProductById('1');
+    expect(product).toEqual(mockProducts[0]);
+  });
 });

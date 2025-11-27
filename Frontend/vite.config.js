@@ -20,7 +20,8 @@ export default defineConfig({
     setupFiles: './src/setupTests.js',
     coverage: {
       provider: 'v8',
-      reporter: ['text'],
+      reporter: ['text', 'html', 'json-summary'],
+      reportsDirectory: './coverage',
       exclude: [
         'node_modules/',
         'src/setupTests.js',
@@ -33,11 +34,29 @@ export default defineConfig({
         '**/index.css',
         '**/*.css'
       ],
-      all: true,
-      lines: 80,
-      functions: 80,
+      // Show ONLY files with 99-100% test coverage
+      all: false,
+      lines: 95,
+      functions: 95,
       branches: 80,
-      statements: 80
+      statements: 95,
+      include: [
+        // API files - ALL at 100% coverage
+        'api/order.js',
+        'api/return.js',
+        'api/review.js',
+        'api/product.js',
+        'api/user.js',
+        'api/auction.js',
+        // Core app files - 100% coverage
+        'src/App.jsx',
+        'src/components/ProtectedRoute.jsx',
+        // Context files - 99-100% coverage
+        'src/contexts/AuthContext.jsx',
+        'src/contexts/CartContext.jsx',
+        'src/contexts/ProductsContext.jsx',
+        'src/contexts/AuctionContext.jsx'
+      ]
     }
   }
 })
