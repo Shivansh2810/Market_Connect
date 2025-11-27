@@ -12,10 +12,22 @@ env_path = Path(__file__).with_name('.env')
 load_dotenv(dotenv_path=env_path)
 
 app = Flask(__name__)
-CORS(app)  # allows frontend requests from localhost
+CORS(app, resources={
+    r"/api/chatbot/*": {
+        "origins": [
+            "https://market-connect-lsh3.vercel.app"
+        ],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "methods": ["GET", "POST", "OPTIONS"]
+    }
+})  # allows frontend requests from localhost
 
-FAQ_API_URL = "http://localhost:8080/api/faqs"
-PRODUCT_API_URL = "http://localhost:8080/api/products"
+# FAQ_API_URL = "http://localhost:8080/api/faqs"
+# PRODUCT_API_URL = "http://localhost:8080/api/products"
+
+FAQ_API_URL = os.getenv("BACKEND_URL") + "/api/faqs"
+PRODUCT_API_URL = os.getenv("BACKEND_URL") + "/api/products"
+
 _faq_cache = []
 
 def load_faqs():
@@ -304,4 +316,6 @@ if __name__ == "__main__":
     print(f"Chatbot API server starting on port {port}")
     print("Welcome to the Market Connect customer service API!")
     print(f"Server will be available at: http://localhost:{port}")
-    app.run(debug=True, port=port, host='0.0.0.0')
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+

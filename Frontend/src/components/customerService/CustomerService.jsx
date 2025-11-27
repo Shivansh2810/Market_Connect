@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './customerService.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import api from '../../../api/axios';
+import api from '../../../services/axios';
 
 import { 
     faArrowLeft,
@@ -15,8 +15,12 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 // Chatbot API endpoint - adjust this to match your Flask server URL
-const CHATBOT_API_URL = 'http://localhost:5000/api/chatbot';
-const FAQ_API_URL = 'http://localhost:8080/api/faqs';
+// const CHATBOT_API_URL = 'http://localhost:5000/services/chatbot';
+// const FAQ_API_URL = 'http://localhost:8080/services/faqs'; 
+
+const CHATBOT_API_URL = import.meta.env.VITE_CHATBOT_URL;
+const FAQ_API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/faqs`;
+
 
 const CustomerService = ({ onBack }) => {
     const [messages, setMessages] = useState([]);

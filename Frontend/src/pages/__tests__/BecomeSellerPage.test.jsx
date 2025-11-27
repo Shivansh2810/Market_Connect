@@ -3,9 +3,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import BecomeSellerPage from '../BecomeSellerPage';
 import { AuthProvider } from '../../contexts/AuthContext';
-import api from '../../../api/axios';
+import api from '../../../services/axios';
 
-vi.mock('../../../api/axios');
+vi.mock('../../../services/axios');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {

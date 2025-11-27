@@ -4,9 +4,9 @@ import { BrowserRouter } from 'react-router-dom';
 import AuctionDetail from '../AuctionDetail';
 import { AuthProvider } from '../../../contexts/AuthContext';
 import { AuctionProvider } from '../../../contexts/AuctionContext';
-import * as auctionAPI from '../../../../api/auction';
+import * as auctionAPI from '../../../../services/auction';
 
-vi.mock('../../../../api/auction');
+vi.mock('../../../../services/auction');
 vi.mock('socket.io-client', () => ({
   io: vi.fn(() => ({
     on: vi.fn(),

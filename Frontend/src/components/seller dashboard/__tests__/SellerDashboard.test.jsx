@@ -4,10 +4,10 @@ import { BrowserRouter } from 'react-router-dom';
 import SellerDashboard from '../SellerDashboard';
 import { AuthProvider } from '../../../contexts/AuthContext';
 import { ProductsProvider } from '../../../contexts/ProductsContext';
-import api from '../../../../api/axios';
+import api from '../../../../services/axios';
 
-vi.mock('../../../../api/axios');
-vi.mock('../../../../api/product');
+vi.mock('../../../../services/axios');
+vi.mock('../../../../services/product');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {

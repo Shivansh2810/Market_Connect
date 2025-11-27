@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import { getActiveAuctions as fetchActiveAuctions, getUpcomingAuctions as fetchUpcomingAuctions, getAuctionById } from '../../api/auction';
+import { getActiveAuctions as fetchActiveAuctions, getUpcomingAuctions as fetchUpcomingAuctions, getAuctionById } from '../../services/auction';
 import { useAuth } from './AuthContext';
 
 const AuctionContext = createContext(null);
@@ -76,9 +76,11 @@ export const AuctionProvider = ({ children }) => {
 
     // init socket
     try {
-      const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:8080', {
-        auth: { token: token || localStorage.getItem('token') },
-      });
+      const socket = io(import.meta.env.VITE_SOCKET_URL, {
+  auth: { token: token || localStorage.getItem('token') },
+  transports: ["websocket"]
+});
+
       socketRef.current = socket;
 
       socket.on('connect', () => {

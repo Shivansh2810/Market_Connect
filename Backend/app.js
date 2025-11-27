@@ -31,20 +31,32 @@ const auctionRoutes = require('./routes/auctionRoutes');
 const chatRoutes = require("./routes/chat");
 const assistantRoutes = require("./routes/assistant");
 
-mongoose
-  .connect(process.env.ATLASDB_URL)
-  .then(() => console.log("MongoDB Atlas connected"))
-  .catch((err) => console.error("DB connection error:", err));
+if (process.env.NODE_ENV !== "test") {
+  mongoose
+    .connect(process.env.ATLASDB_URL)
+    .then(() => console.log("MongoDB Atlas connected"))
+    .catch(err => console.error("DB error:", err));
+}
+
 
   initSocket(server);
 
 // CORS middleware MUST come first
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://market-connect-2qmb.onrender.com",
+    process.env.FRONTEND_URL,
+  ].filter(Boolean),
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(passport.initialize());
 
 
@@ -80,12 +92,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Export the app for testing. When run directly, start the server.
-// if (require.main === module) {
-  const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORTT || 8080;
+
+if (require.main === module) {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
-// }
+}
 
 module.exports = app;

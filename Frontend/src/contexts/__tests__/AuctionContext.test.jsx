@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { AuctionProvider, useAuction } from '../AuctionContext';
 import { AuthProvider } from '../AuthContext';
-import * as auctionApi from '../../../api/auction';
+import * as auctionApi from '../../../services/auction';
 import { io } from 'socket.io-client';
 
-vi.mock('../../../api/auction');
+vi.mock('../../../services/auction');
 vi.mock('socket.io-client');
 
 const mockSocket = {

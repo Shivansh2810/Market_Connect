@@ -5,9 +5,9 @@ import ProductDetailPage from '../ProductDetailPage';
 import { AuthProvider } from '../../contexts/AuthContext';
 import { ProductsProvider } from '../../contexts/ProductsContext';
 import { CartProvider } from '../../contexts/CartContext';
-import * as productApi from '../../../api/product';
+import * as productApi from '../../../services/product';
 
-vi.mock('../../../api/product');
+vi.mock('../../../services/product');
 
 const mockNavigate = vi.fn();
 const mockParams = { productId: '123' };

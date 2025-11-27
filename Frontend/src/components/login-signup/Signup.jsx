@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../../api/axios";
+import api from "../../../services/axios";
 import { useAuth } from "../../contexts/AuthContext";
 import "./Signup.css";
 
-// Using shared `api` instance (baseURL configured in Frontend/api/axios.js)
+// Using shared `api` instance (baseURL configured in Frontend/services/axios.js)
 
 export default function Signup() {
   const navigate = useNavigate();

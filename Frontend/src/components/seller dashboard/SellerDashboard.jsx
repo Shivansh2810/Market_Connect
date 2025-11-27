@@ -19,7 +19,7 @@ import {
     faSearch,
     faSync
 } from '@fortawesome/free-solid-svg-icons';
-import api from '../../../api/axios';
+import api from '../../../services/axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProducts } from '../../contexts/ProductsContext'; // <-- 1. IMPORTED
 
