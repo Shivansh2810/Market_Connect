@@ -802,9 +802,16 @@ describe('AuctionContext', () => {
     
     const mockUser = { _id: 'user123', name: 'Test User' };
     
-    // Mock localStorage to have user
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    localStorage.setItem('token', 'test-token');
+    // Create a custom wrapper with mocked useAuth that returns a user
+    const { useAuth } = await import('../AuthContext');
+    vi.spyOn(await import('../AuthContext'), 'useAuth').mockReturnValue({
+      user: mockUser,
+      token: 'test-token',
+      isAuthenticated: true,
+      login: vi.fn(),
+      logout: vi.fn(),
+      updateUser: vi.fn()
+    });
     
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const { result } = renderHook(() => useAuction(), { wrapper });
@@ -813,12 +820,20 @@ describe('AuctionContext', () => {
       expect(result.current.loading).toBe(false);
     });
     
-    // The console.log happens inside placeBid when user exists
-    // We just need to verify the function exists and can be called
-    expect(result.current.placeBid).toBeDefined();
+    // Now call placeBid with a user present - this should trigger the console.log
+    act(() => {
+      result.current.placeBid('product-1', 500);
+    });
+    
+    // Verify the console.log was called
+    expect(consoleSpy).toHaveBeenCalledWith('📤 Placing bid:', { 
+      productId: 'product-1', 
+      amount: 500, 
+      userId: 'user123' 
+    });
     
     consoleSpy.mockRestore();
-    localStorage.clear();
+    vi.restoreAllMocks();
   });
 
   it('logs when joining auction room', async () => {

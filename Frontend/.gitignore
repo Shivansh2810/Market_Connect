@@ -2,3 +2,12 @@ node_modules
 
 .early.coverage
 .env
+
+# Test coverage
+coverage/
+*.txt
+complete-coverage.txt
+coverage-output.txt
+test-output.txt
+test-results.txt
+final-test.txt

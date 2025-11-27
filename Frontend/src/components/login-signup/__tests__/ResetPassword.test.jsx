@@ -2,12 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import ResetPassword from '../ResetPassword';
-<<<<<<< HEAD
-import { AuthProvider } from '../../../contexts/AuthContext';
-import api from '../../../../api/axios';
-=======
 import api from '../../../../services/axios';
->>>>>>> 6d9d6d5e917c61927b278719835e695073b0753b
+import { AuthProvider } from '../../../contexts/AuthContext';
 
 vi.mock('../../../../services/axios');
 
