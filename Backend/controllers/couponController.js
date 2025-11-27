@@ -70,8 +70,6 @@ const createCoupon = async (req, res) => {
         error: error.details[0].message
       });
     }
-
-    // Handle empty usageLimit - convert to null
     const couponData = {
       ...value,
       usageLimit: value.usageLimit === '' || value.usageLimit === null ? null : value.usageLimit
@@ -89,7 +87,6 @@ const createCoupon = async (req, res) => {
   } catch (error) {
     console.error("Create coupon error:", error);
     
-    // Handle duplicate key error
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -107,9 +104,8 @@ const createCoupon = async (req, res) => {
 
 const getCoupons = async (req, res) => {
   try {
-    console.log('[GET /coupons] Fetching all coupons...');
     const coupons = await Coupon.find().sort({ createdAt: -1 });
-    console.log(`[GET /coupons] ✅ Found ${coupons.length} coupons`);
+    console.log(`[GET /coupons] Found ${coupons.length} coupons`);
 
     res.json({
       success: true,
@@ -119,7 +115,7 @@ const getCoupons = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("[GET /coupons] ❌ Error:", error.message);
+    console.error("[GET /coupons] Error:", error.message);
     console.error("[GET /coupons] Full error stack:", error);
     res.status(500).json({
       success: false,
@@ -142,7 +138,6 @@ const updateCoupon = async (req, res) => {
       });
     }
 
-    // Handle empty usageLimit - convert to null
     const updateData = {
       ...value,
       usageLimit: value.usageLimit === '' || value.usageLimit === null ? null : value.usageLimit
@@ -170,7 +165,6 @@ const updateCoupon = async (req, res) => {
   } catch (error) {
     console.error("Update coupon error:", error);
     
-    // Handle duplicate key error
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,

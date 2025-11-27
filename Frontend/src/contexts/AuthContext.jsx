@@ -19,26 +19,24 @@ export const AuthProvider = ({ children }) => {
 
   const validateToken = async (storedToken) => {
     try {
-      console.log('🔐 Validating token...');
+      console.log('Validating token...');
       
-      // Set the token in axios headers for this request
       const config = {
         headers: {
           Authorization: `Bearer ${storedToken}`
         }
       };
       
-      // ✅ FIXED: Use correct endpoint for token validation
       let response;
       try {
         response = await api.get('/users/me', config);
       } catch (error) {
-        console.log('❌ /users/me failed, trying fallback...');
-        // Try without the /users prefix as fallback
+        console.log(' /users/me failed, trying fallback...');
+        
         response = await api.get('/me', config);
       }
       
-      console.log('✅ Token validation response:', response.data);
+      console.log('Token validation response:', response.data);
       
       if (response.data.success) {
         const userData = response.data.data || response.data.user;
@@ -46,18 +44,16 @@ export const AuthProvider = ({ children }) => {
         setToken(storedToken);
         setIsAuthenticated(true);
         
-        // Update localStorage with fresh user data
         localStorage.setItem('user', JSON.stringify(userData));
         
-        // Set default authorization header for all future requests
         api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
         
         return true;
       }
     } catch (error) {
-      console.error('❌ Token validation failed:', error);
+      console.error('Token validation failed:', error);
       console.error('Error response:', error.response?.data);
-      // Token is invalid, clear everything
+    
       logout();
     }
     return false;
@@ -69,20 +65,18 @@ export const AuthProvider = ({ children }) => {
       const storedUser = localStorage.getItem('user');
 
       console.log('🔄 Initializing auth...');
-      console.log('Stored token:', storedToken ? '✅ Exists' : '❌ Missing');
-      console.log('Stored user:', storedUser ? '✅ Exists' : '❌ Missing');
+      console.log('Stored token:', storedToken ? 'Exists' : ' Missing');
+      console.log('Stored user:', storedUser ? ' Exists' : 'Missing');
 
       if (storedToken) {
-        // Validate token with backend
         await validateToken(storedToken);
       } else {
-        // No token found
-        console.log('❌ No token found, logging out');
+        console.log('No token found, logging out');
         logout();
       }
       
       setLoading(false);
-      console.log('🏁 Auth initialization complete');
+      console.log(' Auth initialization complete');
     };
 
     initializeAuth();
@@ -97,14 +91,13 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
     setIsAuthenticated(true);
     
-    // Set default authorization header for all future requests
     api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
     
-    console.log('✅ Login successful, user:', userData);
+    console.log(' Login successful, user:', userData);
   };
 
   const logout = () => {
-    console.log('🚪 Logging out...');
+    console.log(' Logging out...');
     
     localStorage.removeItem('token');
     localStorage.removeItem('user');

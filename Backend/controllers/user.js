@@ -7,22 +7,21 @@ const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
   host: "smtp-relay.brevo.com",
   port: 587,
-  secure: false, // true for 465, false for other ports
+  secure: false,
   auth: {
     user: process.env.BREVO_EMAIL,
     pass: process.env.BREVO_SMTP_KEY,
   },
   tls: {
-    rejectUnauthorized: false // Only for development
+    rejectUnauthorized: false 
   }
 });
 
-// Test connection
 transporter.verify((error, success) => {
   if (error) {
-    console.error("❌ Brevo SMTP Error:", error.message);
+    console.error("Brevo SMTP Error:", error.message);
   } else {
-    console.log("✅ Brevo SMTP Server is ready to send emails");
+    console.log("Brevo SMTP Server is ready to send emails");
   }
 });
 
@@ -461,7 +460,7 @@ exports.googleAuth = (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     
     if (!req.user || !req.user.user || !req.user.token) {
-      console.error('❌ Missing user data in request:', req.user);
+      console.error('Missing user data in request:', req.user);
       return res.redirect(`${frontendUrl}/login?error=auth_failed`);
     }
 
@@ -474,14 +473,14 @@ exports.googleAuth = (req, res) => {
       googleId: req.user.user.googleId,
     };
 
-    console.log('✅ User data prepared:', { id: userData.id, email: userData.email });
+    console.log(' User data prepared:', { id: userData.id, email: userData.email });
 
     const redirectUrl = `${frontendUrl}/google-callback?token=${encodeURIComponent(req.user.token)}&userId=${encodeURIComponent(req.user.user._id)}`;
 
-    console.log('➡️ Redirecting to frontend:', redirectUrl);
+    console.log(' Redirecting to frontend:', redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {
-    console.error('❌ Google Auth Controller Error:', error);
+    console.error(' Google Auth Controller Error:', error);
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     res.redirect(`${frontendUrl}/login?error=auth_processing_failed`);
   }

@@ -1,4 +1,3 @@
-// controllers/categoryController.js - COMPLETE UPDATED VERSION
 const Category = require('../models/category');
 const Product = require('../models/product'); 
 
@@ -9,7 +8,6 @@ exports.createCategory = async (req, res) => {
     
     const { name, slug, parentId } = req.body;
 
-    // Validate required fields
     if (!name || name.trim() === '') {
       return res.status(400).json({ 
         success: false, 
@@ -27,12 +25,10 @@ exports.createCategory = async (req, res) => {
     const trimmedName = name.trim();
     const trimmedSlug = slug.trim().toLowerCase();
 
-    // Normalize parentId
     const normalizedParentId = (parentId && parentId.toString().trim() !== '') ? parentId : null;
 
     console.log('Processing category:', { trimmedName, trimmedSlug, normalizedParentId });
 
-    // Check for duplicate name
     const existingName = await Category.findOne({ 
       name: { $regex: new RegExp(`^${trimmedName}$`, 'i') } 
     });
@@ -43,8 +39,6 @@ exports.createCategory = async (req, res) => {
         message: "A category with this name already exists." 
       });
     }
-
-    // Check for duplicate slug
     const existingSlug = await Category.findOne({ 
       slug: trimmedSlug 
     });
@@ -56,14 +50,13 @@ exports.createCategory = async (req, res) => {
       });
     }
 
-    // Create category
     const category = await Category.create({
       name: trimmedName,
       slug: trimmedSlug,
       parentId: normalizedParentId
     });
 
-    console.log('✅ Category created successfully:', category);
+    console.log('Category created successfully:', category);
     
     res.status(201).json({ 
       success: true, 
@@ -72,9 +65,8 @@ exports.createCategory = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Create category error:', error);
+    console.error(' Create category error:', error);
     
-    // Handle duplicate key errors
     if (error.code === 11000) {
       if (error.keyPattern && error.keyPattern.name) {
         return res.status(400).json({
@@ -102,10 +94,10 @@ exports.getAllCategories = async (req, res) => {
   try {
     console.log('[GET /categories] Fetching all categories...');
     const categories = await Category.find({}).sort({ name: 1 });
-    console.log(`[GET /categories] ✅ Found ${categories.length} categories`);
+    console.log(`[GET /categories] Found ${categories.length} categories`);
     res.status(200).json({ success: true, categories });
   } catch (error) {
-    console.error('[GET /categories] ❌ Error:', error.message, error.stack);
+    console.error('[GET /categories] Error:', error.message, error.stack);
     res.status(500).json({ 
       success: false,
       message: "Server Error", 
@@ -145,7 +137,6 @@ exports.updateCategory = async (req, res) => {
       });
     }
 
-    // Validate required fields if provided
     if (name && name.trim() === '') {
       return res.status(400).json({ 
         success: false, 
@@ -160,7 +151,6 @@ exports.updateCategory = async (req, res) => {
       });
     }
 
-    // Update fields if provided
     if (name) {
       category.name = name.trim();
     }
@@ -183,7 +173,6 @@ exports.updateCategory = async (req, res) => {
   } catch (error) {
     console.error('Update category error:', error);
     
-    // Handle duplicate key errors
     if (error.code === 11000) {
       if (error.keyPattern && error.keyPattern.name) {
         return res.status(400).json({
