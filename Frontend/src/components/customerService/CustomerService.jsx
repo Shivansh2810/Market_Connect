@@ -18,7 +18,9 @@ import {
 // const CHATBOT_API_URL = 'http://localhost:5000/services/chatbot';
 // const FAQ_API_URL = 'http://localhost:8080/services/faqs'; 
 
-const CHATBOT_API_URL = import.meta.env.VITE_CHATBOT_URL;
+//const CHATBOT_API_URL = import.meta.env.VITE_CHATBOT_URL;
+
+// Using the assistant API instead of separate chatbot server
 const FAQ_API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/faqs`;
 
 
@@ -122,23 +124,26 @@ const CustomerService = ({ onBack }) => {
             setIsLoading(true);
 
             try {
-                // Send message to Python chatbot API
+                // Use assistant API for customer service
+                /*Send message to Python chatbot API
                 const response = await fetch(`${CHATBOT_API_URL}/message`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        message: userMessage,
-                        sessionId: sessionId
-                    })
+                */
+                const response = await api.post('/assistant/chat', {
+                    message: userMessage,
+                    session_id: sessionId
                 });
-
+                /*
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                */
 
-                const data = await response.json();
+                const data = response.data;
                 
                 // Add bot response
                 const botMessage = {
@@ -151,6 +156,14 @@ const CustomerService = ({ onBack }) => {
                 setMessages(newMessages);
 
                 try {
+                    /*            Send message to Python chatbot API
+            const response = await fetch(`${CHATBOT_API_URL}/message`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                */
                     await api.post('/chats', {
                         sessionId,
                         messages: newMessages,
@@ -159,8 +172,8 @@ const CustomerService = ({ onBack }) => {
                 } catch (saveErr) {
                 }
             } catch (err) {
-                console.error('Error sending message to chatbot:', err);
-                setError('Failed to connect to chatbot. Please ensure the chatbot server is running.');
+                console.error('Error sending message:', err);
+                setError('Failed to send message. Please try again.');
                 
                 // Add error message
                 const errorMessage = {
@@ -204,23 +217,13 @@ const CustomerService = ({ onBack }) => {
         setIsLoading(true);
 
         try {
-            // Send message to Python chatbot API
-            const response = await fetch(`${CHATBOT_API_URL}/message`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    message: question,
-                    sessionId: sessionId
-                })
+            // Use assistant API for customer service
+            const response = await api.post('/assistant/chat', {
+                message: question,
+                session_id: sessionId
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
+            const data = response.data;
             
             // Add bot response
             const botMessage = {
@@ -241,8 +244,8 @@ const CustomerService = ({ onBack }) => {
             } catch (saveErr) {
             }
         } catch (err) {
-            console.error('Error sending message to chatbot:', err);
-            setError('Failed to connect to chatbot. Please ensure the chatbot server is running.');
+            console.error('Error sending message:', err);
+            setError('Failed to send message. Please try again.');
             
             // Add error message
             const errorMessage = {
@@ -270,20 +273,13 @@ const CustomerService = ({ onBack }) => {
 
     const handleResetConversation = async () => {
         try {
-            await fetch(`${CHATBOT_API_URL}/reset`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    sessionId: sessionId
-                })
-            });
+            // Just clear messages locally - no need for API call
             setMessages([]);
             setError(null);
+            // Generate new session ID
+            setSessionId(`cs_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
         } catch (err) {
             console.error('Error resetting conversation:', err);
-            // Still clear messages locally even if API call fails
             setMessages([]);
         }
     };
