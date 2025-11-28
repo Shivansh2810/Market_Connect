@@ -1034,3 +1034,40 @@
         gap: 8px;
     }
 }
+
+/* Compare Button for Similar Products */
+.compare-with-current-btn {
+    width: 100%;
+    margin-top: 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.compare-with-current-btn:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.compare-with-current-btn svg {
+    font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .compare-with-current-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+}

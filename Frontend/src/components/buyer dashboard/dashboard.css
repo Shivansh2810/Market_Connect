@@ -1851,3 +1851,37 @@
         font-size: 18px !important;
     }
 }
+/* Compare Button in Product Actions */
+.compare-btn {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 45px;
+}
+
+.compare-btn:hover {
+    background-color: #5a6268;
+    transform: translateY(-1px);
+}
+
+.product-actions {
+    display: flex;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .compare-btn {
+        padding: 10px;
+        font-size: 12px;
+        min-width: 40px;
+    }
+}
