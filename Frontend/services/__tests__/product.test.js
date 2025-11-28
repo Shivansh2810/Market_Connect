@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getAllProducts, getProductById, getCategories } from '../product';
+import { getAllProducts, getProductById, getSimilarProducts, getCategories } from '../product';
 import api from '../axios';
 
 // Mock the API
@@ -83,9 +83,35 @@ describe('Product API', () => {
       await getProductById('123');
       
       expect(consoleSpy).toHaveBeenCalledWith('🔍 Fetching product with ID:', '123');
-      expect(consoleSpy).toHaveBeenCalledWith('📦 Product API response:', mockProduct);
+      expect(consoleSpy).toHaveBeenCalledWith('Product API response:', mockProduct);
       
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('getSimilarProducts', () => {
+    it('fetches similar products successfully', async () => {
+      const mockProducts = {
+        success: true,
+        products: [
+          { _id: '2', title: 'Similar Product 1', price: 90 },
+          { _id: '3', title: 'Similar Product 2', price: 110 }
+        ]
+      };
+      
+      api.get.mockResolvedValueOnce({ data: mockProducts });
+      
+      const result = await getSimilarProducts('123');
+      
+      expect(api.get).toHaveBeenCalledWith('/products/123/similar');
+      expect(result).toEqual(mockProducts);
+    });
+
+    it('handles error when fetching similar products', async () => {
+      const mockError = new Error('Server error');
+      api.get.mockRejectedValueOnce(mockError);
+      
+      await expect(getSimilarProducts('123')).rejects.toThrow('Server error');
     });
   });
 
@@ -103,7 +129,7 @@ describe('Product API', () => {
       
       const result = await getCategories();
       
-      expect(api.get).toHaveBeenCalledWith('/categories');
+      expect(api.get).toHaveBeenCalledWith('/category');
       expect(result).toEqual(mockCategories);
     });
 
