@@ -8,8 +8,8 @@ const callbackURL = process.env.NODE_ENV === 'production'
   ? 'https://market-connect-2qmb.onrender.com/api/users/auth/google/callback'
   : 'http://localhost:8080/api/users/auth/google/callback';
 
-console.log('🔐 Google OAuth Callback URL:', callbackURL);
-console.log('🔐 Environment:', process.env.NODE_ENV);
+console.log('Google OAuth Callback URL:', callbackURL);
+console.log(' Environment:', process.env.NODE_ENV);
   passport.use(
     new GoogleStrategy(
       {
@@ -22,37 +22,72 @@ console.log('🔐 Environment:', process.env.NODE_ENV);
       },
       async (accessToken, refreshToken, googleProfile, done) => {
         try {
-          console.log('Google OAuth callback received');
-          console.log('Profile:', JSON.stringify(googleProfile, null, 2));
+          
           
           if (!googleProfile.emails || !googleProfile.emails[0]) {
-            console.error('No email in Google profile');
+            console.error(' No email in Google profile');
             return done(new Error('No email provided by Google'), null);
           }
 
           const email = googleProfile.emails[0].value;
           console.log('📧 Email:', email);
 
-          let existingUser = await User.findOne({ email });
+          let existingUser = await User.findOne({ email: email.toLowerCase().trim() });
 
           if (!existingUser) {
             console.log('👤 Creating new user from Google profile');
-            existingUser = new User({
-              name: googleProfile.displayName,
-              email: email,
-              role: "buyer",
-              mobNo: "0000000000",
-              googleId: googleProfile.id,
-            });
+            
+            try {
+              const uniquePlaceholder = `000${Date.now().toString().slice(-7)}`;
+              
+              existingUser = new User({
+                name: googleProfile.displayName,
+                email: email.toLowerCase().trim(),
+                role: "buyer",
+                mobNo: uniquePlaceholder,
+                googleId: googleProfile.id,
+              });
 
-            await existingUser.save();
-            console.log('New user created:', existingUser._id);
+              await existingUser.save();
+              console.log(' New user created successfully:', existingUser._id);
+            } catch (saveError) {
+              console.error(' Error saving new user:', saveError);
+              console.error('Error details:', {
+                message: saveError.message,
+                code: saveError.code,
+                keyPattern: saveError.keyPattern,
+                keyValue: saveError.keyValue
+              });
+              
+              if (saveError.code === 11000) {
+                console.log(' Duplicate key error, attempting to find existing user...');
+                existingUser = await User.findOne({ 
+                  $or: [
+                    { email: email.toLowerCase().trim() },
+                    { googleId: googleProfile.id }
+                  ]
+                });
+                
+                if (existingUser) {
+                  console.log(' Found existing user after duplicate error:', existingUser._id);
+                  // Update googleId if missing
+                  if (!existingUser.googleId) {
+                    existingUser.googleId = googleProfile.id;
+                    await existingUser.save();
+                  }
+                } else {
+                  throw saveError;
+                }
+              } else {
+                throw saveError;
+              }
+            }
           } else {
-            console.log('👤 Existing user found:', existingUser._id);
+            console.log(' Existing user found:', existingUser._id);
             if (!existingUser.googleId) {
               existingUser.googleId = googleProfile.id;
               await existingUser.save();
-              console.log('Google ID added to existing user');
+              console.log(' Google ID added to existing user');
             }
           }
 
@@ -66,7 +101,8 @@ console.log('🔐 Environment:', process.env.NODE_ENV);
 
           return done(null, { user: existingUser, token: authToken });
         } catch (error) {
-          console.error('Google OAuth error:', error);
+          console.error(' Google OAuth error:', error);
+          console.error('Error message:', error.message);
           console.error('Error stack:', error.stack);
           return done(error, null);
         }
