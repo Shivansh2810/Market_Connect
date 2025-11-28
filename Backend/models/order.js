@@ -81,10 +81,11 @@ const orderSchema = new Schema(
       type: Date,
     },
 
-    //this is irrelevant for time-being, hence commented
-    // deliveredAt: {
-    //     type: Date,
-    // },
+    //this is added once the seller/admin updates the order status to delivered
+    // and it is verified during return application
+    deliveredAt: {
+        type: Date,
+    },
   },
   {
     timestamps: true, // in order to save timestamps for both instances - creation and updation

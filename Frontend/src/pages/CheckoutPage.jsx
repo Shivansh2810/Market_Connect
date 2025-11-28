@@ -123,7 +123,8 @@ const CheckoutPage = () => {
       // Create order without payment field (payment will be created later)
       const orderData = {
         shippingInfo,
-        orderItems
+        orderItems,
+        couponCode: appliedCoupon ? appliedCoupon.coupon.code : undefined
       };
 
       console.log('Creating order with data:', JSON.stringify(orderData, null, 2));
