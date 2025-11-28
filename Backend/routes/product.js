@@ -11,10 +11,10 @@ const { protect, isSeller, isOwner } = require("../middlewares/auth");
 
 //public routes
 router.get("/products", productController.getAllProducts);
-router.get("/products/compare", productController.compareProducts);
+router.get("/products/compare", productController.compareProducts); // Must come before :id routes
 router.get('/products/suggestions', productController.getProductSuggestions);
+router.get("/products/:id/similar", productController.getSimilarProducts); // Specific routes before generic :id
 router.get("/products/:id", productController.getProductById);
-router.get("/products/:id/similar", productController.getSimilarProducts);
 
 //protected(Seller as a user)
 router.post(
