@@ -121,15 +121,22 @@ class ResponseGenerator {
   formatProductsForResponse(products) {
     return products.map(product => ({
       id: product._id,
-      name: product.name,
+      _id: product._id,
+      name: product.title || product.name,
+      title: product.title || product.name,
       price: product.price,
       description: product.description,
-      category: product.category,
-      rating: product.rating,
-      reviewCount: product.reviewCount,
+      category: product.categoryId?.name || product.category?.name || 'General',
+      rating: product.ratingAvg || product.rating || 0,
+      ratingAvg: product.ratingAvg || product.rating || 0,
+      reviewCount: product.ratingCount || product.reviewCount || 0,
+      ratingCount: product.ratingCount || product.reviewCount || 0,
       image_url: product.images && product.images.length > 0 ? product.images[0].url : '/images/placeholder.jpg',
+      images: product.images || [],
       features: product.features || [],
-      tags: product.tags || []
+      tags: product.tags || [],
+      stock: product.stock || 0,
+      currency: product.currency || 'INR'
     }));
   }
 }
