@@ -48,10 +48,10 @@ exports.createRazorpayOrder = async (req, res) => {
     }
 
     // Ensuring order is in the appropriate default status
-    if (order.orderStatus !== "Payment Pending") {
+    if (order.orderStatus !== "Payment Pending" && order.orderStatus !== "Payment Failed") {
       return res.status(400).json({
         success: false,
-        message: "Order is not in payment pending status",
+        message: "Order is not in a payable state",
       });
     }
 
@@ -508,6 +508,42 @@ exports.getRefundStatus = async (req, res) => {
       message: "Failed to retrieve refund status",
       error: error.message,
     });
+  }
+};
+
+// -- HANDLE PAYMENT CANCELLATION (Scenario when user closes the page)
+exports.handlePaymentCancellation = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    // Verify buyer authorization
+    if (order.buyer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized access" });
+    }
+
+    // to avoid overwriting "Order Placed" if a race condition occurs
+    if (order.orderStatus === "Payment Pending") {
+      order.orderStatus = "Payment Failed";
+      await order.save();
+      
+      // updating the asscociated payment record, if it exists
+      if (order.payment) {
+        await Payment.findByIdAndUpdate(order.payment, { status: "failed" });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Order status updated to Payment Failed",
+    });
+  } catch (error) {
+    console.error("Payment cancellation error:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
 
