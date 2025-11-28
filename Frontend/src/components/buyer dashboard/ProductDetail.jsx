@@ -351,8 +351,8 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
                                             {renderStars(review.rating)}
                                         </div>
                                     </div>
-                                    <p className="review-comment">{review.comment}</p>
                                     <span className="review-date">{formatDate(review.createdAt)}</span>
+                                    <p className="review-comment">{review.comment}</p>
                                 </div>
                             ))}
                         </div>

@@ -213,10 +213,8 @@ const SellerDashboard = () => {
             ).length,
         [orders]
     );
-    const totalSales = useMemo(
-        () => orders.reduce((sum, order) => sum + (order.totalPrice || 0), 0),
-        [orders]
-    );
+    // Use totalRevenue from dashboardStats instead of calculating from orders
+    const totalSales = dashboardStats?.totalRevenue || 0;
 
     const filteredProducts = products.filter(product =>
         product.title.toLowerCase().includes(searchTerm.toLowerCase())
