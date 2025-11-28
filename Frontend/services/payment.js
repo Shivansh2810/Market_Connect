@@ -50,3 +50,12 @@ export const getRefundStatus = async (orderId) => {
   return response.data;
 };
 
+/**
+ * Cancel payment order (User closed popup or cancelled)
+ * @param {string} orderId - The order ID
+ * @returns {Promise} Response
+ */
+export const cancelPaymentOrder = async (orderId) => {
+  const response = await api.post("/payments/payment-cancel", { orderId });
+  return response.data;
+};

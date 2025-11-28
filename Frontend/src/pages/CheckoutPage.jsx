@@ -6,6 +6,7 @@ import { createOrder } from '../../services/order';
 import { applyCoupon } from '../../services/coupon';
 import PaymentGateway from '../components/payment/PaymentGateway';
 import AvailableCoupons from '../components/payment/AvailableCoupons';
+import { cancelPaymentOrder } from '../../services/payment';
 import './CheckoutPage.css';
 
 const CheckoutPage = () => {
@@ -172,8 +173,18 @@ const CheckoutPage = () => {
     });
   };
 
-  const handlePaymentCancel = () => {
-    // Payment cancelled - allow user to try again or go back
+  const handlePaymentCancel = async () => {
+    try {
+      // We check if orderCreated exists to get the ID
+      if (orderCreated && orderCreated._id) {
+        await cancelPaymentOrder(orderCreated._id);
+        console.log("Payment status updated to Failed/Cancelled on backend");
+      }
+    } catch (error) {
+      // logging the error but don't stop the UI flow
+      console.error("Failed to update status on backend:", error);
+    }
+
     setOrderCreated(null);
     setShowShippingForm(true);
     navigate('/checkout', {

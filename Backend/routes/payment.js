@@ -12,6 +12,9 @@ router.post("/verify", protect, paymentController.verifyPayment);
 // Get payment details by order ID
 router.get("/order/:orderId", protect, paymentController.getPaymentByOrderId);
 
+// Handling payment cancellation by user
+router.post("/payment-cancel", protect, paymentController.handlePaymentCancellation);
+
 // -- Routes for Refund functionality
 
 // Initiate a refund for an order (called by the buyer)
