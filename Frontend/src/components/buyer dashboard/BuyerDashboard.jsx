@@ -139,50 +139,51 @@ const BuyerDashboard = () => {
         sessionId: assistantSessionId,
       });
 
+      console.log('Assistant response:', data);
+
       if (Array.isArray(data.products) && data.products.length > 0) {
-        setAssistantProducts(
-          data.products.map((p) => {
-            const id = p._id || p.id;
-            // Try to find the full product from the loaded catalogue
-            const baseProduct = products.find(
-              (prod) => String(prod._id) === String(id)
-            );
+        // Map assistant products to match our product structure
+        const mappedProducts = data.products.map((p) => {
+          const id = p.id || p._id;
+          
+          // Find matching product from our catalog
+          const baseProduct = products.find(
+            (prod) => String(prod._id) === String(id)
+          );
 
-            const normalized = {
-              ...p,
-              _id: id,
-              title: p.name || p.title || baseProduct?.title || 'Product',
-              ratingAvg: p.rating ?? p.ratingAvg ?? baseProduct?.ratingAvg ?? 0,
-              ratingCount:
-                p.reviewCount ?? p.ratingCount ?? baseProduct?.ratingCount ?? 0,
-              price:
-                typeof p.price === 'number'
-                  ? p.price
-                  : baseProduct?.price ?? 0,
-              currency: baseProduct?.currency || 'INR',
-              stock:
-                typeof baseProduct?.stock === 'number' ? baseProduct.stock : 0,
-              images:
-                p.images ||
-                (p.image_url
-                  ? [{
-                      url: p.image_url,
-                      publicId: 'assistant',
-                      isPrimary: true,
-                    }]
-                  : baseProduct?.images || []),
-              category: baseProduct?.category || baseProduct?.categoryId,
-            };
+          if (baseProduct) {
+            // Use the full product from catalog
+            return baseProduct;
+          }
 
-            return baseProduct ? { ...baseProduct.toObject?.() ?? baseProduct, ...normalized } : normalized;
-          })
-        );
+          // If not found in catalog, create a normalized product object
+          return {
+            _id: id,
+            title: p.name || p.title || 'Product',
+            description: p.description || '',
+            price: typeof p.price === 'number' ? p.price : 0,
+            currency: 'INR',
+            ratingAvg: p.rating ?? 0,
+            ratingCount: p.reviewCount ?? 0,
+            stock: 10, // Default stock for assistant results
+            images: p.image_url 
+              ? [{ url: p.image_url, isPrimary: true }]
+              : [],
+            categoryId: { name: p.category || 'General' },
+            category: { name: p.category || 'General' },
+            isDeleted: false
+          };
+        });
+
+        setAssistantProducts(mappedProducts);
+        setAssistantError('');
       } else {
         setAssistantProducts([]);
+        setAssistantError('No products found. Try different keywords.');
       }
     } catch (err) {
       console.error('Assistant search error:', err);
-      setAssistantError('Assistant search failed. Please try again.');
+      setAssistantError('Smart search failed. Try regular search instead.');
       setAssistantProducts(null);
     } finally {
       setAssistantLoading(false);
@@ -281,20 +282,33 @@ const BuyerDashboard = () => {
                 className="assistant-search-btn"
                 onClick={handleAssistantSearch}
                 disabled={assistantLoading || !searchTerm.trim()}
-                title="Smart search assistant"
+                title={assistantLoading ? "Searching..." : "AI Smart Search - Try natural language like 'laptop for gaming' or 'gift for mom'"}
               >
-                <FontAwesomeIcon icon={faRobot} />
+                <FontAwesomeIcon 
+                  icon={faRobot} 
+                  className={assistantLoading ? 'spinning' : ''}
+                />
               </button>
               <div className="search-input-wrapper">
                 <FontAwesomeIcon icon={faSearch} className="search-icon" />
                 <input
                   type="text"
-                  placeholder="Search for products..."
+                  placeholder="Search products... (Try AI: 'laptop for gaming' or 'gift under 5000')"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && searchTerm.trim()) {
+                      handleAssistantSearch();
+                    }
+                  }}
                 />
               </div>
             </div>
+            {assistantLoading && (
+              <div className="assistant-loading-hint">
+                🤖 AI is analyzing your query and finding the best products...
+              </div>
+            )}
           </div>
           
           <div className="header-actions">
@@ -368,9 +382,27 @@ const BuyerDashboard = () => {
 
           <div className="filters-section">
             <div className="section-header-left">
-              <h3>Featured Products</h3>
+              <h3>{assistantProducts ? 'Smart Search Results' : 'Featured Products'}</h3>
               <span className="product-count">{sortedProducts.length} products</span>
             </div>
+
+            {assistantProducts && (
+              <div className="assistant-info-text">
+                <FontAwesomeIcon icon={faRobot} style={{ marginRight: '5px' }} />
+                AI-powered results
+                <button 
+                  className="clear-assistant-btn"
+                  onClick={() => {
+                    setAssistantProducts(null);
+                    setSearchTerm('');
+                    setAssistantError('');
+                  }}
+                  style={{ marginLeft: '10px', fontSize: '12px', padding: '2px 8px' }}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
 
             {assistantError && (
               <div className="assistant-error-text">{assistantError}</div>

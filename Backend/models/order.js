@@ -4,66 +4,75 @@ const { Schema } = mongoose;
 const addressSchema = require("./sharedSchemas.js");
 
 const orderItemSchema = new Schema(
-    {
-        name: { type: String, required: true },
-        quantity: { type: Number, required: true },
-        image: { type: String, required: true }, 
-        price: { type: Number, required: true },
-        product: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: true,
-            ref: "Product", 
-        },
+  {
+    name: { type: String, required: true },
+    quantity: { type: Number, required: true },
+    image: { type: String, required: true },
+    price: { type: Number, required: true },
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "Product",
     },
-    { _id: false }
+  },
+  { _id: false }
 );
-
 
 const orderSchema = new Schema(
   {
     shippingInfo: {
-        type: addressSchema,
-        required: true,
+      type: addressSchema,
+      required: false,
     },
     buyer: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: "User", 
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "User",
     },
     seller: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: "User",
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "User",
+    },
+    isAuctionOrder: {
+      type: Boolean,
+      default: false,
+    },
+
+    auctionProduct: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
     },
     orderItems: [orderItemSchema],
     payment: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Payment" // Reference to the Payment document
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Payment", // Reference to the Payment document
     },
     itemsPrice: {
-        type: Number,
-        required: true,
-        default: 0.0,
+      type: Number,
+      required: true,
+      default: 0.0,
     },
     taxPrice: {
-        type: Number,
-        required: true,
-        default: 0.0,
+      type: Number,
+      required: true,
+      default: 0.0,
     },
     shippingPrice: {
-        type: Number,
-        required: true,
-        default: 0.0,
+      type: Number,
+      required: true,
+      default: 0.0,
     },
     totalPrice: {
-        type: Number,
-        required: true,
-        default: 0.0,
+      type: Number,
+      required: true,
+      default: 0.0,
     },
     orderStatus: {
-        type: String,
-        required: true,
-        enum: [
+      type: String,
+      required: true,
+      enum: [
+        "Address Pending",
         "Payment Pending", // initial default status while creating order
         "Payment Failed",
         "Order Placed",
@@ -72,19 +81,20 @@ const orderSchema = new Schema(
         "Cancelled",
         "Returned", // return has been requested by buyer
         "Partially Refunded",
-        "Refunded",],
-        default: "Payment Pending",
+        "Refunded",
+      ],
+      default: "Payment Pending",
     },
 
     orderPlacedAt: {
-      // confirmed payment timestamp received from payment gateway  
+      // confirmed payment timestamp received from payment gateway
       type: Date,
     },
 
     //this is added once the seller/admin updates the order status to delivered
     // and it is verified during return application
     deliveredAt: {
-        type: Date,
+      type: Date,
     },
   },
   {

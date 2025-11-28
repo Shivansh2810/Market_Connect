@@ -133,6 +133,29 @@ exports.updateAuction = async (req, res) => {
   }
 };
 
+//get 2 days old auction
+exports.getRecentCompletedAuctions = async (req, res) => {
+  try {
+    const now = new Date();
+    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+
+    const auctions = await Product.find({
+      isAuction: true,
+      "auctionDetails.status": "Completed",
+      "auctionDetails.endTime": { $gte: twoDaysAgo, $lte: now },
+    })
+      .populate("sellerId", "name")
+      .populate("auctionDetails.highestBidder", "name email")
+      .sort({ "auctionDetails.endTime": -1 });
+
+    res.json({ success: true, data: auctions });
+  } catch (error) {
+    console.error("getRecentCompletedAuctions error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
 exports.cancelAuction = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
