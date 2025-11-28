@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
 import './dashboard.css';
 import Profile from '../profile/Profile';
@@ -52,7 +52,8 @@ const BuyerDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('popularity');
-  const [priceRange, setPriceRange] = useState([0, 3000]);
+  const [priceRange, setPriceRange] = useState([0, 250000]);
+  const [priceRangeDisplay, setPriceRangeDisplay] = useState('none');
   const [currentView, setCurrentView] = useState('dashboard');
   const [showChatbot, setShowChatbot] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -100,7 +101,9 @@ const BuyerDashboard = () => {
         product.categoryId?.name === selectedCategory;
 
       const price = product.price || 0;
-      const matchesPrice = price >= priceRange[0] && price <= priceRange[1];
+      const matchesPrice = priceRange[0] === 0 && priceRange[1] === 250000 
+        ? true // Show all products when "None" is selected
+        : price >= priceRange[0] && price <= priceRange[1];
 
       return matchesSearch && matchesCategory && matchesPrice;
     });
@@ -259,17 +262,18 @@ const BuyerDashboard = () => {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <div className="header-content">
-          <div className="logo-section">
-            <h1>Market Connect</h1>
+        {/* Single row: Market Connect (left), Search bar (center), Actions (right) */}
+        <div className="header-single-row">
+          <div className="brand-section">
             <button
               className="mobile-menu-btn"
               onClick={() => setShowMobileMenu(!showMobileMenu)}
             >
               <FontAwesomeIcon icon={showMobileMenu ? faTimes : faBars} />
             </button>
+            <h1 className="brand-title">Market Connect</h1>
           </div>
-
+          
           <div className="search-section">
             <div className="search-bar">
               <button
@@ -292,7 +296,7 @@ const BuyerDashboard = () => {
               </div>
             </div>
           </div>
-
+          
           <div className="header-actions">
             <button
               className="action-btn cart-toggle-btn"
@@ -397,22 +401,40 @@ const BuyerDashboard = () => {
             </div>
 
             <div className="filter-group">
-              <label>Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}</label>
-              <input
-                type="range"
-                min="0"
-                max="10000000"
-                value={priceRange[1]}
-                onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value, 10)])}
-              />
+              <label>Price Range</label>
+              <select
+                value={priceRangeDisplay}
+                onChange={(e) => {
+                  setPriceRangeDisplay(e.target.value);
+                  if (e.target.value === 'none') {
+                    setPriceRange([0, 250000]); // Show all products
+                  } else {
+                    const [min, max] = e.target.value.split('-').map(Number);
+                    setPriceRange([min, max]);
+                  }
+                }}
+              >
+                <option value="none">None</option>
+                <option value="0-1000">₹0 - ₹1,000</option>
+                <option value="1000-2000">₹1,000 - ₹2,000</option>
+                <option value="2000-5000">₹2,000 - ₹5,000</option>
+                <option value="5000-10000">₹5,000 - ₹10,000</option>
+                <option value="10000-20000">₹10,000 - ₹20,000</option>
+                <option value="20000-50000">₹20,000 - ₹50,000</option>
+                <option value="50000-100000">₹50,000 - ₹1,00,000</option>
+                <option value="100000-250000">₹1,00,000 - ₹2,50,000</option>
+              </select>
             </div>
           </div>
         </aside>
 
         <main className="main-content">
-          <div className="content-header">
-            <h2>Welcome to Market Connect</h2>
-            <p>Discover amazing products at great prices</p>
+          {/* Separate centered welcome section */}
+          <div className="welcome-section">
+            <div className="welcome-content">
+              <h2>Welcome to Market Connect</h2>
+              <p>Discover amazing products at great prices</p>
+            </div>
           </div>
 
           <section className="products-section">
