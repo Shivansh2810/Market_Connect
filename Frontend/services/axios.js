@@ -1,14 +1,9 @@
 import axios from "axios";
 
-// const api = axios.create({
-//   baseURL: "http://localhost:8080/api",
-// });
-
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true,
 });
-
 
 // Request interceptor to add token to every request
 api.interceptors.request.use(
@@ -26,11 +21,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Check if error is 401 (Unauthorized)
     if (error.response?.status === 401) {
-      // Token is invalid or expired
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login'; // Redirect to login
+
+      if (window.location.pathname !== '/login') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

@@ -433,15 +433,6 @@
   }
 }
 
-/* ✅ Input states for better UX */
-.login-right input:invalid {
-  border-color: #ef5350;
-}
-
-.login-right input:invalid:focus {
-  box-shadow: 0 0 6px #ffcdd2;
-}
-
 @media (max-width: 768px) {
   .login-container {
     flex-direction: column;
