@@ -131,6 +131,35 @@ describe('AuthContext', () => {
     });
   });
 
+  it('restores auth state with user property instead of data', () => {
+    const mockUser = {
+      id: '456',
+      name: 'Another User',
+      email: 'another@test.com',
+      role: 'seller'
+    };
+    const mockToken = 'fake-token-456';
+    
+    localStorage.setItem('token', mockToken);
+    localStorage.setItem('user', JSON.stringify(mockUser));
+    
+    // Mock successful token validation with user property
+    api.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        user: mockUser
+      }
+    });
+    
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    
+    waitFor(() => {
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.token).toBe(mockToken);
+      expect(result.current.isAuthenticated).toBe(true);
+    });
+  });
+
   it('clears invalid token from localStorage', async () => {
     localStorage.setItem('token', 'invalid-token');
     localStorage.setItem('user', JSON.stringify({ id: '123' }));

@@ -14,6 +14,10 @@ const AuctionDetail = () => {
   const realAuction = allAuctions.find(a => a?.id === id && a?.title);
   const [localAuction, setLocalAuction] = useState(realAuction || null);
   const [loading, setLoading] = useState(!realAuction);
+  
+  // Declare ALL hooks at the top before any conditional returns
+  const [bidInput, setBidInput] = useState("");
+  const [msg, setMsg] = useState(null);
 
   // Fetch auction if not in context
   useEffect(() => {
@@ -90,8 +94,6 @@ const AuctionDetail = () => {
   }
 
   const minBid = (localAuction.currentBid || localAuction.startingPrice) + (localAuction.minIncrement || 10);
-  const [bidInput, setBidInput] = useState("");
-  const [msg, setMsg] = useState(null);
 
   const submitBid = e => {
     e.preventDefault();
