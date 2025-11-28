@@ -80,8 +80,7 @@ export default function GoogleCallback() {
             mobNo: user.mobNo 
           });
 
-          // Check if user needs to update phone number
-          if (user.mobNo === "0000000000" || !user.mobNo || user.mobNo === "1234567890") {
+          if (!user.mobNo || user.mobNo.startsWith("000") || user.mobNo === "1234567890") {
             console.log('📱 Phone number needs update');
             setUserData(user);
             setShowPhoneModal(true);

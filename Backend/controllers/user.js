@@ -455,12 +455,23 @@ exports.upgradeToSeller = async (req, res) => {
 
 exports.googleAuth = (req, res) => {
   try {
-    console.log('🔄 Google Auth Controller - Processing callback');
+    console.log('Google Auth Controller - Processing callback');
+    console.log('req.user structure:', JSON.stringify(req.user, null, 2));
     
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     
-    if (!req.user || !req.user.user || !req.user.token) {
-      console.error('Missing user data in request:', req.user);
+    if (!req.user) {
+      console.error(' No req.user object');
+      return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+    }
+
+    if (!req.user.user) {
+      console.error(' No req.user.user object');
+      return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+    }
+
+    if (!req.user.token) {
+      console.error('No req.user.token');
       return res.redirect(`${frontendUrl}/login?error=auth_failed`);
     }
 
@@ -473,14 +484,15 @@ exports.googleAuth = (req, res) => {
       googleId: req.user.user.googleId,
     };
 
-    console.log(' User data prepared:', { id: userData.id, email: userData.email });
+    console.log(' User data prepared:', { id: userData.id, email: userData.email, role: userData.role });
 
     const redirectUrl = `${frontendUrl}/google-callback?token=${encodeURIComponent(req.user.token)}&userId=${encodeURIComponent(req.user.user._id)}`;
 
-    console.log(' Redirecting to frontend:', redirectUrl);
+    console.log('Redirecting to frontend:', redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {
-    console.error(' Google Auth Controller Error:', error);
+    console.error('Google Auth Controller Error:', error);
+    console.error('Error stack:', error.stack);
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     res.redirect(`${frontendUrl}/login?error=auth_processing_failed`);
   }
