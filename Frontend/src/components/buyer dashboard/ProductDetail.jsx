@@ -13,7 +13,8 @@ import {
     faTruck,
     faShieldAlt,
     faUser,
-    faHome // Imported faHome
+    faHome,
+    faExchangeAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { getSimilarProducts } from '../../../services/product';
 
@@ -125,6 +126,23 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
     const handleSimilarProductClick = (similarProduct) => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         window.location.href = `/dashboard/products/${similarProduct._id}`;
+    };
+
+    const handleCompareWithCurrent = (similarProduct, e) => {
+        e.stopPropagation();
+        
+        // Check if products are from same category
+        const currentCategoryId = product.categoryId?._id || product.categoryId;
+        const similarCategoryId = similarProduct.categoryId?._id || similarProduct.categoryId;
+        
+        if (currentCategoryId !== similarCategoryId) {
+            alert('Products must be from the same category to compare');
+            return;
+        }
+        
+        // Navigate directly to compare page
+        const ids = `${product._id},${similarProduct._id}`;
+        navigate(`/compare?ids=${ids}`);
     };
 
     return (
@@ -406,6 +424,14 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
                                                         {similarProduct.currency === 'USD' ? '$' : '₹'}{similarProduct.price}
                                                     </span>
                                                 </div>
+                                                <button 
+                                                    className="compare-with-current-btn"
+                                                    onClick={(e) => handleCompareWithCurrent(similarProduct, e)}
+                                                    title="Compare with current product"
+                                                >
+                                                    <FontAwesomeIcon icon={faExchangeAlt} />
+                                                    Compare
+                                                </button>
                                             </div>
                                         </div>
                                     );

@@ -18,6 +18,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import BecomeSellerPage from './pages/BecomeSellerPage';
 import AuctionListing from './components/Auction/AuctionListing';
 import AuctionDetail from './components/Auction/AuctionDetail';
+import ProductCompare from './components/buyer dashboard/ProductCompare';
 import './App.css';
 
 function App() {
@@ -90,6 +91,10 @@ function App() {
                       <AuctionDetail />
                     </ProtectedRoute>
                   }
+                />
+                <Route
+                  path="/compare"
+                  element={<ProductCompare />}
                 />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

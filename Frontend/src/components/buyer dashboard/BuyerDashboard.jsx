@@ -662,8 +662,7 @@ const BuyerDashboard = () => {
         <FontAwesomeIcon icon={faComments} className="chatbot-icon" />
         <span className="chatbot-badge">
           <FontAwesomeIcon icon={faRobot} />
-        </span>
-      </button>
+        </span>      </button>
     </div>
   );
 };
