@@ -429,9 +429,6 @@ const AdminDashboard = () => {
           </div>
 
           <div className="header-actions">
-            <button className="action-btn" onClick={() => navigate('/dashboard')} title="Profile">
-              <FontAwesomeIcon icon={faUser} />
-            </button>
             <button className="action-btn logout-btn" onClick={handleLogout} title="Logout">
               <FontAwesomeIcon icon={faSignOutAlt} />
             </button>

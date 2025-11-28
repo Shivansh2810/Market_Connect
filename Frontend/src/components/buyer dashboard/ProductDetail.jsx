@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ProductDetail.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -11,11 +12,13 @@ import {
     faBox,
     faTruck,
     faShieldAlt,
-    faUser
+    faUser,
+    faHome // Imported faHome
 } from '@fortawesome/free-solid-svg-icons';
 import { getSimilarProducts } from '../../../services/product';
 
 const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow }) => {
+    const navigate = useNavigate(); // Initialize navigation hook
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [isInCart, setIsInCart] = useState(false);
@@ -127,11 +130,19 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
     return (
         <div className="product-detail-page">
             <div className="product-detail-container">
-                {/* Header with Back Button */}
+                {/* Header with Back Button and Home Icon */}
                 <div className="product-detail-header">
                     <button className="back-button" onClick={onBack}>
                         <FontAwesomeIcon icon={faArrowLeft} />
                         Back to Products
+                    </button>
+                    
+                    <button 
+                        className="home-button" 
+                        onClick={() => navigate('/dashboard')}
+                        title="Go to Dashboard"
+                    >
+                        <FontAwesomeIcon icon={faHome} />
                     </button>
                 </div>
 
@@ -278,14 +289,11 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
                             <span>Condition: <strong>{conditionInfo.text}</strong></span>
                         </div>
 
-                        {/* --- 4. SELLER NAME FIX --- */}
                         <div className="seller-info" style={{marginTop: '15px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px'}}>
                             <span style={{fontSize: '14px', color: '#666'}}>
                                 Sold by: {sellerName}
                             </span>
                         </div>
-                        {/* --- END OF FIX --- */}
-
 
                         <div className="stock-status">
                             {product.stock > 0 ? (
@@ -311,45 +319,6 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
                             </div>
                         )}
 
-                        <div className="quantity-selector">
-                            <label>Quantity:</label>
-                            <div className="quantity-controls">
-                                <button 
-                                    className="quantity-btn"
-                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                    disabled={quantity <= 1}
-                                >
-                                    -
-                                </button>
-                                <span className="quantity">{quantity}</span>
-                                <button 
-                                    className="quantity-btn"
-                                    onClick={() => setQuantity(quantity + 1)}
-                                    disabled={product.stock <= 0 || quantity >= product.stock}
-                                >
-                                    +
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="product-actions">
-                            <button 
-                                className="btn-add-cart"
-                                onClick={handleAddToCart}
-                                disabled={product.stock <= 0}
-                            >
-                                <FontAwesomeIcon icon={faShoppingCart} />
-                                {isInCart ? 'Added to Cart' : 'Add to Cart'}
-                            </button>
-                            <button 
-                                className="btn-buy-now"
-                                onClick={handleBuyNow}
-                                disabled={product.stock <= 0}
-                            >
-                                Buy Now
-                            </button>
-                        </div>
-
                         <div className="product-features">
                             <div className="feature">
                                 <FontAwesomeIcon icon={faTruck} />
@@ -367,7 +336,6 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
                     </div>
                 </div>
 
-                {/* --- 5. ADDED NEW REVIEW SECTION --- */}
                 <div className="product-reviews">
                     <h3>Customer Reviews ({reviews.length})</h3>
                     {reviews.length > 0 ? (
@@ -446,7 +414,6 @@ const ProductDetail = ({ product, reviews = [], onBack, onAddToCart, onBuyNow })
                         )}
                     </div>
                 )}
-
             </div>
         </div>
     );
