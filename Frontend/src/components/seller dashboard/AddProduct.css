@@ -170,13 +170,19 @@
     align-items: center;
     gap: 8px;
     padding: 12px 24px;
-    background-color: #ffffff;
-    color: var(--primary-color);
-    border: 2px solid var(--primary-color);
+    background-color: var(--primary-color);
+    color: white !important;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: 600;
+}
+
+.upload-button,
+.upload-button *,
+label.upload-button,
+label.upload-button * {
+    color: white !important;
 }
 
 .upload-button:hover {

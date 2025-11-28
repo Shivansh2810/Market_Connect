@@ -104,7 +104,7 @@ const ReviewManagement = ({ product, onBack }) => {
                     </button>
                     <div className="review-header-content">
                         <div>
-                            <h1>{product ? product.title : 'All Reviews'}</h1>
+                       
                             <p className="review-subtitle">Manage customer reviews and ratings</p>
                         </div>
                         <div className="review-stats-summary">
@@ -194,15 +194,15 @@ const ReviewManagement = ({ product, onBack }) => {
                                                     <FontAwesomeIcon icon={faCalendar} />
                                                     {formatDate(review.createdAt)}
                                                 </div>
+                                                {/* Review comment displayed immediately below the date */}
+                                                <div className="review-body" style={{ marginTop: '8px' }}>
+                                                    <p className="review-comment">{review.comment || 'No comment provided.'}</p>
+                                                </div>
                                             </div>
                                         </div>
                                             <div className="review-rating">
                                                 {renderStars(review.rating)}
                                             </div>
-                                        </div>
-
-                                        <div className="review-body">
-                                            <p className="review-comment">{review.comment || 'No comment provided.'}</p>
                                         </div>
 
                                         {/* Review Images */}

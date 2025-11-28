@@ -808,7 +808,14 @@ const Profile = ({ onBack }) => {
                                     onChange={(e) => setReviewData(prev => ({ ...prev, comment: e.target.value }))}
                                     className="form-input"
                                     rows="6"
-                                    placeholder="Share your experience with this product..."
+                                    placeholder={
+                                        reviewData.rating === 5 ? "What made this product excellent? Share what you loved about it..." :
+                                        reviewData.rating === 4 ? "What did you like about this product? Share your positive experience..." :
+                                        reviewData.rating === 3 ? "Share your honest thoughts about this product. What worked well and what could be improved?" :
+                                        reviewData.rating === 2 ? "What aspects of this product didn't meet your expectations? Please share your concerns..." :
+                                        reviewData.rating === 1 ? "We're sorry to hear about your experience. Please tell us what went wrong so we can improve..." :
+                                        "Share your experience with this product..."
+                                    }
                                     maxLength="3000"
                                 />
                                 <p style={{fontSize: '12px', color: '#999', marginTop: '5px', textAlign: 'right'}}>
