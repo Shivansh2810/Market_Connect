@@ -8,7 +8,8 @@
 }
 
 .product-detail-container {
-  max-width: 1200px;
+  max-width: 1600px; /* Changed from 1200px */
+  width: 95%;        /* Added to take up more space */
   margin: 0 auto;
   background-color: #ffffff;
   border-radius: 12px;
@@ -19,6 +20,41 @@
 .product-detail-header {
   padding: 20px 30px;
   border-bottom: 1px solid #e9ecef;
+  display: flex;                
+  justify-content: space-between; 
+  align-items: center;
+}
+
+/* ADD THIS NEW CLASS HERE (Global scope) */
+.home-button {
+  background: white;
+  border: 1px solid #e0e0e0;
+  color: #3c009d;
+  width: 45px;      /* Slightly larger */
+  height: 45px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.home-button:hover {
+  background-color: #3c009d;
+  color: white;
+  border-color: #3c009d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(60, 0, 157, 0.2);
+}
+
+.product-detail-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;     /* Increased from 40px */
+  padding: 40px; /* Increased from 30px */
 }
 
 .back-button {
@@ -893,4 +929,38 @@
     .similar-product-price .price {
         font-size: 16px;
     }
+    /* Update Header to use Flexbox for spacing */
+.product-detail-header {
+  padding: 20px 30px;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;               /* Added */
+  justify-content: space-between; /* Added: Pushes buttons to edges */
+  align-items: center;         /* Added */
 }
+
+/* Add styles for the new Home Button */
+.home-button {
+  background: white;
+  border: 1px solid #e0e0e0;
+  color: #3c009d; /* Market Connect Purple */
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* Circle shape */
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.home-button:hover {
+  background-color: #3c009d;
+  color: white;
+  border-color: #3c009d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(60, 0, 157, 0.2);
+}
+}
+

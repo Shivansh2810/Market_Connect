@@ -546,16 +546,7 @@ const Profile = ({ onBack }) => {
         <div className="profile-section">
             <h3>Account Settings</h3>
             <div className="settings-list">
-                <div className="setting-item">
-                    <div className="setting-info">
-                        <FontAwesomeIcon icon={faCreditCard} />
-                        <div>
-                            <h4>Payment Methods</h4>
-                            <p>Manage your saved payment methods</p>
-                        </div>
-                    </div>
-                    <button className="btn btn-secondary">Manage</button>
-                </div>
+                
 
                 <div className="setting-item danger">
                     <div className="setting-info">

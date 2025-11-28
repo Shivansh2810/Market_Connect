@@ -321,10 +321,19 @@ const BuyerDashboard = () => {
       <div className="dashboard-content">
         <aside className={`sidebar ${showMobileMenu ? 'mobile-open' : ''}`}>
           <nav className="sidebar-nav">
-            <div className="nav-item active">
-              <FontAwesomeIcon icon={faHome} />
-              <span>Dashboard</span>
-            </div>
+            <div
+                className="nav-item active"
+                onClick={() => {
+                  navigate('/dashboard');      // Redirects to dashboard route
+                  setCurrentView('dashboard'); // Resets the view state if you were on a sub-view
+                  setSearchTerm('');           // Optional: Resets search filters
+                  setSelectedCategory('All');  // Optional: Resets category filters
+                }}
+                style={{ cursor: 'pointer' }} // Makes the mouse cursor look like a hand
+              >
+                <FontAwesomeIcon icon={faHome} />
+                <span>Dashboard</span>
+              </div>
             <div
               className="nav-item"
               onClick={() => requireAuth(() => navigate('/auctions'))}
