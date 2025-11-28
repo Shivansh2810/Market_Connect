@@ -21,6 +21,22 @@ const getProductReviews = async (req, res) => {
   }
 };
 
+// --- NEW FUNCTION ADDED HERE ---
+// GET /api/reviews/my-reviews
+const getMyReviews = async (req, res) => {
+  try {
+    // req.user._id comes from your auth middleware
+    const reviews = await Review.find({ buyerId: req.user._id })
+      .populate("productId", "name image price") // Populates product details so frontend has context
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, data: reviews });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// -------------------------------
+
 // GET /api/reviews/seller/:sellerId/stats
 const getSellerStats = async (req, res) => {
   try {
@@ -112,8 +128,6 @@ const createReview = async (req, res) => {
         .status(400)
         .json({ message: "You can only review products you have purchased" });
 
-    // Removed seller check: allow reviews for products from multiple sellers in cart orders
-
     const review = new Review({
       productId,
       sellerId: product.sellerId,
@@ -193,6 +207,7 @@ const deleteReview = async (req, res) => {
 
 module.exports = {
   getProductReviews,
+  getMyReviews, // <--- Don't forget to export the new function
   createReview,
   updateReview,
   deleteReview,
