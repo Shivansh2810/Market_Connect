@@ -894,3 +894,72 @@
         font-size: 16px;
     }
 }
+/* ==
+=== MOBILE RESPONSIVE - HIDE DUPLICATE BUTTONS ===== */
+@media (max-width: 768px) {
+    /* Hide action buttons in header on mobile (they're duplicated below) */
+    .product-detail-header .action-buttons,
+    .product-detail-header .add-to-cart-btn,
+    .product-detail-header .buy-now-btn {
+        display: none !important;
+    }
+    
+    /* Adjust header for mobile */
+    .product-detail-header {
+        padding: 15px 20px;
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 100;
+    }
+    
+    .back-button {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+    
+    /* Make content single column */
+    .product-detail-content {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 20px;
+    }
+    
+    /* Adjust images for mobile */
+    .thumbnail-images {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    /* Keep action buttons visible in main content */
+    .product-info .action-buttons {
+        display: flex !important;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .product-info .action-buttons button {
+        width: 100%;
+        padding: 14px;
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .product-detail-page {
+        padding: 10px;
+    }
+    
+    .product-detail-header {
+        padding: 12px 15px;
+    }
+    
+    .product-detail-content {
+        padding: 15px;
+    }
+    
+    .thumbnail-images {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+}
