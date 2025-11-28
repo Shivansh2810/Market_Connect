@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
 import './dashboard.css';
 import Profile from '../profile/Profile';
@@ -265,13 +265,13 @@ const BuyerDashboard = () => {
         {/* Single row: Market Connect (left), Search bar (center), Actions (right) */}
         <div className="header-single-row">
           <div className="brand-section">
-            <h1 className="brand-title">Market Connect</h1>
             <button
               className="mobile-menu-btn"
               onClick={() => setShowMobileMenu(!showMobileMenu)}
             >
               <FontAwesomeIcon icon={showMobileMenu ? faTimes : faBars} />
             </button>
+            <h1 className="brand-title">Market Connect</h1>
           </div>
           
           <div className="search-section">
