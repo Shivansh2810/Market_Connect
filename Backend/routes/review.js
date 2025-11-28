@@ -8,6 +8,12 @@ const {
   updateReviewSchema,
 } = require("../validations/review");
 
+// --- NEW ROUTE ADDED HERE ---
+// Protected - Get all reviews written by the current logged-in user
+// This must match the api.get('/reviews/my-reviews') call in your frontend service
+router.get("/my-reviews", protect, reviewController.getMyReviews);
+// ----------------------------
+
 // Public - get visible reviews for product
 router.get("/product/:productId", reviewController.getProductReviews);
 

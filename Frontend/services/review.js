@@ -18,8 +18,15 @@ export const deleteReview = async (reviewId) => {
   return response.data;
 };
 
-// Get reviews for a product
+// Get reviews for a specific product (Public view)
 export const getProductReviews = async (productId) => {
   const response = await api.get(`/reviews/product/${productId}`);
+  return response.data;
+};
+
+export const getMyReviews = async () => {
+  // IMPORTANT: Ensure your backend has a route matching this (e.g., router.get('/my-reviews', ...))
+  // If your backend uses '/reviews/me' or '/reviews/user', change the string below.
+  const response = await api.get('/reviews/my-reviews');
   return response.data;
 };
