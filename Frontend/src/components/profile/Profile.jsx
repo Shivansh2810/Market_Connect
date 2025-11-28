@@ -21,7 +21,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../../services/axios';
 import { getCurrentUserProfile, getCurrentUserOrders, updateCurrentUserProfile } from '../../../services/user';
 import { requestReturn } from '../../../services/return';
-import { createReview } from '../../../services/review';
+// --- CHANGE 1: Import getMyReviews here ---
+import { createReview, getMyReviews } from '../../../services/review'; 
 
 const Profile = ({ onBack }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -58,11 +59,14 @@ const Profile = ({ onBack }) => {
                 setLoading(true);
                 setError('');
 
-                const [profileResponse, ordersResponse] = await Promise.all([
+                // --- CHANGE 2: Fetch Reviews alongside Profile and Orders ---
+                const [profileResponse, ordersResponse, reviewsResponse] = await Promise.all([
                     getCurrentUserProfile(),
-                    getCurrentUserOrders().catch(() => ({ success: false, data: [] }))
+                    getCurrentUserOrders().catch(() => ({ success: false, data: [] })),
+                    getMyReviews().catch(() => ({ success: false, data: [] })) // Fetch user's reviews
                 ]);
 
+                // Handle Profile Data
                 if (profileResponse?.success && profileResponse.data) {
                     const profile = profileResponse.data;
                     setProfileData({
@@ -80,11 +84,28 @@ const Profile = ({ onBack }) => {
                     setProfileData(null);
                 }
 
+                // Handle Order Data
                 if (ordersResponse?.success && Array.isArray(ordersResponse.data)) {
                     setOrderHistory(ordersResponse.data);
                 } else {
                     setOrderHistory([]);
                 }
+
+                // --- CHANGE 3: Process the fetched reviews into the Set ---
+                const previouslyReviewed = new Set();
+                
+                if (reviewsResponse?.success && Array.isArray(reviewsResponse.data)) {
+                    reviewsResponse.data.forEach(review => {
+                        // Check if product is populated object or just ID string
+                        const prodId = review.productId?._id || review.productId || review.product;
+                        if (prodId) {
+                            previouslyReviewed.add(prodId.toString());
+                        }
+                    });
+                }
+                setReviewedProducts(previouslyReviewed);
+                // -----------------------------------------------------------
+
             } catch (fetchError) {
                 console.error('Failed to load profile data', fetchError);
                 setError(fetchError.response?.data?.message || 'Unable to load profile.');
@@ -233,6 +254,13 @@ const Profile = ({ onBack }) => {
 
     const handleWriteReview = (order, item) => {
         const productId = item.product._id || item.product;
+        
+        // Safety check
+        if (reviewedProducts.has(productId)) {
+            alert('You have already reviewed this product.');
+            return;
+        }
+
         setReviewData({
             orderId: order._id,
             productId: productId,
@@ -267,7 +295,7 @@ const Profile = ({ onBack }) => {
 
             await createReview(payload);
             
-            // Add to reviewed products set
+            // --- CHANGE 4: Update Local State Immediately ---
             setReviewedProducts(prev => new Set([...prev, reviewData.productId]));
             
             alert('Review submitted successfully! Thank you for your feedback.');

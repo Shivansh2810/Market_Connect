@@ -1,6 +1,8 @@
 const { Server } = require("socket.io");
 const Bid = require("./models/bids");
 const Product = require("./models/product");
+const Order = require("./models/order");
+const User = require("./models/user");
 
 let io;
 
@@ -131,13 +133,12 @@ async function checkEndedAuctions() {
     const endedAuctions = await Product.find({
       "auctionDetails.status": "Active",
       "auctionDetails.endTime": { $lte: now },
-    });
+      isAuction: true,
+    }).populate("sellerId", "name");
 
     for (const auction of endedAuctions) {
-      await Product.updateOne(
-        { _id: auction._id },
-        { $set: { "auctionDetails.status": "Completed" } }
-      );
+      auction.auctionDetails.status = "Completed";
+      await auction.save();
 
       io.to(auction._id.toString()).emit("auctionEnded", {
         productId: auction._id,
@@ -145,9 +146,57 @@ async function checkEndedAuctions() {
         finalPrice: auction.auctionDetails.currentBid,
       });
 
-      console.log(`Auction ${auction.title} has ended.`);
+      if (!auction.auctionDetails.highestBidder) {
+        console.log(`No winner for auction ${auction._id}, skipping order creation.`);
+        continue;
+      }
 
-      //Upcoming Feature: New order for winning bidder automatically created
+      const existingOrder = await Order.findOne({
+        isAuctionOrder: true,
+        auctionProduct: auction._id,
+      });
+
+      if (existingOrder) {
+        console.log(`Order already exists for auction ${auction._id}, skipping.`);
+        continue;
+      }
+
+      const winner = await User.findById(auction.auctionDetails.highestBidder);
+      if (!winner) {
+        console.log(`Winner user not found for auction ${auction._id}`);
+        continue;
+      }
+
+      const itemsPrice = auction.auctionDetails.currentBid || auction.price || 0;
+      const taxPrice = 0;
+      const shippingPrice = 0;
+      const totalPrice = itemsPrice + taxPrice + shippingPrice;
+
+      const order = await Order.create({
+        buyer: winner._id,
+        seller: auction.sellerId,
+        isAuctionOrder: true,
+        auctionProduct: auction._id,
+        shippingInfo: undefined,
+
+        orderItems: [
+          {
+            name: auction.title,
+            quantity: 1,
+            image: auction.images?.[0]?.url || "",
+            price: itemsPrice,
+            product: auction._id,
+          },
+        ],
+
+        itemsPrice,
+        taxPrice,
+        shippingPrice,
+        totalPrice,
+        orderStatus: "Address Pending",
+      });
+
+      console.log(`Auction order created: ${order._id} for winner ${winner.email}`);
     }
   } catch (error) {
     console.error("Error checking ended auctions:", error);

@@ -186,7 +186,8 @@ label.upload-button * {
 }
 
 .upload-button:hover {
-    background-color: var(--primary-dark);
+    background-color: var(--primary-color);
+    color: white;
     transform: translateY(-2px);
 }
 

@@ -301,6 +301,68 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
+//get auction orders
+exports.getMyAuctionOrders = async (req, res) => {
+  const orders = await Order.find({
+    buyer: req.user._id,
+    isAuctionOrder: true
+  })
+  .populate("auctionProduct", "title images price")
+  .sort({ createdAt: -1 });
+
+  res.json({ success: true, data: orders });
+};
+
+//address adding for auction orders
+exports.setAuctionOrderShipping = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { shippingInfo } = req.body;
+
+    if (!shippingInfo || !shippingInfo.street || !shippingInfo.city || !shippingInfo.state || !shippingInfo.pincode || !shippingInfo.country) {
+      return res.status(400).json({
+        success: false,
+        message: "Incomplete shipping address",
+      });
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (!order.isAuctionOrder) {
+      return res.status(400).json({ success: false, message: "Not an auction order" });
+    }
+
+    if (order.buyer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    if (order.orderStatus !== "Address Pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Shipping address already set or order is not in Address Pending status",
+      });
+    }
+    order.shippingInfo = shippingInfo;
+    order.orderStatus = "Payment Pending";
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: "Shipping address added. You can now proceed to payment.",
+      data: order,
+    });
+  } catch (error) {
+    console.error("setAuctionOrderShipping error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
 // -- Cancel order (for buyer)
 exports.cancelOrder = async (req, res) => {
   try {

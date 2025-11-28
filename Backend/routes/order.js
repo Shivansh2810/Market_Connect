@@ -19,4 +19,11 @@ router.put("/:orderId/status", protect, orderController.updateOrderStatus);
 // Cancel an order (for buyer)
 router.put("/:orderId/cancel", protect, orderController.cancelOrder);
 
+//get auction orders
+router.get("/my-auction-orders", protect, orderController.getMyAuctionOrders);
+
+//set address 
+router.put("/:id/auction-shipping", protect, orderController.setAuctionOrderShipping);
+
+
 module.exports = router;
