@@ -64,11 +64,9 @@ const userSchema = new Schema(
       trim: true,
       validate: {
         validator: function(v) {
-          // Skip validation for Google OAuth users (they have googleId)
           if (this.googleId) {
             return true;
           }
-          // For regular users with password, validate the mobile number
           if (this.password) {
             return /^[6-9]\d{9}$/.test(v);
           }

@@ -5,8 +5,6 @@ const mongoose = require("mongoose");
 const passport = require("passport");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-
-//Socket Server requirements
 const http = require('http');
 const { initSocket } = require('./socket');
 
@@ -41,7 +39,6 @@ if (process.env.NODE_ENV !== "test") {
 
   initSocket(server);
 
-// CORS middleware MUST come first
 app.use(cors({
   origin: [
     "http://localhost:3000",
@@ -60,15 +57,12 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 
-// Health check
 app.get("/", (req, res) => {
   res.json({ message: "Server is running" });
 });
 
-// Mount user routes
 app.use("/api/users", userRoutes);
 
-// Mount other routes
 app.use("/api/faqs", faqRoutes);
 app.use("/api", productRoutes);
 app.use("/api/category", categoryRoutes);
@@ -84,7 +78,6 @@ app.use('/api/auctions', auctionRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/assistant", assistantRoutes);
 
-// Global error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err.message);
   res.status(err.status || 500).json({

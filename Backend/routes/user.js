@@ -55,12 +55,11 @@ router.get(
 router.get(
   "/auth/google/callback",
   (req, res, next) => {
-    console.log('📥 Google OAuth callback received');
+    console.log('Google OAuth callback received');
     console.log('Query params:', req.query);
     
-    // Check if there's an error from Google
     if (req.query.error) {
-      console.error('❌ Google OAuth error:', req.query.error);
+      console.error('Google OAuth error:', req.query.error);
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
       return res.redirect(`${frontendUrl}/login?error=${req.query.error}`);
     }
@@ -72,18 +71,17 @@ router.get(
       session: false,
     }, (err, user, info) => {
       if (err) {
-        console.error('❌ Passport authentication error:', err);
+        console.error('Passport authentication error:', err);
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
         return res.redirect(`${frontendUrl}/login?error=auth_error`);
       }
       
       if (!user) {
-        console.error('❌ No user returned from passport:', info);
+        console.error('No user returned from passport:', info);
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
         return res.redirect(`${frontendUrl}/login?error=no_user`);
       }
       
-      // Manually set user on request
       req.user = user;
       next();
     })(req, res, next);
