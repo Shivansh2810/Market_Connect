@@ -38,27 +38,31 @@
     z-index: 1000;
 }
 
-.header-content {
+/* Single Header Row - Brand (left), Search (center), Actions (right) */
+.header-single-row {
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
     padding: 15px 20px;
-    max-width: 1200px;
-    margin: 0 auto;
     position: relative;
 }
 
-.logo-section {
+/* Remove old header-content styles */
+
+/* Brand Section - Left side */
+.brand-section {
     display: flex;
     align-items: center;
     gap: 15px;
+    flex-shrink: 0;
 }
 
-.logo-section h1 {
+.brand-title {
     margin: 0;
     font-size: 24px;
     font-weight: 700;
     letter-spacing: 1px;
+    color: white;
 }
 
 .mobile-menu-btn {
@@ -77,12 +81,16 @@
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Search Section */
+/* Search Section - Absolutely centered */
 .search-section {
-    flex: 1;
-    max-width: 500px;
-    margin: 0 20px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    max-width: 400px;
 }
+
+
 
 .search-bar {
     display: flex;
@@ -153,11 +161,12 @@
     font-size: 16px;
 }
 
-/* Header Actions */
+/* Header Actions - Right side of single row */
 .header-actions {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 .action-btn {
@@ -342,19 +351,27 @@
     box-shadow: var(--shadow);
 }
 
-.content-header {
+/* Welcome Section - Separate centered division */
+.welcome-section {
+    display: flex;
+    justify-content: center;
+    width: 100%;
     margin-bottom: 30px;
-    text-align: center;
 }
 
-.content-header h2 {
+.welcome-content {
+    text-align: center;
+    max-width: 600px;
+}
+
+.welcome-content h2 {
     margin: 0 0 10px 0;
     color: var(--text-primary);
     font-size: 28px;
     font-weight: 700;
 }
 
-.content-header p {
+.welcome-content p {
     margin: 0;
     color: var(--text-secondary);
     font-size: 16px;
