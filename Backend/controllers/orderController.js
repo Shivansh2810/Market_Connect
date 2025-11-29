@@ -12,9 +12,7 @@ const {
 exports.createOrder = async (req, res) => {
   try {
     // input data validation
-    const { error } = createOrderSchema.validate(req.body, {
-      abortEarly: false,
-    });
+    const { error } = createOrderSchema.validate(req.body, { abortEarly: false });
     if (error) {
       return res.status(400).json({
         success: false,
@@ -26,13 +24,9 @@ exports.createOrder = async (req, res) => {
     const { orderItems, shippingInfo, couponCode } = req.body;
 
     // verifying user existence
-    const user = await User.findById(req.user._id).populate(
-      "buyerInfo.cart.productId"
-    );
+    const user = await User.findById(req.user._id).populate("buyerInfo.cart.productId");
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
     let finalOrderItems = [];
@@ -41,15 +35,13 @@ exports.createOrder = async (req, res) => {
     // Case 1: Order placed from cart
     if (orderItems.length === 1 && orderItems[0].productId === "cart") {
       if (!user.buyerInfo.cart.length) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Cart is empty" });
+        return res.status(400).json({ success: false, message: "Cart is empty" });
       }
 
-      // Update: stock check correction
+      // Stock Check for Cart
       for (const item of user.buyerInfo.cart) {
         if (!item.productId) {
-           return res.status(400).json({ success: false, message: "One or more items in cart are invalid." });
+           return res.status(400).json({ success: false, message: "Invalid item in cart." });
         }
         if (item.productId.stock < item.quantity) {
           return res.status(400).json({
@@ -66,8 +58,8 @@ exports.createOrder = async (req, res) => {
         name: item.productId.title,
         image: item.productId.images?.[0]?.url || null,
       }));
-    }
-
+    } 
+    
     // Case 2: Direct single product order
     else {
       finalOrderItems = await Promise.all(
@@ -75,7 +67,6 @@ exports.createOrder = async (req, res) => {
           const product = await Product.findById(item.productId);
           if (!product) throw new Error(`Product not found: ${item.productId}`);
           
-          // stock check for DIRECT ORDER
           if (product.stock < item.quantity)
             throw new Error(`Insufficient stock for ${product.title}`);
 
@@ -90,48 +81,50 @@ exports.createOrder = async (req, res) => {
       );
     }
 
-    // Calculate pricing
+    // Pricing calculation
+    // Base Price
     const itemsPrice = finalOrderItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
-    const taxPrice = parseFloat((0.18 * itemsPrice).toFixed(2)); // Considering standard 18% GST
-    const shippingPrice = itemsPrice > 1000 ? 0 : 50; // Arbitrarily applying shipping cost of 50 only to items below price 1000
-    
-    // Initial Total Price
-    let totalPrice = itemsPrice + taxPrice + shippingPrice;
 
-    // Update: Coupon consideration
+    // Discount
+    let discountAmount = 0;
+    
     if (couponCode) {
-      const coupon = await Coupon.findOne({ 
-        code: couponCode.toUpperCase() 
-      });
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
 
       if (!coupon) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Invalid Coupon Code" 
-        });
+        return res.status(404).json({ success: false, message: "Invalid Coupon Code" });
       }
 
-      // Check if coupon is valid for this specific order value (itemsPrice)
+      // validity based on original Item Price
       if (!coupon.isValid(itemsPrice)) { 
-        return res.status(400).json({ 
-          success: false, 
-          message: "Coupon is not applicable to this order" 
-        });
+        return res.status(400).json({ success: false, message: "Coupon is not applicable to this order" });
       }
 
-      // Calculate and apply discount
-      const discount = coupon.calculateDiscount(itemsPrice);
+      discountAmount = coupon.calculateDiscount(itemsPrice);
       
-      totalPrice = Math.max(0, totalPrice - discount);
-
-      // Increment coupon usage count
+      // Update coupon usage
       coupon.usedCount += 1;
       await coupon.save();
     }
 
+    // Apply Discount
+    const priceAfterDiscount = Math.max(0, itemsPrice - discountAmount);
+
+    // Tax cAlculation(On Discounted Price)
+    const taxPrice = parseFloat((0.18 * priceAfterDiscount).toFixed(2));
+    // a standard 18% has been assumed for our project
+
+    // Shipping
+    const shippingPrice = priceAfterDiscount > 1000 ? 0 : 50;
+    // Arbitrarily applying shipping cost of 50 only to items below price 1000
+
+    // Final Total
+    const totalPrice = priceAfterDiscount + taxPrice + shippingPrice;
+
+    // Saving Order
     // Seller assignment logic: Directly storing the seller id of the product in a single order, while that of the first product in a cart order
     const firstProduct = await Product.findById(finalOrderItems[0].product);
     if (!firstProduct) {
@@ -141,7 +134,6 @@ exports.createOrder = async (req, res) => {
     }
     const assignedSeller = firstProduct.sellerId;
 
-    // Create new order document
     const order = new Order({
       buyer: req.user._id,
       seller: assignedSeller,
@@ -150,13 +142,13 @@ exports.createOrder = async (req, res) => {
       itemsPrice,
       taxPrice,
       shippingPrice,
-      totalPrice, // Includes coupon discount
+      totalPrice, // including dsicount, shipping and tax
       orderStatus: "Payment Pending",
     });
 
     await order.save();
 
-    // Clearing of the cart if cart order
+    // Clearing of cart if needed
     if (orderItems.length === 1 && orderItems[0].productId === "cart") {
       user.buyerInfo.cart = [];
       await user.save();
@@ -171,7 +163,7 @@ exports.createOrder = async (req, res) => {
     console.error("Create order error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to create order", // Improved error msg
+      message: error.message || "Failed to create order",
       error: error.message,
     });
   }
