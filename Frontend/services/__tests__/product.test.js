@@ -30,10 +30,13 @@ describe('Product API', () => {
 
     it('handles error when fetching products', async () => {
       const mockError = new Error('Network error');
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       api.get.mockRejectedValueOnce(mockError);
       
       await expect(getAllProducts()).rejects.toThrow('Network error');
       expect(api.get).toHaveBeenCalledWith('/products');
+      expect(consoleSpy).toHaveBeenCalledWith('Error fetching products:', mockError);
+      consoleSpy.mockRestore();
     });
   });
 
@@ -64,10 +67,14 @@ describe('Product API', () => {
           data: { message: 'Product not found' }
         }
       };
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       
       api.get.mockRejectedValueOnce(mockError);
       
       await expect(getProductById('999')).rejects.toEqual(mockError);
+      expect(consoleSpy).toHaveBeenCalledWith('Error fetching product:', mockError);
+      expect(consoleSpy).toHaveBeenCalledWith('Error response:', mockError.response.data);
+      consoleSpy.mockRestore();
     });
 
     it('logs console messages for debugging', async () => {
@@ -109,9 +116,12 @@ describe('Product API', () => {
 
     it('handles error when fetching similar products', async () => {
       const mockError = new Error('Server error');
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       api.get.mockRejectedValueOnce(mockError);
       
       await expect(getSimilarProducts('123')).rejects.toThrow('Server error');
+      expect(consoleSpy).toHaveBeenCalledWith('Error fetching similar products:', mockError);
+      consoleSpy.mockRestore();
     });
   });
 

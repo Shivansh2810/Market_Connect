@@ -1,13 +1,30 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import SellerDashboard from '../SellerDashboard';
-import { AuthProvider } from '../../../contexts/AuthContext';
-import { ProductsProvider } from '../../../contexts/ProductsContext';
-import api from '../../../../services/axios';
 
-vi.mock('../../../../services/axios');
-vi.mock('../../../../services/product');
+const getMock = vi.fn();
+const putMock = vi.fn();
+const deleteMock = vi.fn();
+
+vi.mock('../../../../services/axios', () => ({
+  __esModule: true,
+  default: {
+    get: (...args) => getMock(...args),
+    put: (...args) => putMock(...args),
+    delete: (...args) => deleteMock(...args),
+  },
+}));
+
+const useAuthMock = vi.fn();
+vi.mock('../../../contexts/AuthContext', () => ({
+  useAuth: () => useAuthMock(),
+}));
+
+const useProductsMock = vi.fn();
+vi.mock('../../../contexts/ProductsContext', () => ({
+  useProducts: () => useProductsMock(),
+}));
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -18,117 +35,227 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-const mockUser = {
+vi.mock('../AddProduct', () => ({
+  __esModule: true,
+  default: ({ onBack, onSave, product }) => (
+    <div data-testid="add-product-view">
+      <span data-testid="editing-product">{product?.title ?? 'new product'}</span>
+      <button type="button" onClick={() => onSave({ _id: product?._id || 'new' })}>
+        save-product
+      </button>
+      <button type="button" onClick={onBack}>
+        back-to-products
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('../ReviewManagement', () => ({
+  __esModule: true,
+  default: ({ onBack, product }) => (
+    <div data-testid="review-management-view">
+      <span data-testid="review-product">{product?._id}</span>
+      <button type="button" onClick={onBack}>
+        back-to-reviews
+      </button>
+    </div>
+  ),
+}));
+
+const renderDashboard = () => render(<SellerDashboard />);
+
+const sellerUser = {
   id: 'seller123',
-  name: 'Test Seller',
   email: 'seller@test.com',
-  role: 'seller'
+  name: 'Seller Test',
 };
 
-const mockUseAuth = vi.fn();
-vi.mock('../../../contexts/AuthContext', async () => {
-  const actual = await vi.importActual('../../../contexts/AuthContext');
-  return {
-    ...actual,
-    useAuth: () => mockUseAuth()
-  };
-});
-
-const mockDashboardData = {
-  success: true,
-  data: {
-    totalRevenue: 50000,
-    totalOrders: 100,
-    totalProducts: 25,
-    pendingReturns: 3,
-    avgRating: 4.5,
-    ratingCount: 50,
-    topProducts: []
-  }
+const topProduct = {
+  productId: 'prod-top',
+  qtySold: 9,
+  product: {
+    title: 'Top Camera',
+    price: 1200,
+    images: [{ url: 'top.jpg' }],
+  },
 };
 
-const mockProducts = [
+const ordersFixture = [
   {
-    _id: '1',
-    title: 'Seller Product 1',
-    price: 999,
-    stock: 10,
-    sellerId: 'seller123',
-    images: [{ url: 'test1.jpg' }],
-    categoryId: { name: 'Electronics' }
-  }
+    _id: 'order-1',
+    buyer: { name: 'Buyer One' },
+    orderItems: [{ quantity: 2 }],
+    totalPrice: 3000,
+    orderStatus: 'Order Placed',
+    createdAt: '2024-02-01T00:00:00Z',
+  },
+  {
+    _id: 'order-2',
+    buyer: { email: 'buyer@two.com' },
+    orderItems: [{ quantity: 1 }],
+    totalPrice: 1500,
+    orderStatus: 'Delivered',
+    createdAt: '2024-03-01T00:00:00Z',
+  },
 ];
 
-const renderSellerDashboard = () => {
-  return render(
-    <BrowserRouter>
-      <AuthProvider>
-        <ProductsProvider>
-          <SellerDashboard />
-        </ProductsProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  );
+const returnsFixture = [
+  {
+    _id: 'return-1',
+    order: { _id: 'order-1', totalPrice: 500 },
+    buyer: { name: 'Buyer One' },
+    reason: 'Damaged item',
+    description: 'Box crushed',
+    refundAmount: 500,
+    status: 'Requested',
+    items: [{ name: 'Camera', quantity: 1, price: 500 }],
+  },
+  {
+    _id: 'return-2',
+    order: 'order-2',
+    buyer: { email: 'buyer@two.com' },
+    reason: 'Missing parts',
+    refundAmount: 300,
+    status: 'Rejected',
+    rejectionReason: 'Outside policy',
+  },
+  {
+    _id: 'return-3',
+    order: 'order-3',
+    buyer: { name: 'Buyer Three' },
+    reason: 'Wrong size',
+    refundAmount: 200,
+    status: 'Completed',
+  },
+];
+
+const sellerProductsResponse = {
+  success: true,
+  products: [
+    {
+      _id: 'product-1',
+      title: 'Seller Laptop',
+      price: 45000,
+      stock: 4,
+      categoryId: { name: 'Computers', _id: 'cat-1' },
+      sellerId: { _id: 'seller123' },
+      images: [{ url: 'laptop.jpg' }],
+      ratingAvg: 4.8,
+      ratingCount: 25,
+      isDeleted: false,
+    },
+    {
+      _id: 'product-2',
+      title: 'Other Seller Phone',
+      price: 15000,
+      stock: 12,
+      categoryId: { name: 'Mobiles', _id: 'cat-2' },
+      sellerId: { _id: 'someone-else' },
+      images: [{ url: 'phone.jpg' }],
+      ratingAvg: 4,
+      ratingCount: 10,
+      isDeleted: false,
+    },
+    {
+      _id: 'product-3',
+      title: 'Deleted Item',
+      price: 1000,
+      stock: 1,
+      categoryId: { name: 'Misc', _id: 'cat-3' },
+      sellerId: 'seller123',
+      isDeleted: true,
+    },
+  ],
 };
 
-describe('SellerDashboard Component', () => {
+const configureHappyPaths = () => {
+  getMock.mockImplementation((url) => {
+    if (url === '/seller/dashboard') {
+      return Promise.resolve({
+        data: {
+          success: true,
+          data: {
+            totalRevenue: 100000,
+            totalOrders: 200,
+            totalProducts: 10,
+            pendingReturns: 2,
+            avgRating: 4.6,
+            ratingCount: 80,
+            topProducts: [topProduct],
+          },
+        },
+      });
+    }
+    if (url.startsWith('/seller/my-sales')) {
+      return Promise.resolve({
+        data: { success: true, data: { orders: ordersFixture, currentPage: 1, totalPages: 2 } },
+      });
+    }
+    if (url === '/seller/my-returns') {
+      return Promise.resolve({ data: { success: true, data: returnsFixture } });
+    }
+    if (url === '/analytics/seller/salesreport') {
+      return Promise.resolve({ data: { success: true, data: [{ _id: '2024-01-01', totalSales: 1000 }] } });
+    }
+    if (url === '/products') {
+      return Promise.resolve({ data: sellerProductsResponse });
+    }
+    return Promise.resolve({ data: { success: true } });
+  });
+
+  putMock.mockResolvedValue({ data: { success: true } });
+  deleteMock.mockResolvedValue({ data: { success: true } });
+};
+
+describe('SellerDashboard', () => {
+  const logoutMock = vi.fn();
+  const confirmSpy = vi.spyOn(window, 'confirm');
+  const alertSpy = vi.spyOn(window, 'alert');
+
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseAuth.mockReturnValue({
-      user: mockUser,
-      isAuthenticated: true,
-      logout: vi.fn()
+    configureHappyPaths();
+    confirmSpy.mockReturnValue(true);
+    alertSpy.mockImplementation(() => {});
+    useAuthMock.mockReturnValue({ user: sellerUser, logout: logoutMock });
+    useProductsMock.mockReturnValue({ categories: [{ _id: 'cat-1', name: 'Computers' }] });
+  });
+
+  afterEach(() => {
+    delete window.__sellerDashboardTestHooks;
+  });
+
+  it('loads dashboard metrics and refreshes data', async () => {
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(screen.getByText('Seller Dashboard')).toBeInTheDocument();
     });
-    api.get.mockImplementation((url) => {
-      if (url === '/seller/dashboard') return Promise.resolve({ data: mockDashboardData });
-      if (url.includes('/seller/my-sales')) return Promise.resolve({ data: { success: true, data: { orders: [], currentPage: 1, totalPages: 1 } } });
-      if (url === '/seller/my-returns') return Promise.resolve({ data: { success: true, data: [] } });
-      if (url === '/analytics/seller/salesreport') return Promise.resolve({ data: { success: true, data: [] } });
-      if (url === '/products') return Promise.resolve({ data: { success: true, products: mockProducts } });
-      return Promise.resolve({ data: {} });
+
+    expect(screen.getByText(/Total Revenue/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Top Performing Products/)).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole('button', { name: /Refresh/i }));
+    await waitFor(() => {
+      expect(getMock).toHaveBeenCalledWith('/seller/dashboard');
     });
   });
 
-  it('renders seller dashboard header', async () => {
-    renderSellerDashboard();
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Market Connect - Seller/i)).toBeInTheDocument();
-    });
-  });
+  it('handles reviews navigation and logout', async () => {
+    renderDashboard();
+    await waitFor(() => screen.getByText('Seller Dashboard'));
 
-  it('displays dashboard metrics', async () => {
-    renderSellerDashboard();
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Total Revenue/i)).toBeInTheDocument();
-    });
-  });
+    await userEvent.click(screen.getByText('Reviews'));
+    await waitFor(() => screen.getByText('Customer Reviews'));
 
-  it('navigates to products view', async () => {
-    renderSellerDashboard();
-    
-    // Component should render without errors
-    await waitFor(() => {
-      expect(document.body).toBeTruthy();
-    });
-  });
+    const reviewButtons = screen.getAllByRole('button', { name: 'View Reviews' });
+    await userEvent.click(reviewButtons[0]);
 
-  it('handles logout', async () => {
-    const mockLogout = vi.fn();
-    mockUseAuth.mockReturnValue({
-      user: mockUser,
-      isAuthenticated: true,
-      logout: mockLogout
-    });
-    
-    renderSellerDashboard();
-    
-    await waitFor(() => {
-      const logoutButton = screen.getByTitle('Logout');
-      fireEvent.click(logoutButton);
-    });
-    
-    expect(mockLogout).toHaveBeenCalled();
+    await waitFor(() => screen.getByTestId('review-management-view'));
+    await userEvent.click(screen.getByText('back-to-reviews'));
+    expect(screen.getByText('Customer Reviews')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTitle('Logout'));
+    expect(logoutMock).toHaveBeenCalled();
   });
 });

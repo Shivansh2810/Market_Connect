@@ -23,8 +23,17 @@ import {
 // Using the assistant API instead of separate chatbot server
 const FAQ_API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/faqs`;
 
+const getDefaultFetch = () => {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.fetch === 'function') {
+        return globalThis.fetch.bind(globalThis);
+    }
+    return async () => {
+        throw new Error('fetch is not available');
+    };
+};
 
-const CustomerService = ({ onBack }) => {
+
+const CustomerService = ({ onBack, apiClient = api, fetchFn = getDefaultFetch() }) => {
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -50,7 +59,7 @@ const CustomerService = ({ onBack }) => {
         // Fetch FAQs
         const fetchFaqs = async () => {
             try {
-                const res = await fetch(FAQ_API_URL);
+                const res = await fetchFn(FAQ_API_URL);
                 if (!res.ok) throw new Error('Failed to load FAQs');
                 const data = await res.json();
                 setFaqs(Array.isArray(data.faqs) ? data.faqs : []);
@@ -65,7 +74,7 @@ const CustomerService = ({ onBack }) => {
     const fetchSavedChats = async () => {
         try {
             setIsLoadingChats(true);
-            const res = await api.get('/chats');
+            const res = await apiClient.get('/chats');
             const data = res.data && res.data.data ? res.data.data : [];
             setSavedChats(Array.isArray(data) ? data : []);
         } catch (err) {
@@ -87,7 +96,7 @@ const CustomerService = ({ onBack }) => {
 
     const handleLoadChat = async (chatSummary) => {
         try {
-            const res = await api.get(`/chats/${chatSummary.sessionId}`);
+            const res = await apiClient.get(`/chats/${chatSummary.sessionId}`);
             const chatData = res.data && res.data.data ? res.data.data : null;
             if (chatData && Array.isArray(chatData.messages)) {
                 setSessionId(chatData.sessionId);
@@ -133,7 +142,7 @@ const CustomerService = ({ onBack }) => {
                     },
                     body: JSON.stringify({
                 */
-                const response = await api.post('/assistant/chat', {
+                const response = await apiClient.post('/assistant/chat', {
                     message: userMessage,
                     session_id: sessionId
                 });
@@ -164,7 +173,7 @@ const CustomerService = ({ onBack }) => {
                 },
                 body: JSON.stringify({
                 */
-                    await api.post('/chats', {
+                    await apiClient.post('/chats', {
                         sessionId,
                         messages: newMessages,
                     });
@@ -187,7 +196,7 @@ const CustomerService = ({ onBack }) => {
                 setMessages(newMessages);
 
                 try {
-                    await api.post('/chats', {
+                    await apiClient.post('/chats', {
                         sessionId,
                         messages: newMessages,
                     });
@@ -218,7 +227,7 @@ const CustomerService = ({ onBack }) => {
 
         try {
             // Use assistant API for customer service
-            const response = await api.post('/assistant/chat', {
+            const response = await apiClient.post('/assistant/chat', {
                 message: question,
                 session_id: sessionId
             });
@@ -236,7 +245,7 @@ const CustomerService = ({ onBack }) => {
             setMessages(newMessages);
 
             try {
-                await api.post('/chats', {
+                await apiClient.post('/chats', {
                     sessionId,
                     messages: newMessages,
                 });
@@ -259,7 +268,7 @@ const CustomerService = ({ onBack }) => {
             setMessages(newMessages);
 
             try {
-                await api.post('/chats', {
+                await apiClient.post('/chats', {
                     sessionId,
                     messages: newMessages,
                 });
@@ -479,6 +488,7 @@ const CustomerService = ({ onBack }) => {
                             <button 
                                 type="submit" 
                                 className="send-btn" 
+                                aria-label="Send message"
                                 disabled={!inputMessage.trim() || isLoading}
                             >
                                 {isLoading ? (

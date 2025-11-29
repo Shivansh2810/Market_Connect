@@ -361,6 +361,19 @@ const SellerDashboard = () => {
         logout();
     };
 
+    if (
+        typeof window !== 'undefined'
+        && (import.meta.env?.MODE === 'test' || import.meta.env?.TEST)
+    ) {
+        window.__sellerDashboardTestHooks = {
+            handleReturnResolution,
+            handleDeleteProduct,
+            handleSaveProduct,
+            fetchProducts,
+            setCurrentView,
+        };
+    }
+
     const lowStockProducts = products.filter(p => p.stock < 5);
 
     // Render add/edit product page

@@ -1,235 +1,218 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import Signup from '../Signup';
-import { AuthProvider } from '../../../contexts/AuthContext';
-import api from '../../../../services/axios';
 
-vi.mock('../../../../services/axios');
+const loginMock = vi.fn();
+const navigateMock = vi.fn();
+const postMock = vi.fn();
+const authState = { login: loginMock, isAuthenticated: false };
 
-const mockNavigate = vi.fn();
+vi.mock('../../../contexts/AuthContext', () => ({
+  useAuth: () => authState,
+}));
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
-    useNavigate: () => mockNavigate,
+    useNavigate: () => navigateMock,
   };
 });
 
-const renderSignup = () => {
-  return render(
-    <BrowserRouter>
-      <AuthProvider>
-        <Signup />
-      </AuthProvider>
-    </BrowserRouter>
-  );
+vi.mock('../../../../services/axios', () => ({
+  __esModule: true,
+  default: {
+    post: (...args) => postMock(...args),
+  },
+}));
+
+const renderComponent = () => render(
+  <MemoryRouter>
+    <Signup />
+  </MemoryRouter>
+);
+
+const firstNameInput = () => screen.getByPlaceholderText(/First Name/i);
+const lastNameInput = () => screen.getByPlaceholderText(/Last Name/i);
+const emailInput = () => screen.getByPlaceholderText(/Email/i);
+const mobileInput = () => screen.getByPlaceholderText(/Mobile Number/i);
+const passwordInput = () => screen.getByPlaceholderText(/^Password$/i);
+const confirmPasswordInput = () => screen.getByPlaceholderText(/Confirm Password/i);
+const submitButton = () => screen.getByRole('button', { name: /sign up/i });
+
+const fillValidForm = () => {
+  fireEvent.change(firstNameInput(), { target: { value: 'John' } });
+  fireEvent.change(lastNameInput(), { target: { value: 'Doe' } });
+  fireEvent.change(emailInput(), { target: { value: 'john@test.com' } });
+  fireEvent.change(mobileInput(), { target: { value: '9876543210' } });
+  fireEvent.change(passwordInput(), { target: { value: 'Test123!' } });
+  fireEvent.change(confirmPasswordInput(), { target: { value: 'Test123!' } });
 };
 
-describe('Signup Component', () => {
+describe('Signup', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
+    loginMock.mockReset();
+    navigateMock.mockReset();
+    postMock.mockReset();
+    authState.isAuthenticated = false;
   });
 
-  it('renders signup form correctly', () => {
-    renderSignup();
-    
-    expect(screen.getByText(/Market Connect/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/First Name/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Last Name/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Email/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Mobile Number/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/^Password$/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Confirm Password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /SIGN UP/i })).toBeInTheDocument();
+  afterEach(() => {
+    cleanup();
   });
 
-  it('validates first name to only accept alphabets', async () => {
-    renderSignup();
-    
-    const firstNameInput = screen.getByPlaceholderText(/First Name/i);
-    fireEvent.change(firstNameInput, { target: { value: 'John123' } });
-    
+  it('redirects authenticated users to dashboard immediately', async () => {
+    authState.isAuthenticated = true;
+    renderComponent();
     await waitFor(() => {
-      expect(screen.getByText(/Only alphabets are allowed!/i)).toBeInTheDocument();
+      expect(navigateMock).toHaveBeenCalledWith('/dashboard');
     });
   });
 
-  it('validates last name to only accept alphabets', async () => {
-    renderSignup();
-    
-    const lastNameInput = screen.getByPlaceholderText(/Last Name/i);
-    fireEvent.change(lastNameInput, { target: { value: 'Doe@' } });
-    
+  it('enforces alphabetic first and last names', async () => {
+    renderComponent();
+    fireEvent.change(firstNameInput(), { target: { value: 'Ann3' } });
+    fireEvent.change(lastNameInput(), { target: { value: "O'Neil!" } });
+
     await waitFor(() => {
-      expect(screen.getByText(/Only alphabets are allowed!/i)).toBeInTheDocument();
+      expect(screen.getAllByText('Only alphabets are allowed!')).toHaveLength(2);
+    });
+
+    fireEvent.change(firstNameInput(), { target: { value: 'Anne' } });
+    await waitFor(() => {
+      expect(screen.getAllByText('Only alphabets are allowed!')).toHaveLength(1);
     });
   });
 
-  it('validates mobile number to only accept numbers', async () => {
-    renderSignup();
-    
-    const mobileInput = screen.getByPlaceholderText(/Mobile Number/i);
-    fireEvent.change(mobileInput, { target: { value: '98765abc' } });
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Only numbers are allowed!/i)).toBeInTheDocument();
-    });
+  it('prevents submission when field-level errors exist', () => {
+    renderComponent();
+    fireEvent.change(mobileInput(), { target: { value: '12345678901' } });
+    fireEvent.click(submitButton());
+
+    expect(
+      screen.getByText('Please fix the highlighted errors before submitting!')
+    ).toBeInTheDocument();
+    expect(postMock).not.toHaveBeenCalled();
   });
 
-  it('validates mobile number length', async () => {
-    renderSignup();
-    
-    const mobileInput = screen.getByPlaceholderText(/Mobile Number/i);
-    fireEvent.change(mobileInput, { target: { value: '12345678901' } });
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Mobile number cannot exceed 10 digits!/i)).toBeInTheDocument();
-    });
+  it('requires all form fields before submitting', async () => {
+    renderComponent();
+    fireEvent.change(passwordInput(), { target: { value: 'Valid123' } });
+    fireEvent.change(confirmPasswordInput(), { target: { value: 'Valid123' } });
+    fireEvent.click(submitButton());
+
+    expect(await screen.findByText('All fields are required!')).toBeInTheDocument();
   });
 
-  it('shows error when passwords do not match', async () => {
-    renderSignup();
-    
-    fireEvent.change(screen.getByPlaceholderText(/First Name/i), { target: { value: 'John' } });
-    fireEvent.change(screen.getByPlaceholderText(/Last Name/i), { target: { value: 'Doe' } });
-    fireEvent.change(screen.getByPlaceholderText(/Email/i), { target: { value: 'john@test.com' } });
-    fireEvent.change(screen.getByPlaceholderText(/Mobile Number/i), { target: { value: '9876543210' } });
-    fireEvent.change(screen.getByPlaceholderText(/^Password$/i), { target: { value: 'Test123!' } });
-    fireEvent.change(screen.getByPlaceholderText(/Confirm Password/i), { target: { value: 'Test456!' } });
-    
-    const signupButton = screen.getByRole('button', { name: /SIGN UP/i });
-    fireEvent.click(signupButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Passwords do not match!/i)).toBeInTheDocument();
-    });
+  it('validates mobile number format and length', () => {
+    renderComponent();
+    fireEvent.change(mobileInput(), { target: { value: 'abc' } });
+    expect(screen.getByText('Only numbers are allowed!')).toBeInTheDocument();
+
+    fireEvent.change(mobileInput(), { target: { value: '12345678901' } });
+    expect(
+      screen.getByText('Mobile number cannot exceed 10 digits!')
+    ).toBeInTheDocument();
   });
 
-  it('shows error for short password', async () => {
-    renderSignup();
-    
-    fireEvent.change(screen.getByPlaceholderText(/First Name/i), { target: { value: 'John' } });
-    fireEvent.change(screen.getByPlaceholderText(/Last Name/i), { target: { value: 'Doe' } });
-    fireEvent.change(screen.getByPlaceholderText(/Email/i), { target: { value: 'john@test.com' } });
-    fireEvent.change(screen.getByPlaceholderText(/Mobile Number/i), { target: { value: '9876543210' } });
-    fireEvent.change(screen.getByPlaceholderText(/^Password$/i), { target: { value: 'Test1' } });
-    fireEvent.change(screen.getByPlaceholderText(/Confirm Password/i), { target: { value: 'Test1' } });
-    
-    const signupButton = screen.getByRole('button', { name: /SIGN UP/i });
-    fireEvent.click(signupButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Password must be at least 6 characters long!/i)).toBeInTheDocument();
-    });
+  it('validates password mismatch, minimum length, and complexity', () => {
+    renderComponent();
+    fireEvent.change(firstNameInput(), { target: { value: 'John' } });
+    fireEvent.change(lastNameInput(), { target: { value: 'Doe' } });
+    fireEvent.change(emailInput(), { target: { value: 'john@test.com' } });
+    fireEvent.change(mobileInput(), { target: { value: '9876543210' } });
+    fireEvent.change(passwordInput(), { target: { value: 'short' } });
+    fireEvent.change(confirmPasswordInput(), { target: { value: 'longer' } });
+
+    fireEvent.click(submitButton());
+
+    expect(screen.getByText('Passwords do not match!')).toBeInTheDocument();
+
+    fireEvent.change(confirmPasswordInput(), { target: { value: 'short' } });
+    fireEvent.click(submitButton());
+    expect(
+      screen.getByText('Password must be at least 6 characters long!')
+    ).toBeInTheDocument();
+
+    fireEvent.change(passwordInput(), { target: { value: 'password' } });
+    fireEvent.change(confirmPasswordInput(), { target: { value: 'password' } });
+    fireEvent.click(submitButton());
+    expect(
+      screen.getByText(
+        'Password must contain at least one uppercase letter, one lowercase letter, and one number!'
+      )
+    ).toBeInTheDocument();
   });
 
-  it('shows error for weak password', async () => {
-    renderSignup();
-    
-    fireEvent.change(screen.getByPlaceholderText(/First Name/i), { target: { value: 'John' } });
-    fireEvent.change(screen.getByPlaceholderText(/Last Name/i), { target: { value: 'Doe' } });
-    fireEvent.change(screen.getByPlaceholderText(/Email/i), { target: { value: 'john@test.com' } });
-    fireEvent.change(screen.getByPlaceholderText(/Mobile Number/i), { target: { value: '9876543210' } });
-    fireEvent.change(screen.getByPlaceholderText(/^Password$/i), { target: { value: 'password' } });
-    fireEvent.change(screen.getByPlaceholderText(/Confirm Password/i), { target: { value: 'password' } });
-    
-    const signupButton = screen.getByRole('button', { name: /SIGN UP/i });
-    fireEvent.click(signupButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Password must contain at least one uppercase letter, one lowercase letter, and one number!/i)).toBeInTheDocument();
-    });
-  });
-
-  it('successfully signs up a new user', async () => {
-    const mockResponse = {
+  it('signs up successfully and logs user in', async () => {
+    postMock.mockResolvedValueOnce({
       data: {
-        token: 'fake-token',
-        user: {
-          id: '123',
-          name: 'John Doe',
-          email: 'john@test.com',
-          role: 'buyer'
-        }
-      }
-    };
-    
-    api.post.mockResolvedValueOnce(mockResponse);
-    
-    renderSignup();
-    
-    fireEvent.change(screen.getByPlaceholderText(/First Name/i), { target: { value: 'John' } });
-    fireEvent.change(screen.getByPlaceholderText(/Last Name/i), { target: { value: 'Doe' } });
-    fireEvent.change(screen.getByPlaceholderText(/Email/i), { target: { value: 'john@test.com' } });
-    fireEvent.change(screen.getByPlaceholderText(/Mobile Number/i), { target: { value: '9876543210' } });
-    fireEvent.change(screen.getByPlaceholderText(/^Password$/i), { target: { value: 'Test123!' } });
-    fireEvent.change(screen.getByPlaceholderText(/Confirm Password/i), { target: { value: 'Test123!' } });
-    
-    const signupButton = screen.getByRole('button', { name: /SIGN UP/i });
-    fireEvent.click(signupButton);
-    
+        token: 'token',
+        user: { name: 'John Doe', email: 'john@test.com' },
+      },
+    });
+
+    renderComponent();
+    fillValidForm();
+    fireEvent.click(submitButton());
+
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith('/users/signup', {
+      expect(postMock).toHaveBeenCalledWith('/users/signup', {
         name: 'John Doe',
         email: 'john@test.com',
         password: 'Test123!',
         confirmPassword: 'Test123!',
-        mobNo: '9876543210'
+        mobNo: '9876543210',
       });
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+      expect(loginMock).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'john@test.com' }),
+        'token'
+      );
+      expect(navigateMock).toHaveBeenCalledWith('/dashboard');
     });
   });
 
-  it('handles signup error correctly', async () => {
-    api.post.mockRejectedValueOnce({
-      response: {
-        data: { message: 'Email already exists' }
-      }
+  it('surfaces API error message when signup fails', async () => {
+    postMock.mockRejectedValueOnce({
+      response: { data: { message: 'Email already exists' } },
     });
-    
-    renderSignup();
-    
-    fireEvent.change(screen.getByPlaceholderText(/First Name/i), { target: { value: 'John' } });
-    fireEvent.change(screen.getByPlaceholderText(/Last Name/i), { target: { value: 'Doe' } });
-    fireEvent.change(screen.getByPlaceholderText(/Email/i), { target: { value: 'existing@test.com' } });
-    fireEvent.change(screen.getByPlaceholderText(/Mobile Number/i), { target: { value: '9876543210' } });
-    fireEvent.change(screen.getByPlaceholderText(/^Password$/i), { target: { value: 'Test123!' } });
-    fireEvent.change(screen.getByPlaceholderText(/Confirm Password/i), { target: { value: 'Test123!' } });
-    
-    const signupButton = screen.getByRole('button', { name: /SIGN UP/i });
-    fireEvent.click(signupButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Email already exists/i)).toBeInTheDocument();
-    });
+
+    renderComponent();
+    fillValidForm();
+    fireEvent.click(submitButton());
+
+    expect(await screen.findByText('Email already exists')).toBeInTheDocument();
   });
 
-  it('navigates to login page when clicking login link', () => {
-    renderSignup();
-    
-    const loginLink = screen.getByText(/Login/i);
-    fireEvent.click(loginLink);
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/');
+  it('falls back to generic error when API message missing', async () => {
+    postMock.mockRejectedValueOnce({});
+
+    renderComponent();
+    fillValidForm();
+    fireEvent.click(submitButton());
+
+    expect(
+      await screen.findByText(
+        'Signup failed. Please check your information and try again.'
+      )
+    ).toBeInTheDocument();
   });
 
-  it('shows loading state during signup', async () => {
-    api.post.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
-    
-    renderSignup();
-    
-    fireEvent.change(screen.getByPlaceholderText(/First Name/i), { target: { value: 'John' } });
-    fireEvent.change(screen.getByPlaceholderText(/Last Name/i), { target: { value: 'Doe' } });
-    fireEvent.change(screen.getByPlaceholderText(/Email/i), { target: { value: 'john@test.com' } });
-    fireEvent.change(screen.getByPlaceholderText(/Mobile Number/i), { target: { value: '9876543210' } });
-    fireEvent.change(screen.getByPlaceholderText(/^Password$/i), { target: { value: 'Test123!' } });
-    fireEvent.change(screen.getByPlaceholderText(/Confirm Password/i), { target: { value: 'Test123!' } });
-    
-    const signupButton = screen.getByRole('button', { name: /SIGN UP/i });
-    fireEvent.click(signupButton);
-    
+  it('navigates to login when link is clicked', () => {
+    renderComponent();
+    fireEvent.click(screen.getByText(/Login/i));
+    expect(navigateMock).toHaveBeenCalledWith('/');
+  });
+
+  it('shows loading state while submitting signup request', () => {
+    postMock.mockReturnValue(new Promise(() => {}));
+
+    renderComponent();
+    fillValidForm();
+    fireEvent.click(submitButton());
+
     expect(screen.getByRole('button', { name: /SIGNING UP.../i })).toBeInTheDocument();
   });
 });

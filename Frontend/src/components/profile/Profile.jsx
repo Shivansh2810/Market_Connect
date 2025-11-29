@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useState, forwardRef } from 'react';
 import './profile.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -24,7 +24,7 @@ import { requestReturn } from '../../../services/return';
 // --- CHANGE 1: Import getMyReviews here ---
 import { createReview, getMyReviews } from '../../../services/review'; 
 
-const Profile = ({ onBack }) => {
+const Profile = forwardRef(({ onBack }, ref) => {
     const [isEditing, setIsEditing] = useState(false);
     const [activeTab, setActiveTab] = useState('personal');
     const [profileData, setProfileData] = useState(null);
@@ -116,6 +116,32 @@ const Profile = ({ onBack }) => {
 
         fetchData();
     }, []);
+
+        useImperativeHandle(ref, () => ({
+            triggerWriteReview: handleWriteReview,
+            setReviewedProducts,
+            triggerSubmitReview: handleSubmitReview,
+            updateReviewData: (updater) => {
+                setReviewData((prev) => {
+                    if (typeof updater === 'function') {
+                        return updater(prev);
+                    }
+                    return { ...prev, ...updater };
+                });
+            },
+            openReturnModal: handleReturnOrder,
+            triggerSubmitReturn: handleSubmitReturn,
+            toggleReturnItem: handleItemSelection,
+            updateReturnState: ({ reason, description }) => {
+                if (typeof reason !== 'undefined') {
+                    setReturnReason(reason);
+                }
+                if (typeof description !== 'undefined') {
+                    setReturnDescription(description);
+                }
+            },
+            setActiveTab,
+        }));
 
     const handleInputChange = (field, value) => {
         setProfileData(prev => ({
@@ -848,6 +874,6 @@ const Profile = ({ onBack }) => {
             )}
         </div>
     );
-};
+});
 
 export default Profile;
