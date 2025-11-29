@@ -46,6 +46,7 @@ export default defineConfig({
         'services/return.js',
         'services/review.js',
         'services/product.js',
+        'services/payment.js',
         'services/user.js',
         'services/auction.js',
         // Core app files

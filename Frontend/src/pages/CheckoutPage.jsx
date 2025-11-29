@@ -39,8 +39,11 @@ const CheckoutPage = () => {
     }));
   };
 
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) {
+  const handleApplyCoupon = async (codeOverride) => {
+    const rawCode = typeof codeOverride === 'string' ? codeOverride : couponCode;
+    const normalizedCode = rawCode.trim().toUpperCase();
+
+    if (!normalizedCode) {
       setCouponError('Please enter a coupon code');
       return;
     }
@@ -52,7 +55,7 @@ const CheckoutPage = () => {
       // Calculate cart value before tax and shipping
       const cartValue = totalAmount;
 
-      const response = await applyCoupon(couponCode.trim().toUpperCase(), cartValue);
+      const response = await applyCoupon(normalizedCode, cartValue);
 
       if (response.success) {
         setAppliedCoupon(response.data);
@@ -77,10 +80,11 @@ const CheckoutPage = () => {
   };
 
   const handleSelectCoupon = (code) => {
-    setCouponCode(code);
-    // Auto-apply the selected coupon
+    const normalizedCode = code.toUpperCase();
+    setCouponCode(normalizedCode);
+    // Auto-apply the selected coupon using the latest code value
     setTimeout(() => {
-      handleApplyCoupon();
+      handleApplyCoupon(normalizedCode);
     }, 100);
   };
 
@@ -404,7 +408,7 @@ const CheckoutPage = () => {
                   />
                   <button
                     type="button"
-                    onClick={handleApplyCoupon}
+                    onClick={() => handleApplyCoupon()}
                     disabled={couponLoading || !couponCode.trim()}
                     className="btn-apply-coupon"
                   >
