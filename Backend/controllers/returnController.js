@@ -69,10 +69,10 @@ exports.requestReturn = async (req, res) => {
       });
     }
 
-    // Check if any items from this order are already in a pending return
+    // Check if any items from this order are already in a return (pending, approved, rejected, or completed)
     const existingReturns = await Return.find({ 
       order: orderId,
-      status: { $in: ["Requested", "Approved"] }
+      status: { $in: ["Requested", "Approved", "Rejected", "Completed"] }
     });
 
     if (existingReturns.length > 0) {
