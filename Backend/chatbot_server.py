@@ -8,7 +8,7 @@ import os
 
 # Load environment variables from .env located in the same directory as this file,
 # regardless of the current working directory when the script is run.
-env_path = Path(__file__).with_name('.env')
+env_path = Path(__file__).resolve().parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
 app = Flask(__name__)
